@@ -46,6 +46,8 @@ create-*.sh
 copy-*.sh
 move-*.sh
 generate-*.sh
+backend/migrations-execute-simple.sh
+backend/public/clear-cache-terminal.sh
 
 # Fichiers temporaires
 *.tmp
