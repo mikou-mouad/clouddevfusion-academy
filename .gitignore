@@ -35,9 +35,12 @@ Thumbs.db
 logs/
 
 # Scripts de déploiement et utilitaires
-*.sh
+# Exceptions: scripts de déploiement principaux
+!deploy-frontend.sh
+!deploy-backend.sh
 !backend/bin/console
-deploy-*.sh
+# Ignorer tous les autres scripts
+*.sh
 upload-*.sh
 test-*.sh
 check-*.sh
