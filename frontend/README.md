@@ -87,13 +87,3 @@ npm run build
 - SCSS
 - RxJS
 
-## Prochaines étapes
-
-1. Connecter le frontend au backend Symfony
-2. Implémenter les services HTTP pour les appels API
-3. Ajouter l'authentification pour le back office
-4. Compléter les interfaces d'administration
-5. Ajouter les assets (logo, images)
-6. Implémenter la gestion des fichiers uploadés
-7. Ajouter les validations de formulaires avancées
-
