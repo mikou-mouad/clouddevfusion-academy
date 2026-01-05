@@ -1,0 +1,10 @@
+APP_ENV=prod
+APP_SECRET=4e028afda6275909ce1fd79def00690baecef2d9aa488da2245f886467226a8e
+APP_DEBUG=0
+
+# Base de données PostgreSQL O2Switch
+DATABASE_URL="postgresql://race8462_race8462:clouddevfusion@localhost:5432/race8462_academy?serverVersion=15&charset=utf8"
+
+# CORS - Autoriser votre domaine frontend
+CORS_ALLOW_ORIGIN=https://academy.clouddevfusion.com
+

@@ -1,0 +1,13 @@
+APP_ENV=prod
+APP_SECRET=4e028afda6275909ce1fd79def00690baecef2d9aa488da2245f886467226a8e
+
+# Base de données - À COMPLÉTER avec vos identifiants O2Switch
+# Pour PostgreSQL :
+# DATABASE_URL="postgresql://username:password@localhost:5432/database_name?serverVersion=15&charset=utf8"
+# Pour MySQL :
+# DATABASE_URL="mysql://username:password@localhost:3306/database_name?serverVersion=8.0&charset=utf8"
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name?serverVersion=15&charset=utf8"
+
+# CORS - Autoriser votre domaine frontend
+CORS_ALLOW_ORIGIN=https://academy.clouddevfusion.com
+

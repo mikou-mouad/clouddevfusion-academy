@@ -1,0 +1,259 @@
+<div class="exam-vouchers-page">
+  <!-- Hero Section -->
+  <section class="vouchers-hero">
+    <div class="container">
+      <h1>Exam Vouchers</h1>
+      <p class="hero-subtitle">Préparez votre certification Microsoft avec nos bons d'examen</p>
+    </div>
+  </section>
+
+  <!-- Overview Section -->
+  <section class="overview-section">
+    <div class="container">
+      <div class="overview-card">
+        <div class="overview-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="overview-content">
+          <h2>Vue d'ensemble</h2>
+          <p>Découvrez nos bons d'examen Microsoft et nos bundles de formation. Que vous souhaitiez passer uniquement l'examen ou suivre une formation complète, nous avons la solution adaptée à vos besoins.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Options Section -->
+  <section class="options-section">
+    <h2 class="section-title">Nos Options</h2>
+    <div class="container">
+      <div class="options-grid">
+        <!-- Option 1: Voucher Only -->
+        <div class="option-card" *ngFor="let type of ['voucher-only', 'training-voucher', 'retake']">
+          <div class="option-icon" [class]="'icon-' + type">
+            <svg *ngIf="getTypeIcon(type) === 'ticket'" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+              <line x1="9" y1="9" x2="15" y2="9"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            <svg *ngIf="getTypeIcon(type) === 'book-ticket'" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+            <svg *ngIf="getTypeIcon(type) === 'refresh'" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </div>
+          <h3>{{ getTypeLabel(type) }}</h3>
+          <p>{{ getTypeDescription(type) }}</p>
+          <div class="option-price" *ngIf="vouchersByType[type] && vouchersByType[type].length > 0">
+            À partir de {{ vouchersByType[type][0].price }} €
+          </div>
+          <button class="btn btn-secondary" (click)="filterType = filterType === type ? '' : type">
+            Voir les options
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filters Section -->
+  <section class="filters-section">
+    <div class="container">
+      <div class="filters-container">
+        <div class="filter-group">
+          <label>Filtrer par examen:</label>
+          <select [(ngModel)]="filterExamCode">
+            <option value="">Tous les examens</option>
+            <option *ngFor="let code of getUniqueExamCodes()" [value]="code">{{ code }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Filtrer par type:</label>
+          <select [(ngModel)]="filterType">
+            <option value="">Tous les types</option>
+            <option value="voucher-only">Voucher uniquement</option>
+            <option value="training-voucher">Formation + Voucher</option>
+            <option value="retake">Retake</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Vouchers Table Section -->
+  <section class="vouchers-table-section">
+    <h2 class="section-title">Détails par Examen</h2>
+    <div class="container">
+      <div class="loading-state" *ngIf="loading">
+        <p>Chargement des bons d'examen...</p>
+      </div>
+
+      <div class="error-state" *ngIf="error">
+        <p>{{ error }}</p>
+      </div>
+
+      <div class="vouchers-table-container" *ngIf="!loading && filteredVouchers.length > 0">
+        <table class="vouchers-table">
+          <thead>
+            <tr>
+              <th>Code Examen</th>
+              <th>Type</th>
+              <th>Prix</th>
+              <th>Validité</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let voucher of filteredVouchers">
+              <td>
+                <strong>{{ voucher.examCode }}</strong>
+                <span class="voucher-code">{{ voucher.code }}</span>
+              </td>
+              <td>
+                <span class="type-badge" [class]="'type-' + voucher.type">
+                  {{ getTypeLabel(voucher.type) }}
+                </span>
+              </td>
+              <td class="price-cell">{{ voucher.price }} €</td>
+              <td>{{ voucher.validityPeriod }} jours</td>
+              <td>
+                <button class="btn btn-primary btn-sm" (click)="openDetailsModal(voucher)">
+                  Voir détails
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && filteredVouchers.length === 0">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p>Aucun bon d'examen trouvé</p>
+        <p class="empty-hint">Essayez de modifier vos filtres</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to Use Section -->
+  <section class="how-to-section">
+    <h2 class="section-title">Comment Utiliser</h2>
+    <div class="container">
+      <div class="timeline">
+        <div class="timeline-item" *ngFor="let step of [1, 2, 3, 4]; let i = index">
+          <div class="timeline-number">{{ step }}</div>
+          <div class="timeline-content">
+            <h3 *ngIf="step === 1">Comment échanger</h3>
+            <h3 *ngIf="step === 2">Où planifier</h3>
+            <h3 *ngIf="step === 3">Exigences d'identité</h3>
+            <h3 *ngIf="step === 4">Règles de report</h3>
+            <p *ngIf="step === 1">Une fois votre bon d'examen acheté, vous recevrez un code d'échange par email. Utilisez ce code sur le site Microsoft pour activer votre examen.</p>
+            <p *ngIf="step === 2">Planifiez votre examen sur le site officiel Microsoft Learn ou via Pearson VUE. Les liens seront fournis avec votre bon d'examen.</p>
+            <p *ngIf="step === 3">Préparez une pièce d'identité officielle avec photo (passeport, carte d'identité) pour le jour de l'examen. Le nom doit correspondre exactement à celui utilisé lors de l'inscription.</p>
+            <p *ngIf="step === 4">Vous pouvez reporter votre examen jusqu'à 24 heures avant la date prévue. Au-delà, des frais supplémentaires peuvent s'appliquer.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Corporate Purchase Section -->
+  <section class="corporate-section">
+    <div class="container">
+      <div class="corporate-card">
+        <div class="corporate-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="corporate-content">
+          <h2>Achat en Gros Entreprise</h2>
+          <p>Vous souhaitez équiper votre équipe avec plusieurs bons d'examen ? Contactez-nous pour bénéficier de tarifs préférentiels et d'un accompagnement personnalisé.</p>
+          <a routerLink="/contact" class="btn btn-primary">
+            Contacter pour achat entreprise
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal Détails -->
+<div class="modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()" *ngIf="selectedVoucher">
+    <div class="modal-header">
+      <h2>Détails du Bon d'Examen</h2>
+      <button class="btn-icon" (click)="closeDetailsModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-section">
+        <h3>{{ selectedVoucher.examCode }}</h3>
+        <p class="voucher-code-detail">Code: {{ selectedVoucher.code }}</p>
+        <span class="type-badge" [class]="'type-' + selectedVoucher.type">
+          {{ getTypeLabel(selectedVoucher.type) }}
+        </span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <strong>Prix:</strong>
+          <span>{{ selectedVoucher.price }} €</span>
+        </div>
+        <div class="detail-item">
+          <strong>Validité:</strong>
+          <span>{{ selectedVoucher.validityPeriod }} jours</span>
+        </div>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.description">
+        <h4>Description</h4>
+        <p>{{ selectedVoucher.description }}</p>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.bookingSteps && selectedVoucher.bookingSteps.length > 0">
+        <h4>Étapes de Réservation</h4>
+        <ol class="steps-list">
+          <li *ngFor="let step of selectedVoucher.bookingSteps">{{ step }}</li>
+        </ol>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.redemptionInfo">
+        <h4>Comment Échanger</h4>
+        <p>{{ selectedVoucher.redemptionInfo }}</p>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.scheduleLocation">
+        <h4>Où Planifier</h4>
+        <p>{{ selectedVoucher.scheduleLocation }}</p>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.idRequirements">
+        <h4>Exigences d'Identité</h4>
+        <p>{{ selectedVoucher.idRequirements }}</p>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedVoucher.rescheduleRules">
+        <h4>Règles de Report</h4>
+        <p>{{ selectedVoucher.rescheduleRules }}</p>
+      </div>
+
+      <div class="modal-footer">
+        <a routerLink="/contact" class="btn btn-primary" (click)="closeDetailsModal()">
+          Contacter pour achat
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

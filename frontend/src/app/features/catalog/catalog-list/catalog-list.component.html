@@ -1,0 +1,190 @@
+<div class="catalog-page">
+  <section class="catalog-header">
+    <div class="container">
+      <h1>Catalogue de formations</h1>
+      <p>Découvrez nos formations Azure certifiantes</p>
+    </div>
+  </section>
+
+  <section class="filters-section">
+    <div class="container">
+      <div class="search-and-sort">
+        <div class="search-bar-modern">
+          <div class="search-icon-wrapper">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            placeholder="Rechercher une formation..."
+            class="search-input-modern">
+          <button class="search-clear" *ngIf="searchQuery" (click)="searchQuery = ''">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M15 9l-6 6M9 9l6 6"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="sort-controls-modern">
+          <label for="sort" class="sort-label">Trier par</label>
+          <select id="sort" [(ngModel)]="sortBy" class="sort-select-modern">
+            <option value="default">Par défaut</option>
+            <option value="popular">Populaires</option>
+            <option value="price-asc">Prix croissant</option>
+            <option value="price-desc">Prix décroissant</option>
+            <option value="date-asc">Date</option>
+            <option value="title-asc">Titre A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Filtres en ligne -->
+      <div class="filters-container">
+        <div class="filters-inline">
+          <div class="filter-group-inline">
+            <span class="filter-label-small">Rôle</span>
+            <div class="chips-group-inline">
+              <button class="filter-chip-small" [class.active]="filters.role === ''" (click)="filters.role = ''; applyFilters()">Tous</button>
+              <button class="filter-chip-small" [class.active]="filters.role === 'administrator'" (click)="filters.role = 'administrator'; applyFilters()">Administrateur</button>
+              <button class="filter-chip-small" [class.active]="filters.role === 'developer'" (click)="filters.role = 'developer'; applyFilters()">Développeur</button>
+              <button class="filter-chip-small" [class.active]="filters.role === 'architect'" (click)="filters.role = 'architect'; applyFilters()">Architecte</button>
+              <button class="filter-chip-small" [class.active]="filters.role === 'security'" (click)="filters.role = 'security'; applyFilters()">Sécurité</button>
+              <button class="filter-chip-small" [class.active]="filters.role === 'devops'" (click)="filters.role = 'devops'; applyFilters()">DevOps</button>
+            </div>
+          </div>
+
+          <div class="filter-group-inline">
+            <span class="filter-label-small">Niveau</span>
+            <div class="chips-group-inline">
+              <button class="filter-chip-small" [class.active]="filters.level === ''" (click)="filters.level = ''; applyFilters()">Tous</button>
+              <button class="filter-chip-small level-beginner" [class.active]="filters.level === 'beginner'" (click)="filters.level = 'beginner'; applyFilters()">Débutant</button>
+              <button class="filter-chip-small level-intermediate" [class.active]="filters.level === 'intermediate'" (click)="filters.level = 'intermediate'; applyFilters()">Intermédiaire</button>
+              <button class="filter-chip-small level-advanced" [class.active]="filters.level === 'advanced'" (click)="filters.level = 'advanced'; applyFilters()">Avancé</button>
+            </div>
+          </div>
+
+          <div class="filter-group-inline">
+            <span class="filter-label-small">Format</span>
+            <div class="chips-group-inline">
+              <button class="filter-chip-small" [class.active]="filters.format === ''" (click)="filters.format = ''; applyFilters()">Tous</button>
+              <button class="filter-chip-small" [class.active]="filters.format === 'online'" (click)="filters.format = 'online'; applyFilters()">En ligne</button>
+              <button class="filter-chip-small" [class.active]="filters.format === 'onsite'" (click)="filters.format = 'onsite'; applyFilters()">Présentiel</button>
+              <button class="filter-chip-small" [class.active]="filters.format === 'hybrid'" (click)="filters.format = 'hybrid'; applyFilters()">Mixte</button>
+            </div>
+          </div>
+
+          <div class="filter-group-inline">
+            <span class="filter-label-small">Langue</span>
+            <div class="chips-group-inline">
+              <button class="filter-chip-small" [class.active]="filters.language === ''" (click)="filters.language = ''; applyFilters()">Toutes</button>
+              <button class="filter-chip-small" [class.active]="filters.language === 'fr'" (click)="filters.language = 'fr'; applyFilters()">Français</button>
+              <button class="filter-chip-small" [class.active]="filters.language === 'en'" (click)="filters.language = 'en'; applyFilters()">Anglais</button>
+            </div>
+          </div>
+
+          <div class="filter-group-inline" *ngIf="getActiveFiltersCount() > 0">
+            <button class="clear-filters-btn" (click)="resetFilters()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="results-footer">
+        <div class="results-count-modern">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <span><strong>{{ filteredCourses.length }}</strong> formation(s) trouvée(s)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="courses-section">
+    <div class="container">
+      <div class="loading-state" *ngIf="loading">
+        <p>Chargement des formations...</p>
+      </div>
+      <div class="error-state" *ngIf="error && !loading">
+        <p>{{ error }}</p>
+      </div>
+      <div class="courses-grid" *ngIf="!loading && filteredCourses.length > 0; else noResults">
+        <div class="course-card" *ngFor="let course of filteredCourses" [class.popular]="course.popular">
+          <div class="course-card-header">
+            <div class="course-badge" [class]="'badge-' + course.level.toLowerCase()">
+              {{ course.level }}
+            </div>
+            <div class="popular-badge" *ngIf="course.popular">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              Populaire
+            </div>
+          </div>
+          
+          <div class="course-card-body">
+            <h3>{{ course.title }}</h3>
+            <p class="course-code">{{ course.code }}</p>
+            <p class="course-description" *ngIf="course.description">{{ course.description }}</p>
+            
+            <div class="course-meta">
+              <span class="meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                {{ course.duration }}
+              </span>
+              <span class="meta-item" *ngIf="course.format">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ course.format }}
+              </span>
+              <span class="meta-item" *ngIf="course.certification">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
+                </svg>
+                Certification
+              </span>
+            </div>
+          </div>
+          
+          <div class="course-card-footer">
+            <div class="price-section">
+              <span class="course-price">{{ getCoursePrice(course) }}€</span>
+              <span class="price-label">HT</span>
+            </div>
+            <a [routerLink]="['/catalog', course.id]" class="btn btn-primary">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <ng-template #noResults>
+        <div class="no-results">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+            <path d="M8 11h6M11 8v6"/>
+          </svg>
+          <p>Aucune formation ne correspond à vos critères de recherche.</p>
+          <button class="btn btn-secondary" (click)="resetFilters()">Réinitialiser les filtres</button>
+        </div>
+      </ng-template>
+    </div>
+  </section>
+</div>
+

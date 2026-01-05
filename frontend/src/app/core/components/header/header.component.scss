@@ -1,0 +1,509 @@
+// ============================================
+// HEADER MODERNE avec Glassmorphism
+// ============================================
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: var(--spacing-sm) 0;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 61, 122, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  &.scrolled::before {
+    background: rgba(0, 61, 122, 0.98);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.header-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--dark-blue) 0%, var(--primary-blue) 100%);
+  opacity: 0.95;
+  z-index: -1;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+  
+  @media (max-width: 1400px) {
+    padding: 0 var(--spacing-md);
+  }
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  position: relative;
+  max-width: 100%;
+}
+
+// ============================================
+// LOGO
+// ============================================
+.logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.logo-img {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+  margin-right: var(--spacing-sm);
+  outline: none;
+  border: none;
+  box-shadow: none;
+  
+  @media (max-width: 768px) {
+    height: 40px;
+    margin-right: var(--spacing-xs);
+  }
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  position: relative;
+  z-index: 10;
+  margin-left: var(--spacing-xs);
+}
+
+.logo-text-line1 {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #ffffff !important;
+  letter-spacing: -0.3px;
+  text-shadow: none;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  
+  @media (max-width: 1024px) {
+    font-size: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.875rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+  }
+}
+
+.logo-text-line2 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #ffffff !important;
+  letter-spacing: -0.2px;
+  text-shadow: none;
+  opacity: 0.95;
+  display: block;
+  visibility: visible;
+  
+  @media (max-width: 1024px) {
+    font-size: 0.75rem;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.6875rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.625rem;
+  }
+}
+
+// ============================================
+// NAVIGATION MENU
+// ============================================
+.nav-menu {
+  display: flex;
+  list-style: none;
+  gap: var(--spacing-sm);
+  flex: 1;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  
+  li {
+    position: relative;
+    flex-shrink: 0;
+    
+    a {
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      transition: all 0.3s ease;
+      position: relative;
+      display: block;
+      opacity: 0.9;
+      white-space: nowrap;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%) scaleX(0);
+        width: 80%;
+        height: 2px;
+        background: var(--light-blue);
+        transition: transform 0.3s ease;
+      }
+      
+      &:hover {
+        color: var(--light-blue);
+        opacity: 1;
+        transform: translateY(-2px);
+        
+        &::before {
+          transform: translateX(-50%) scaleX(1);
+        }
+      }
+      
+      &.active {
+        color: var(--light-blue);
+        opacity: 1;
+        font-weight: 600;
+        
+        &::before {
+          transform: translateX(-50%) scaleX(1);
+        }
+        
+        &::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          right: -8px;
+          transform: translateY(-50%);
+          width: 6px;
+          height: 6px;
+          background: var(--light-blue);
+          border-radius: 50%;
+          box-shadow: 0 0 8px var(--light-blue);
+        }
+      }
+    }
+  }
+  
+  @media (max-width: 768px) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 61, 122, 0.98);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: calc(var(--spacing-xl) * 2) var(--spacing-xl) var(--spacing-xl);
+    gap: var(--spacing-md);
+    transform: translateX(-100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    margin-top: 70px;
+    
+    &.active {
+      transform: translateX(0);
+    }
+    
+    li {
+      width: 100%;
+      
+      a {
+        font-size: 1.1rem;
+        padding: var(--spacing-md);
+        width: 100%;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        
+        &::before {
+          display: none;
+        }
+        
+        &::after {
+          display: none;
+        }
+        
+        &.active {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding-left: var(--spacing-lg);
+          
+          &::after {
+            display: none;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// NAV ACTIONS
+// ============================================
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  
+  &.btn-primary {
+    background: var(--white);
+    color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+    
+    &:hover {
+      background: var(--light-blue);
+      color: var(--white);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(77, 158, 255, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
+  &.btn-secondary {
+    background: transparent;
+    color: var(--white);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    &.btn-rdv {
+      background: linear-gradient(135deg, rgba(77, 158, 255, 0.2), rgba(0, 102, 204, 0.2));
+      border-color: rgba(77, 158, 255, 0.5);
+      
+      &:hover {
+        background: linear-gradient(135deg, rgba(77, 158, 255, 0.3), rgba(0, 102, 204, 0.3));
+        border-color: var(--light-blue);
+        box-shadow: 0 4px 20px rgba(77, 158, 255, 0.3);
+      }
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+    padding: var(--spacing-xs) var(--spacing-md);
+    
+    &.btn-secondary {
+      display: none; // Cacher "Prendre RDV" sur mobile dans le header (le bouton flottant sera visible)
+    }
+  }
+}
+
+// ============================================
+// MOBILE MENU TOGGLE (HAMBURGER)
+// ============================================
+.mobile-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 32px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+  position: relative;
+  
+  @media (max-width: 768px) {
+    display: flex;
+  }
+  
+  &:focus {
+    outline: 2px solid var(--light-blue);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
+
+.hamburger-line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: var(--white);
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+  
+  &:nth-child(1) {
+    &.active {
+      transform: translateY(10.5px) rotate(45deg);
+    }
+  }
+  
+  &:nth-child(2) {
+    &.active {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+  }
+  
+  &:nth-child(3) {
+    &.active {
+      transform: translateY(-10.5px) rotate(-45deg);
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 1200px) {
+  .nav-menu {
+    gap: var(--spacing-xs);
+    
+    li a {
+      font-size: 0.85rem;
+      padding: var(--spacing-xs) calc(var(--spacing-xs) * 0.75);
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .nav-menu {
+    gap: var(--spacing-xs);
+    
+    li a {
+      font-size: 0.85rem;
+      padding: var(--spacing-xs);
+    }
+  }
+  
+  .logo-img {
+    height: 45px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: var(--spacing-xs) 0;
+  }
+  
+  .navbar {
+    gap: var(--spacing-sm);
+  }
+  
+  .nav-actions {
+    gap: var(--spacing-sm);
+  }
+}
+
+// ============================================
+// SCROLL EFFECT
+// ============================================
+.header.scrolled {
+  padding: var(--spacing-xs) 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  
+  .logo-img {
+    height: 45px;
+    
+    @media (max-width: 768px) {
+      height: 36px;
+    }
+  }
+}
+
+// ============================================
+// ANIMATIONS
+// ============================================
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  animation: slideDown 0.5s ease-out;
+}
+
+// ============================================
+// OVERLAY pour mobile menu
+// ============================================
+@media (max-width: 768px) {
+  body.menu-open {
+    overflow: hidden;
+  }
+}

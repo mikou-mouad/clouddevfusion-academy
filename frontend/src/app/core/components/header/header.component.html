@@ -1,0 +1,38 @@
+<header class="header" [class.scrolled]="isScrolled">
+  <div class="header-background"></div>
+  <div class="container">
+    <nav class="navbar">
+      <div class="logo">
+        <a routerLink="/home" class="logo-link">
+          <img src="assets/cdfL.png" alt="CloudAcademy By CloudDev Fusion" class="logo-img">
+          <span class="logo-text">
+            <span class="logo-text-line1">CloudAcademy</span>
+            <span class="logo-text-line2">By CloudDev Fusion</span>
+          </span>
+        </a>
+      </div>
+      
+      <ul class="nav-menu" [class.active]="isMobileMenuOpen">
+        <li><a routerLink="/home" routerLinkActive="active" (click)="closeMobileMenu()">Accueil</a></li>
+        <li><a routerLink="/catalog" routerLinkActive="active" (click)="closeMobileMenu()">Catalogue</a></li>
+        <li><a routerLink="/blog" routerLinkActive="active" (click)="closeMobileMenu()">Blog</a></li>
+        <li><a routerLink="/testimonials" routerLinkActive="active" (click)="closeMobileMenu()">Témoignages</a></li>
+        <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMobileMenu()">Contact</a></li>
+      </ul>
+      
+      <div class="nav-actions">
+        <a routerLink="/contact" class="btn btn-secondary" [class.btn-rdv]="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+            <path d="M8 7V3M16 7V3M5 10H19M5 10H4C3.46957 10 2.96086 10.2107 2.58579 10.5858C2.21071 10.9609 2 11.4696 2 12V19C2 19.5304 2.21071 20.0391 2.58579 20.4142C2.96086 20.7893 3.46957 21 4 21H20C20.5304 21 21.0391 20.7893 21.4142 20.4142C21.7893 20.0391 22 19.5304 22 19V12C22 11.4696 21.7893 10.9609 21.4142 10.5858C21.0391 10.2107 20.5304 10 20 10H19M5 10V6C5 5.46957 5.21071 4.96086 5.58579 4.58579C5.96086 4.21071 6.46957 4 7 4H17C17.5304 4 18.0391 4.21071 18.4142 4.58579C18.7893 4.96086 19 5.46957 19 6V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Prendre RDV
+        </a>
+        <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="isMobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'">
+          <span class="hamburger-line" [class.active]="isMobileMenuOpen"></span>
+          <span class="hamburger-line" [class.active]="isMobileMenuOpen"></span>
+          <span class="hamburger-line" [class.active]="isMobileMenuOpen"></span>
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>

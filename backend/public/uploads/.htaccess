@@ -1,0 +1,27 @@
+# Autoriser l'accès aux fichiers uploadés
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+</IfModule>
+
+# Autoriser les types MIME vidéo
+<IfModule mod_mime.c>
+    AddType video/mp4 .mp4
+    AddType video/webm .webm
+    AddType video/ogg .ogv
+    AddType video/quicktime .mov
+    AddType video/x-msvideo .avi
+</IfModule>
+
+# Activer la compression pour les vidéos
+<IfModule mod_deflate.c>
+    # Ne pas compresser les vidéos (déjà compressées)
+</IfModule>
+
+# Cache pour les vidéos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType video/mp4 "access plus 1 year"
+    ExpiresByType video/webm "access plus 1 year"
+    ExpiresByType video/ogg "access plus 1 year"
+</IfModule>

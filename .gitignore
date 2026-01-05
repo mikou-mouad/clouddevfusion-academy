@@ -1,0 +1,46 @@
+# Fichiers sensibles
+.env
+.env.*
+!.env.example
+*.env.local
+*.env.prod
+
+# Backend (Symfony)
+backend/var/
+backend/vendor/
+backend/.env
+backend/.env.*
+backend/public/bundles/
+backend/config/secrets/
+
+# Frontend (Angular)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.sass-cache/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Scripts de déploiement (optionnel - vous pouvez les inclure si vous voulez)
+# deploy-*.sh
+# upload-*.sh
+# test-*.sh
+
+# Fichiers temporaires
+*.tmp
+*.temp
+tmp/
+temp/

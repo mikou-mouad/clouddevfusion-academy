@@ -1,0 +1,28 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterModule } from '@angular/router';
+import { TrainersComponent } from './trainers.component';
+
+describe('TrainersComponent', () => {
+  let component: TrainersComponent;
+  let fixture: ComponentFixture<TrainersComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TrainersComponent, RouterModule.forRoot([])]
+    })
+    .compileComponents();
+
+    fixture = TestBed.createComponent(TrainersComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should have trainers', () => {
+    expect(component.trainers.length).toBeGreaterThan(0);
+  });
+});
+

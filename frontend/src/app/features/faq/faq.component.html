@@ -1,0 +1,47 @@
+<div class="faq-page">
+  <section class="faq-header">
+    <div class="container">
+      <h1>Questions fréquentes</h1>
+      <p>Retrouvez les réponses aux questions les plus courantes</p>
+    </div>
+  </section>
+
+  <section class="faq-content">
+    <div class="container">
+      <div class="faq-categories">
+        <button 
+          *ngFor="let category of categories" 
+          [class.active]="selectedCategory === category"
+          (click)="selectedCategory = category"
+          class="category-btn">
+          {{ category }}
+        </button>
+      </div>
+
+      <div class="faq-list">
+        <div class="loading-state" *ngIf="loading">
+          <p>Chargement des questions fréquentes...</p>
+        </div>
+        
+        <div class="error-state" *ngIf="error && !loading">
+          <p>{{ error }}</p>
+        </div>
+        
+        <div class="faq-item" *ngFor="let faq of filteredFaqs">
+          <div class="faq-question" (click)="toggleFaq(faq)">
+            <h3>{{ faq.question }}</h3>
+            <span class="faq-icon">{{ faq.open ? '−' : '+' }}</span>
+          </div>
+          <div class="faq-answer" [class.open]="faq.open">
+            <p>{{ faq.answer }}</p>
+          </div>
+        </div>
+        
+        <div class="empty-state" *ngIf="!loading && !error && filteredFaqs.length === 0">
+          <p>Aucune question fréquente disponible pour cette catégorie.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+

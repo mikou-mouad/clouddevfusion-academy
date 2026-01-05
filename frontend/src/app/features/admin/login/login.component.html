@@ -1,0 +1,57 @@
+<div class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="assets/cdfL.png" alt="CloudDev Fusion" class="login-logo">
+        <h1>Connexion Admin</h1>
+        <p class="login-subtitle">Accédez au back office</p>
+      </div>
+
+      <form class="login-form" (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <div class="error-message" *ngIf="error">{{ error }}</div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            [(ngModel)]="email" 
+            name="email" 
+            placeholder="admin@clouddevfusion.com"
+            class="form-input"
+            required
+            [disabled]="loading">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input 
+            type="password" 
+            id="password" 
+            [(ngModel)]="password" 
+            name="password" 
+            placeholder="••••••••"
+            class="form-input"
+            required
+            [disabled]="loading">
+        </div>
+
+        <button 
+          type="submit" 
+          class="btn btn-primary btn-block" 
+          [disabled]="loading || !email || !password">
+          <span *ngIf="loading">Connexion...</span>
+          <span *ngIf="!loading">Se connecter</span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <p class="login-info">
+          <strong>Comptes par défaut</strong><br>
+          Admin - admin&#64;clouddevfusion.com / admin123<br>
+          Super Admin - superadmin&#64;clouddevfusion.com / superadmin123
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

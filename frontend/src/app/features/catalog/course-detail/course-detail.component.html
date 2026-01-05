@@ -1,0 +1,272 @@
+<div class="course-detail-page">
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="container">
+      <p>Chargement de la formation...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-state" *ngIf="error && !loading">
+    <div class="container">
+      <p>{{ error }}</p>
+    </div>
+  </div>
+
+  <!-- Course Content -->
+  <div *ngIf="course && !loading">
+    <!-- Hero Section -->
+    <section class="course-hero">
+      <div class="container">
+        <div class="course-hero-content">
+          <div class="course-hero-main">
+            <div class="course-badge-hero" [class]="'badge-' + course.level.toLowerCase()">
+              {{ course.level }}
+            </div>
+            <h1>{{ course.title }}</h1>
+            <p class="course-code-hero">{{ course.code }}</p>
+            <p class="course-description-hero" *ngIf="course.description">{{ course.description }}</p>
+            
+            <div class="course-hero-meta">
+              <div class="hero-meta-item" *ngIf="course.duration">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>{{ course.duration }}</span>
+              </div>
+              <div class="hero-meta-item" *ngIf="course.format">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{{ course.format }}</span>
+              </div>
+              <div class="hero-meta-item" *ngIf="course.accessDelay">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <span>{{ course.accessDelay }}</span>
+              </div>
+              <div class="hero-meta-item" *ngIf="course.certification">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
+                </svg>
+                <span>{{ course.certification }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="course-hero-sidebar">
+            <div class="price-card">
+              <div class="price-label">Prix de la formation</div>
+              <div class="price-value">{{ getCoursePrice(course) }}€ <span class="price-tax">HT</span></div>
+              <div class="price-note">Financement CPF disponible</div>
+            </div>
+          
+          <div class="hero-actions">
+            <a routerLink="/contact" class="btn btn-primary btn-large">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Prendre rendez-vous
+            </a>
+            <a routerLink="/registration" class="btn btn-secondary btn-large">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <path d="M20 8v6M23 11h-6"/>
+              </svg>
+              S'inscrire avec le CPF
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <!-- Dates à venir -->
+    <section class="upcoming-dates-section" *ngIf="course.nextDate">
+      <div class="upcoming-dates-content">
+        <div class="section-header-modern">
+          <h2>Prochaine session</h2>
+          <p class="section-subtitle-modern">Date de la prochaine formation</p>
+        </div>
+        <div class="date-card-modern" *ngIf="formatDate(course.nextDate)">
+          <div class="date-content-modern">
+            <div class="date-day-modern">{{ formatDate(course.nextDate)!.day }}</div>
+            <div class="date-month-modern">{{ formatDate(course.nextDate)!.month }}</div>
+            <div class="date-year-modern">{{ formatDate(course.nextDate)!.year }}</div>
+          </div>
+          <div class="date-info-modern">
+            <div class="date-format-modern" *ngIf="course.format">{{ course.format }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="course-content-modern">
+        <section class="content-section-modern objectives-section" *ngIf="course.objectives && course.objectives.length > 0">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Objectifs</h2>
+              <p class="section-subtitle-modern">Ce que vous allez apprendre</p>
+            </div>
+            <ul class="content-list-modern">
+              <li *ngFor="let objective of course.objectives">
+                <div class="list-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <span>{{ objective }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="content-section-modern outcomes-section" *ngIf="course.outcomes && course.outcomes.length > 0">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Résultats attendus</h2>
+              <p class="section-subtitle-modern">Compétences acquises à l'issue de la formation</p>
+            </div>
+            <ul class="content-list-modern">
+              <li *ngFor="let outcome of course.outcomes">
+                <div class="list-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <span>{{ outcome }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="content-section-modern target-roles-section" *ngIf="course.targetRoles && course.targetRoles.length > 0">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Rôles ciblés</h2>
+              <p class="section-subtitle-modern">Public concerné par cette formation</p>
+            </div>
+            <div class="roles-grid-modern">
+              <div class="role-badge-modern" *ngFor="let role of course.targetRoles">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                </svg>
+                {{ role }}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section-modern prerequisites-section" *ngIf="course.prerequisites && course.prerequisites.length > 0">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Prérequis</h2>
+              <p class="section-subtitle-modern">Connaissances nécessaires avant de commencer</p>
+            </div>
+            <ul class="content-list-modern">
+              <li *ngFor="let prereq of course.prerequisites">
+                <div class="list-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <span>{{ prereq }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="content-section-modern syllabus-section" *ngIf="course.syllabus && course.syllabus.length > 0">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Programme détaillé</h2>
+              <p class="section-subtitle-modern">Contenu de la formation et laboratoires pratiques</p>
+            </div>
+            <div class="modules-list-modern">
+              <div class="module-modern" *ngFor="let module of course.syllabus; let i = index">
+                <div class="module-header-modern">
+                  <span class="module-number-modern">Module {{ i + 1 }}</span>
+                  <h3>{{ module.title }}</h3>
+                </div>
+                <p class="module-description-modern" *ngIf="module.description">{{ module.description }}</p>
+                <div class="labs-section-modern" *ngIf="module.labs && module.labs.length > 0">
+                  <h4>Laboratoires pratiques</h4>
+                  <ul class="labs-list-modern">
+                    <li *ngFor="let lab of module.labs">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                      </svg>
+                      <span class="lab-name-modern">{{ lab.name }}</span>
+                      <span class="lab-duration-modern" *ngIf="lab.duration">{{ lab.duration }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Financement -->
+        <section class="content-section-modern funding-section-modern">
+          <div class="content-wrapper">
+            <div class="section-header-modern">
+              <h2>Financement</h2>
+              <p class="section-subtitle-modern">Cette formation est éligible aux dispositifs de financement suivants</p>
+            </div>
+            <div class="funding-options-modern">
+              <div class="funding-option-modern">
+                <div class="funding-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                </div>
+                <div class="funding-content-modern">
+                  <strong>CPF</strong>
+                  <span>Compte Personnel de Formation</span>
+                </div>
+              </div>
+              <div class="funding-option-modern">
+                <div class="funding-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <div class="funding-content-modern">
+                  <strong>OPCO</strong>
+                  <span>Opérateurs de Compétences</span>
+                </div>
+              </div>
+              <div class="funding-option-modern">
+                <div class="funding-icon">
+                  <img src="assets/France-travail-2023.png" alt="France Travail" class="france-travail-logo">
+                </div>
+                <div class="funding-content-modern">
+                  <strong>France Travail</strong>
+                  <span>Aide à la formation</span>
+                </div>
+              </div>
+            </div>
+            <a routerLink="/registration" class="funding-link-modern">
+              En savoir plus sur le financement
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        </section>
+      </div>
+  </div>
+</div>
+

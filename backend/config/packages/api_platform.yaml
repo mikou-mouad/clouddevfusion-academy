@@ -1,0 +1,25 @@
+api_platform:
+    title: CloudDev Fusion API
+    version: 1.0.0
+    formats:
+        json:
+            mime_types:
+                - application/json
+        jsonld:
+            mime_types:
+                - application/ld+json
+    patch_formats:
+        json:
+            mime_types:
+                - application/merge-patch+json
+    error_formats:
+        jsonproblem:
+            mime_types:
+                - application/problem+json
+    defaults:
+        formats:
+            json: ['application/json']
+        stateless: true
+        normalization_context:
+            enable_max_depth: true
+

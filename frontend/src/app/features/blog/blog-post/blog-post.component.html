@@ -1,0 +1,133 @@
+<div class="blog-post-page">
+  <div class="loading-state" *ngIf="loading">
+    <p>Chargement de l'article...</p>
+  </div>
+  
+  <div class="error-state" *ngIf="error">
+    <p>{{ error }}</p>
+    <a routerLink="/blog" class="btn btn-primary">Retour au blog</a>
+  </div>
+
+  <article class="post" *ngIf="post && !loading && !error">
+    <div class="post-header">
+      <div class="container">
+        <div class="post-meta">
+          <span class="category" *ngIf="post?.category">{{ post.category }}</span>
+          <span class="date" *ngIf="post?.createdAt">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Publié le {{ post.createdAt | date:'dd MMMM yyyy' }}
+          </span>
+          <span class="read-time" *ngIf="post.readTime">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {{ post.readTime }} min de lecture
+          </span>
+        </div>
+        <h1>{{ post.title }}</h1>
+        <div class="post-author">
+          <strong>{{ post.author }}</strong>
+        </div>
+      </div>
+    </div>
+    
+    <div class="post-layout">
+        <div class="post-main">
+          <div class="post-image" *ngIf="post.image">
+            <img [src]="post.image" [alt]="post.title">
+          </div>
+          
+          <div class="post-content" [innerHTML]="formatContent(post.content)"></div>
+          
+          <div class="post-share">
+            <h3>Partager cet article</h3>
+            <div class="share-buttons">
+              <a href="#" class="share-btn share-facebook" title="Partager sur Facebook">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                </svg>
+                Facebook
+              </a>
+              <a href="#" class="share-btn share-twitter" title="Partager sur Twitter">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                </svg>
+                Twitter
+              </a>
+              <a href="#" class="share-btn share-linkedin" title="Partager sur LinkedIn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H6v-7h3v7zM7.5 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM18 17h-3v-3.5c0-1.38-.5-1.5-1-1.5s-1 .12-1 1.5V17h-3v-7h3v1c.4-.6 1.1-1 2-1 1.5 0 3 1.1 3 3.5V17z"/>
+                </svg>
+                LinkedIn
+              </a>
+            </div>
+          </div>
+          
+          <div class="post-actions">
+            <a routerLink="/catalog" class="btn btn-primary">Voir nos formations</a>
+            <a routerLink="/blog" class="btn btn-secondary">Retour au blog</a>
+          </div>
+        </div>
+        
+        <aside class="post-sidebar">
+          <div class="sidebar-card contact-card">
+            <h3>Besoin d'aide ?</h3>
+            <p>Nos experts sont là pour vous accompagner dans votre parcours Azure.</p>
+            <a routerLink="/contact" class="btn btn-primary btn-block">Nous contacter</a>
+            <div class="contact-info">
+              <a href="tel:+33758597595" class="contact-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                +33 7 58 59 75 95
+              </a>
+                  <a href="mailto:contact&#64;clouddevfusion.com" class="contact-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    contact&#64;clouddevfusion.com
+                  </a>
+            </div>
+          </div>
+          
+          <div class="sidebar-card newsletter-card">
+            <h3>Newsletter</h3>
+            <p>Recevez nos derniers articles et guides Azure</p>
+            <form class="newsletter-form" (ngSubmit)="subscribeNewsletter()">
+              <input type="email" placeholder="Votre email" [(ngModel)]="newsletterEmail" name="newsletterEmail" required>
+              <button type="submit" class="btn btn-primary btn-block">S'abonner</button>
+            </form>
+          </div>
+          
+          <div class="sidebar-card related-posts-card" *ngIf="relatedPosts.length > 0">
+            <h3>Articles similaires</h3>
+            <div class="related-posts">
+              <a *ngFor="let relatedPost of relatedPosts" [routerLink]="['/blog', relatedPost.slug]" class="related-post-item">
+                <h4>{{ relatedPost.title }}</h4>
+                <span class="related-post-date">{{ relatedPost.createdAt | date:'dd MMM yyyy' }}</span>
+              </a>
+            </div>
+          </div>
+          
+          <div class="sidebar-card courses-card" *ngIf="popularCourses.length > 0">
+            <h3>Formations populaires</h3>
+            <div class="courses-list">
+              <a *ngFor="let course of popularCourses" [routerLink]="['/catalog', course.code]" class="course-item">
+                <strong>{{ course.title }}</strong>
+                <span class="course-level">{{ course.level }}</span>
+              </a>
+            </div>
+            <a routerLink="/catalog" class="btn btn-secondary btn-block">Voir toutes les formations</a>
+          </div>
+        </aside>
+      </div>
+  </article>
+</div>
+
