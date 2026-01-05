@@ -34,10 +34,18 @@ Thumbs.db
 *.log
 logs/
 
-# Scripts de déploiement (optionnel - vous pouvez les inclure si vous voulez)
-# deploy-*.sh
-# upload-*.sh
-# test-*.sh
+# Scripts de déploiement et utilitaires
+*.sh
+!backend/bin/console
+deploy-*.sh
+upload-*.sh
+test-*.sh
+check-*.sh
+fix-*.sh
+create-*.sh
+copy-*.sh
+move-*.sh
+generate-*.sh
 
 # Fichiers temporaires
 *.tmp
