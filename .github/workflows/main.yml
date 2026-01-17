@@ -132,9 +132,7 @@ jobs:
           set cmd:fail-exit no
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           cd ${BACKEND_REMOTE}
-          mkdir -p var
-          mkdir -p var/cache
-          mkdir -p var/log
+
           bye
           "
       - name: Verify backend endpoint
