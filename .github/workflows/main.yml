@@ -155,24 +155,6 @@ jobs:
           npm run build
           test -d dist
           
-      - name: Upload root .htaccess
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-        run: |
-          echo "Uploading .htaccess to document root"
-
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          put .htaccess -o .htaccess
-          bye
-          "
       - name: Upload dist to FTP (delete removed files)
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
