@@ -131,9 +131,9 @@ jobs:
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           cd ${BACKEND_REMOTE}
-          mkdir -p var
-          mkdir -p var/cache
-          mkdir -p var/log
+          mkdir var || true
+          mkdir var/cache || true
+          mkdir var/log || true
           bye
           "
       - name: Verify backend endpoint
