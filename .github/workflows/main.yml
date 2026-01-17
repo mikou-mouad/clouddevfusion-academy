@@ -66,6 +66,23 @@ jobs:
             --optimize-autoloader \
             --no-scripts
 
+      - name: Prepare .env.prod for deployment
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ALLOW_ORIGIN: ${{ secrets.CORS_ALLOW_ORIGIN }}
+          APP_ENV: prod
+          APP_DEBUG: "0"
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+        run: |
+          cat > backend/.env.prod << EOF
+          APP_ENV=${APP_ENV}
+          APP_DEBUG=${APP_DEBUG}
+          APP_SECRET=${APP_SECRET}
+          DATABASE_URL=${DATABASE_URL}
+          CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+          EOF
+          cat backend/.env.prod
+
       - name: Upload backend files (excluding vendor/var/.env)
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -94,6 +111,25 @@ jobs:
           bye
           "
 
+      - name: Upload .env.prod as .env to production
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          cd ${BACKEND_REMOTE}
+          put -E backend/.env.prod ./.env
+          bye
+          "
+
       - name: Upload vendor (only when deps changed)
         if: ${{ needs.changes.outputs.backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
         env:
@@ -116,6 +152,13 @@ jobs:
             backend/vendor/ ./
           bye
           "
+          
+      - name: Clear Symfony cache
+        run: |
+          sleep 2
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/backend/public/clear-cache-complete.php" || echo "000")"
+          echo "Cache clear HTTP code: $code"
+          sleep 2
           
       - name: Verify backend endpoint
         run: |
