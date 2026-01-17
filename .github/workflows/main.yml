@@ -66,7 +66,7 @@ jobs:
             --optimize-autoloader \
             --no-scripts
 
-      - name: Prepare .env.prod for deployment
+      - name: Prepare .env for deployment
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CORS_ALLOW_ORIGIN: ${{ secrets.CORS_ALLOW_ORIGIN }}
@@ -74,16 +74,16 @@ jobs:
           APP_DEBUG: "0"
           APP_SECRET: ${{ secrets.APP_SECRET }}
         run: |
-          cat > backend/.env.prod << EOF
+          cat > backend/.env << EOF
           APP_ENV=${APP_ENV}
           APP_DEBUG=${APP_DEBUG}
           APP_SECRET=${APP_SECRET}
           DATABASE_URL=${DATABASE_URL}
           CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
           EOF
-          cat backend/.env.prod
+          cat backend/.env
 
-      - name: Upload backend files (excluding vendor/var/.env)
+      - name: Upload backend files (including .env)
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -101,32 +101,14 @@ jobs:
           cd ${BACKEND_REMOTE}
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
-            --exclude-glob='.env*' \
+            --exclude-glob='.env.local' \
+            --exclude-glob='.env.*.local' \
             --exclude-glob='var/' \
             --exclude-glob='vendor/' \
             --exclude-glob='node_modules/' \
             --exclude-glob='*.log' \
             --exclude-glob='.DS_Store' \
             backend/ ./
-          bye
-          "
-
-      - name: Upload .env.prod as .env to production
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          cd ${BACKEND_REMOTE}
-          put .env.prod -./.env
           bye
           "
 
