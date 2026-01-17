@@ -1,4 +1,4 @@
-# KubeLaunch by CloudDevFusion
+# CloudAcademy by CloudDevFusion
 
 Plateforme de formation Azure et Kubernetes - Projet Angular + Symfony
 

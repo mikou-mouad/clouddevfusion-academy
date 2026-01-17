@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "kubelaunch": {
+    "cloudacademy": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/kubelaunch",
+            "outputPath": "dist/cloudacademy",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -67,10 +67,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "kubelaunch:build:production"
+              "buildTarget": "cloudacademy:build:production"
             },
             "development": {
-              "buildTarget": "kubelaunch:build:development"
+              "buildTarget": "cloudacademy:build:development"
             }
           },
           "defaultConfiguration": "development"
