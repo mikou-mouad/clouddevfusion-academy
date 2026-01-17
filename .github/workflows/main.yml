@@ -39,7 +39,7 @@ jobs:
     name: Deploy Backend (Symfony)
     runs-on: ubuntu-latest
     needs: changes
-    # if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout
@@ -155,7 +155,7 @@ jobs:
     name: Deploy Frontend (Angular)
     runs-on: ubuntu-latest
     needs: changes 
-    # if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
     
     steps:
       - name: Checkout
