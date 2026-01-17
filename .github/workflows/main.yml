@@ -36,7 +36,8 @@ jobs:
             --no-dev \
             --prefer-dist \
             --no-interaction \
-            --optimize-autoloader
+            --optimize-autoloader \
+            --no-scripts
 
       - name: Upload backend files (excluding vendor/var/.env)
         env:
