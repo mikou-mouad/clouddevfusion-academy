@@ -207,6 +207,25 @@ jobs:
           bye
           "
 
+      - name: Upload .htaccess to root
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          cd ${FRONTEND_REMOTE}
+          put .htaccess
+          bye
+          "
+
       - name: Verify frontend (retry)
         run: |
           set -e
