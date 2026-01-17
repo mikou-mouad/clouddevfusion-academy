@@ -182,11 +182,28 @@ jobs:
           bye
           "
 
-      - name: Verify frontend
+      - name: Verify frontend (retry)
         run: |
-          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com" || echo "000")"
-          echo "HTTP_CODE=$code"
-          if [ "$code" != "200" ] && [ "$code" != "301" ] && [ "$code" != "302" ]; then
-            echo "Unexpected frontend status: $code"
-            exit 1
-          fi
+          set -e
+
+          URL="https://academy.clouddevfusion.com"
+          MAX_RETRIES=10
+          SLEEP_SECONDS=6
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            code="$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")"
+            echo "Attempt $i/$MAX_RETRIES → HTTP $code"
+
+            if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
+              echo "Frontend is up"
+              exit 0
+            fi
+
+            if [ "$i" -lt "$MAX_RETRIES" ]; then
+              echo "Waiting ${SLEEP_SECONDS}s before retry..."
+              sleep "$SLEEP_SECONDS"
+            fi
+          done
+
+          echo "Frontend did not recover after ${MAX_RETRIES} attempts"
+          exit 1
