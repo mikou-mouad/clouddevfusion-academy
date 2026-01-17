@@ -84,7 +84,6 @@ jobs:
           cd ${BACKEND_REMOTE}
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
-            --exclude-glob='.env*' \
             --exclude-glob='var/' \
             --exclude-glob='vendor/' \
             --exclude-glob='node_modules/' \
@@ -116,25 +115,7 @@ jobs:
             backend/vendor/ ./
           bye
           "
-      - name: Ensure Symfony var folders exist
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          set cmd:fail-exit no
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          cd ${BACKEND_REMOTE}
 
-          bye
-          "
       - name: Verify backend endpoint
         run: |
           code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/api/courses" || echo "000")"
