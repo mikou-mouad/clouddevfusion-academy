@@ -379,7 +379,7 @@
                   @if (testimonial?.author) {
                     <div class="testimonial-author">
                       <div class="author-avatar">
-                        <div class="avatar-initial">{{ testimonial.author.charAt(0) || '?' }}</div>
+                        <div class="avatar-initial">{{ testimonial.author?.charAt(0) || '?' }}</div>
                       </div>
                       <div class="author-details">
                         <h4 class="author-name">{{ testimonial.author }}</h4>
