@@ -185,7 +185,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       description: 'Membre du programme Microsoft Training Partners, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
     },
     {
-      icon: 'cpf',
+      icon: 'flexible',
       title: 'Financement CPF',
       description: 'Éligible au financement CPF, OPCO et autres dispositifs, directement ou à travers nos partenaires, pour faciliter votre accès à la formation.'
     },
@@ -200,7 +200,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       description: 'Groupes de 5 ou 6 Personnes avec accompagnement personnalisé avant, pendant et après la formation avec un support dédié.'
     },
     {
-      icon: 'flexible',
+      icon: 'cpf',
       title: 'Formats Flexibles',
       description: 'Formations en présentiel, distanciel ou hybride, adaptées à vos contraintes et votre rythme.'
     }
