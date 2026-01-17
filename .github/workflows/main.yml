@@ -84,6 +84,7 @@ jobs:
           cd ${BACKEND_REMOTE}
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
+            --exclude-glob='.env*' \
             --exclude-glob='var/' \
             --exclude-glob='vendor/' \
             --exclude-glob='node_modules/' \
@@ -115,7 +116,7 @@ jobs:
             backend/vendor/ ./
           bye
           "
-
+          
       - name: Verify backend endpoint
         run: |
           code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/api/courses" || echo "000")"
