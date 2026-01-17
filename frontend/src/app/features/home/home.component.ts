@@ -183,12 +183,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       icon: 'labs',
       title: 'Certifié Microsoft',
-      description: 'Partenaire Microsoft Gold certifié, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
+      description: 'Membre du programme Microsoft Training Partners, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
     },
     {
       icon: 'cpf',
       title: 'Financement CPF',
-      description: 'Éligible au financement CPF, OPCO et autres dispositifs pour faciliter votre accès à la formation.'
+      description: 'Éligible au financement CPF, OPCO et autres dispositifs, directement ou à travers nos partenaires, pour faciliter votre accès à la formation.'
     },
     {
       icon: 'expert',
@@ -197,8 +197,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     },
     {
       icon: 'support',
-      title: 'Support Continu',
-      description: 'Accompagnement personnalisé avant, pendant et après la formation avec un support dédié.'
+      title: 'Groupes Restreints & Support Continu',
+      description: 'Groupes de 5 ou 6 Personnes avec accompagnement personnalisé avant, pendant et après la formation avec un support dédié.'
     },
     {
       icon: 'flexible',
