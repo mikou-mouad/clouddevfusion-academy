@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ApiService, Faq } from '../../core/services/api.service';
 
 @Component({
     selector: 'app-faq',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './faq.component.html',
     styleUrls: ['./faq.component.scss']
 })

@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Testimonial } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-admin-testimonials',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './testimonials.component.html',
     styleUrls: ['./testimonials.component.scss']
 })

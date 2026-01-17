@@ -2,12 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { HeaderComponent } from './core/components/header/header.component';
 import { FooterComponent } from './core/components/footer/footer.component';
-import { CommonModule, ViewportScroller } from '@angular/common';
+import { ViewportScroller } from '@angular/common';
 import { filter } from 'rxjs/operators';
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, HeaderComponent, FooterComponent, CommonModule],
+    imports: [RouterOutlet, HeaderComponent, FooterComponent],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss']
 })

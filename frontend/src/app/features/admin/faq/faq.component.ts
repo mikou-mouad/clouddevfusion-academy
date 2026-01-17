@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Faq } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-admin-faq',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './faq.component.html',
     styleUrls: ['./faq.component.scss']
 })

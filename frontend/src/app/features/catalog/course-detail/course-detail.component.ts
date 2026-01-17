@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService, Course } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-course-detail',
-    imports: [CommonModule, RouterLink],
+    imports: [RouterLink],
     templateUrl: './course-detail.component.html',
     styleUrls: ['./course-detail.component.scss']
 })

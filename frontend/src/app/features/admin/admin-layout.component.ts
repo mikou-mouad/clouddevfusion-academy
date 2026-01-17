@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 import { AuthService, User } from '../../core/services/auth.service';
 import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-admin-layout',
-    imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+    imports: [RouterLink, RouterLinkActive, RouterOutlet],
     templateUrl: './admin-layout.component.html',
     styleUrls: ['./admin-layout.component.scss']
 })

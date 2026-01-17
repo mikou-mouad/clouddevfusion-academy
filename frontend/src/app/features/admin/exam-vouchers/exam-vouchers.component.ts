@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, ExamVoucher } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-admin-exam-vouchers',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './exam-vouchers.component.html',
     styleUrls: ['./exam-vouchers.component.scss']
 })

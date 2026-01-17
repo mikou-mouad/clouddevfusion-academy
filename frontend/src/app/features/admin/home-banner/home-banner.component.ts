@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, HomeBanner } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-admin-home-banner',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './home-banner.component.html',
     styleUrls: ['./home-banner.component.scss']
 })

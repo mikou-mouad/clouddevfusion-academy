@@ -22,21 +22,21 @@
         <h2>Qui sommes-nous ?</h2>
         <p class="section-subtitle">Votre expert en formations Azure certifiantes</p>
       </div>
-      
+
       <div class="about-content">
         <div class="about-text-wrapper">
           <p class="about-text">
             CloudDev Fusion est un partenaire Microsoft certifié Gold, spécialisé dans les formations Azure.
-            Nous offrons des formations de haut niveau adaptées à tous les profils, avec une expertise 
+            Nous offrons des formations de haut niveau adaptées à tous les profils, avec une expertise
             reconnue dans le cloud computing et les solutions Microsoft Azure.
           </p>
           <p class="about-text">
-            Notre équipe de formateurs certifiés MCT (Microsoft Certified Trainers) partage son expérience 
-            terrain pour vous accompagner vers la réussite de vos certifications tout en développant des 
+            Notre équipe de formateurs certifiés MCT (Microsoft Certified Trainers) partage son expérience
+            terrain pour vous accompagner vers la réussite de vos certifications tout en développant des
             compétences directement applicables en entreprise.
           </p>
         </div>
-        
+
         <div class="partnership-card">
           <div class="partnership-header">
             <img src="assets/Microsoft-logo.png" alt="Microsoft" class="microsoft-logo-img">
@@ -79,25 +79,33 @@
         <p class="section-subtitle">Des formations adaptées à chaque besoin</p>
       </div>
       <div class="targets-grid">
-        <div class="target-card" *ngFor="let target of targets">
-          <div class="target-icon-wrapper">
-            <svg *ngIf="target.icon === '🏢'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
-              <path d="M9 9v0M9 12v0M9 15v0M9 18v0"/>
-            </svg>
-            <svg *ngIf="target.icon === '👥'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            <svg *ngIf="target.icon === '👤'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
+        @for (target of targets; track target) {
+          <div class="target-card">
+            <div class="target-icon-wrapper">
+              @if (target.icon === '🏢') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
+                  <path d="M9 9v0M9 12v0M9 15v0M9 18v0"/>
+                </svg>
+              }
+              @if (target.icon === '👥') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              }
+              @if (target.icon === '👤') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              }
+            </div>
+            <h3>{{ target.title }}</h3>
+            <p>{{ target.description }}</p>
           </div>
-          <h3>{{ target.title }}</h3>
-          <p>{{ target.description }}</p>
-        </div>
+        }
       </div>
     </div>
   </section>
@@ -115,9 +123,9 @@
           <h2>Notre mission</h2>
         </div>
         <p class="mission-text">
-          Former les professionnels aux technologies cloud Microsoft Azure en privilégiant 
-          une approche pratique avec des laboratoires concrets et des cas d'usage réels. 
-          Notre objectif est de vous accompagner vers la réussite de vos certifications 
+          Former les professionnels aux technologies cloud Microsoft Azure en privilégiant
+          une approche pratique avec des laboratoires concrets et des cas d'usage réels.
+          Notre objectif est de vous accompagner vers la réussite de vos certifications
           tout en développant des compétences directement applicables en entreprise.
         </p>
         <div class="mission-values">
@@ -152,16 +160,18 @@
         <p class="section-subtitle">Nos formateurs sont tous certifiés Microsoft et possèdent une expertise terrain approfondie</p>
       </div>
       <div class="certifications-grid">
-        <div class="cert-item" *ngFor="let cert of trainerCertifications">
-          <div class="cert-header">
-            <div class="cert-badge">{{ cert.code }}</div>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
-            </svg>
+        @for (cert of trainerCertifications; track cert) {
+          <div class="cert-item">
+            <div class="cert-header">
+              <div class="cert-badge">{{ cert.code }}</div>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
+              </svg>
+            </div>
+            <h4>{{ cert.name }}</h4>
+            <p>{{ cert.description }}</p>
           </div>
-          <h4>{{ cert.name }}</h4>
-          <p>{{ cert.description }}</p>
-        </div>
+        }
       </div>
     </div>
   </section>
@@ -216,34 +226,44 @@
         <p class="section-subtitle">Choisissez le format qui correspond à vos besoins</p>
       </div>
       <div class="formats-grid">
-        <div class="format-card" *ngFor="let format of deliveryFormats">
-          <div class="format-icon-wrapper">
-            <svg *ngIf="format.icon === '💻'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-            <svg *ngIf="format.icon === '🏢'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
-              <path d="M9 9v0M9 12v0M9 15v0M9 18v0"/>
-            </svg>
-            <svg *ngIf="format.icon === '🔄'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23 4 23 10 17 10"/>
-              <polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
+        @for (format of deliveryFormats; track format) {
+          <div class="format-card">
+            <div class="format-icon-wrapper">
+              @if (format.icon === '💻') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+              }
+              @if (format.icon === '🏢') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
+                  <path d="M9 9v0M9 12v0M9 15v0M9 18v0"/>
+                </svg>
+              }
+              @if (format.icon === '🔄') {
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              }
+            </div>
+            <h3>{{ format.name }}</h3>
+            <p>{{ format.description }}</p>
+            <ul class="format-features">
+              @for (feature of format.features; track feature) {
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span>{{ feature }}</span>
+                </li>
+              }
+            </ul>
           </div>
-          <h3>{{ format.name }}</h3>
-          <p>{{ format.description }}</p>
-          <ul class="format-features">
-            <li *ngFor="let feature of format.features">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span>{{ feature }}</span>
-            </li>
-          </ul>
-        </div>
+        }
       </div>
     </div>
   </section>
@@ -253,11 +273,13 @@
     <div class="container">
       <h2>Indicateurs de qualité</h2>
       <div class="kpis-grid">
-        <div class="kpi-card" *ngFor="let kpi of qualityKPIs">
-          <div class="kpi-value">{{ kpi.value }}</div>
-          <div class="kpi-label">{{ kpi.label }}</div>
-          <p class="kpi-description">{{ kpi.description }}</p>
-        </div>
+        @for (kpi of qualityKPIs; track kpi) {
+          <div class="kpi-card">
+            <div class="kpi-value">{{ kpi.value }}</div>
+            <div class="kpi-label">{{ kpi.label }}</div>
+            <p class="kpi-description">{{ kpi.description }}</p>
+          </div>
+        }
       </div>
     </div>
   </section>
@@ -268,10 +290,16 @@
       <h2>Nos partenariats</h2>
       <p class="section-intro">Nous collaborons avec les meilleurs acteurs du secteur pour vous offrir une formation d'excellence.</p>
       <div class="partners-grid">
-        <div class="partner-logo" *ngFor="let partner of partners">
-          <img [src]="partner.logo" [alt]="partner.name" *ngIf="partner.logo">
-          <div class="partner-name" *ngIf="!partner.logo">{{ partner.name }}</div>
-        </div>
+        @for (partner of partners; track partner) {
+          <div class="partner-logo">
+            @if (partner.logo) {
+              <img [src]="partner.logo" [alt]="partner.name">
+            }
+            @if (!partner.logo) {
+              <div class="partner-name">{{ partner.name }}</div>
+            }
+          </div>
+        }
       </div>
     </div>
   </section>

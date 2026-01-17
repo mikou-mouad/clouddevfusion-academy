@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Course } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-catalog-list',
-    imports: [CommonModule, RouterLink, FormsModule],
+    imports: [RouterLink, FormsModule],
     templateUrl: './catalog-list.component.html',
     styleUrls: ['./catalog-list.component.scss']
 })

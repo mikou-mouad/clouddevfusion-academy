@@ -1,29 +1,29 @@
 <div class="admin-courses-page">
-    <div class="page-header">
-      <div class="header-title-section">
-        <h1>Gestion du catalogue</h1>
-      </div>
-      <button class="btn btn-primary" (click)="openAddModal()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Ajouter une formation
-      </button>
+  <div class="page-header">
+    <div class="header-title-section">
+      <h1>Gestion du catalogue</h1>
     </div>
+    <button class="btn btn-primary" (click)="openAddModal()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Ajouter une formation
+    </button>
+  </div>
 
-    <!-- Barre de recherche et filtres -->
-    <div class="search-filters">
-      <div class="search-bar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input 
-          type="text" 
-          placeholder="Rechercher une formation..." 
-          [(ngModel)]="searchQuery"
-          (input)="applyFilters()">
+  <!-- Barre de recherche et filtres -->
+  <div class="search-filters">
+    <div class="search-bar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input
+        type="text"
+        placeholder="Rechercher une formation..."
+        [(ngModel)]="searchQuery"
+        (input)="applyFilters()">
       </div>
       <div class="filters-group">
         <select [(ngModel)]="filterLevel" (change)="applyFilters()">
@@ -42,495 +42,568 @@
     </div>
 
     <!-- Liste des formations -->
-    <div class="loading-state" *ngIf="loading && courses.length === 0">
-      <p>Chargement...</p>
-    </div>
+    @if (loading && courses.length === 0) {
+      <div class="loading-state">
+        <p>Chargement...</p>
+      </div>
+    }
 
-    <div class="error-state" *ngIf="error && courses.length === 0">
-      <p>{{ error }}</p>
-    </div>
+    @if (error && courses.length === 0) {
+      <div class="error-state">
+        <p>{{ error }}</p>
+      </div>
+    }
 
     <div class="courses-list">
-      <div class="course-card" *ngFor="let course of paginatedCourses; let i = index">
-        <div class="course-header">
-          <div class="course-info">
-            <h3>{{ course.title }}</h3>
-            <span class="course-code">{{ course.code }}</span>
-            <span class="course-badge" [class]="'badge-' + course.level.toLowerCase()">{{ course.level }}</span>
+      @for (course of paginatedCourses; track course; let i = $index) {
+        <div class="course-card">
+          <div class="course-header">
+            <div class="course-info">
+              <h3>{{ course.title }}</h3>
+              <span class="course-code">{{ course.code }}</span>
+              <span class="course-badge" [class]="'badge-' + course.level.toLowerCase()">{{ course.level }}</span>
+            </div>
+            <div class="course-actions">
+              <button type="button" class="btn-icon" (click)="viewCourseDetails(course, $event)" title="Voir les détails" [disabled]="loading">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+              <button type="button" class="btn-icon" (click)="editCourse(i, $event)" title="Modifier" [disabled]="loading">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button type="button" class="btn-icon btn-danger" (click)="deleteCourse(i, $event)" title="Supprimer" [disabled]="loading">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="course-actions">
-            <button type="button" class="btn-icon" (click)="viewCourseDetails(course, $event)" title="Voir les détails" [disabled]="loading">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+          <div class="course-details">
+            <div class="detail-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
               </svg>
-            </button>
-            <button type="button" class="btn-icon" (click)="editCourse(i, $event)" title="Modifier" [disabled]="loading">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              <span>{{ course.duration }}</span>
+            </div>
+            <div class="detail-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
-            </button>
-            <button type="button" class="btn-icon btn-danger" (click)="deleteCourse(i, $event)" title="Supprimer" [disabled]="loading">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-            </button>
+              <span>{{ course.price }}€</span>
+            </div>
+            @if (course.nextDate) {
+              <div class="detail-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>{{ course.nextDate | date:'shortDate' }}</span>
+              </div>
+            }
+            @if (course.syllabus && course.syllabus.length > 0) {
+              <div class="detail-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span>{{ course.syllabus.length }} module(s), {{ getTotalLabs(course) }} lab(s)</span>
+              </div>
+            }
           </div>
+          <p class="course-description">{{ course.description }}</p>
         </div>
-        <div class="course-details">
-          <div class="detail-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>{{ course.duration }}</span>
-          </div>
-          <div class="detail-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"/>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-            <span>{{ course.price }}€</span>
-          </div>
-          <div class="detail-item" *ngIf="course.nextDate">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span>{{ course.nextDate | date:'shortDate' }}</span>
-          </div>
-          <div class="detail-item" *ngIf="course.syllabus && course.syllabus.length > 0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            <span>{{ course.syllabus.length }} module(s), {{ getTotalLabs(course) }} lab(s)</span>
-          </div>
-        </div>
-        <p class="course-description">{{ course.description }}</p>
-      </div>
+      }
 
-      <div class="empty-state" *ngIf="filteredCourses.length === 0 && !loading">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-        <p>Aucune formation pour le moment</p>
-        <button class="btn btn-primary" (click)="openAddModal()">Ajouter la première formation</button>
-      </div>
+      @if (filteredCourses.length === 0 && !loading) {
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          <p>Aucune formation pour le moment</p>
+          <button class="btn btn-primary" (click)="openAddModal()">Ajouter la première formation</button>
+        </div>
+      }
     </div>
 
     <!-- Pagination -->
-    <div class="pagination-container" *ngIf="filteredCourses.length > itemsPerPage && !loading">
-      <div class="pagination-info">
-        <span>Page {{ currentPage }} sur {{ totalPages }} ({{ filteredCourses.length }} formation{{ filteredCourses.length > 1 ? 's' : '' }})</span>
-      </div>
-      <div class="pagination">
-        <button 
-          class="pagination-btn" 
-          [class.disabled]="currentPage === 1"
-          (click)="goToPage(currentPage - 1)"
-          [disabled]="currentPage === 1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-          Précédent
-        </button>
-        
-        <div class="pagination-numbers">
-          <button 
-            *ngFor="let page of getPageNumbers()" 
-            class="pagination-number"
-            [class.active]="page === currentPage"
-            (click)="goToPage(page)">
-            {{ page }}
+    @if (filteredCourses.length > itemsPerPage && !loading) {
+      <div class="pagination-container">
+        <div class="pagination-info">
+          <span>Page {{ currentPage }} sur {{ totalPages }} ({{ filteredCourses.length }} formation{{ filteredCourses.length > 1 ? 's' : '' }})</span>
+        </div>
+        <div class="pagination">
+          <button
+            class="pagination-btn"
+            [class.disabled]="currentPage === 1"
+            (click)="goToPage(currentPage - 1)"
+            [disabled]="currentPage === 1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Précédent
+          </button>
+          <div class="pagination-numbers">
+            @for (page of getPageNumbers(); track page) {
+              <button
+                class="pagination-number"
+                [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+                {{ page }}
+              </button>
+            }
+          </div>
+          <button
+            class="pagination-btn"
+            [class.disabled]="currentPage === totalPages"
+            (click)="goToPage(currentPage + 1)"
+            [disabled]="currentPage === totalPages">
+            Suivant
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
           </button>
         </div>
-        
-        <button 
-          class="pagination-btn" 
-          [class.disabled]="currentPage === totalPages"
-          (click)="goToPage(currentPage + 1)"
-          [disabled]="currentPage === totalPages">
-          Suivant
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
       </div>
-    </div>
+    }
   </div>
 
   <!-- Modal pour voir les détails -->
-  <div class="modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal()">
-    <div class="modal-content large" (click)="$event.stopPropagation()" *ngIf="selectedCourse">
-      <div class="modal-header">
-        <h2>Détails de la formation</h2>
-        <button class="btn-icon" (click)="closeDetailsModal()">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="course-detail-header">
-          <h3>{{ selectedCourse.title }}</h3>
-          <div class="course-meta-info">
-            <span class="course-code">{{ selectedCourse.code }}</span>
-            <span class="course-badge" [class]="'badge-' + selectedCourse.level.toLowerCase()">{{ selectedCourse.level }}</span>
-            <span class="course-format">{{ selectedCourse.format }}</span>
+  @if (showDetailsModal) {
+    <div class="modal-overlay" (click)="closeDetailsModal()">
+      @if (selectedCourse) {
+        <div class="modal-content large" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Détails de la formation</h2>
+            <button class="btn-icon" (click)="closeDetailsModal()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
-        </div>
-
-        <div class="course-info-grid">
-          <div class="info-item">
-            <label>Durée</label>
-            <p>{{ selectedCourse.duration }}</p>
-          </div>
-          <div class="info-item">
-            <label>Prix</label>
-            <p>{{ selectedCourse.price }}€</p>
-          </div>
-          <div class="info-item" *ngIf="selectedCourse.nextDate">
-            <label>Prochaine date</label>
-            <p>{{ selectedCourse.nextDate | date:'shortDate' }}</p>
-          </div>
-          <div class="info-item" *ngIf="selectedCourse.syllabus && selectedCourse.syllabus.length > 0">
-            <label>Programme</label>
-            <p>{{ selectedCourse.syllabus.length }} module(s), {{ getTotalLabs(selectedCourse) }} lab(s)</p>
-          </div>
-        </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.description">
-          <h4>Description</h4>
-          <p>{{ selectedCourse.description }}</p>
-        </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.objectives && selectedCourse.objectives.length > 0">
-          <h4>Objectifs</h4>
-          <ul>
-            <li *ngFor="let obj of selectedCourse.objectives">{{ obj }}</li>
-          </ul>
-        </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.outcomes && selectedCourse.outcomes.length > 0">
-          <h4>Résultats attendus</h4>
-          <ul>
-            <li *ngFor="let outcome of selectedCourse.outcomes">{{ outcome }}</li>
-          </ul>
-        </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.prerequisites && selectedCourse.prerequisites.length > 0">
-          <h4>Prérequis</h4>
-          <ul>
-            <li *ngFor="let prereq of selectedCourse.prerequisites">{{ prereq }}</li>
-          </ul>
-        </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.targetRoles && selectedCourse.targetRoles.length > 0">
-          <h4>Rôles ciblés</h4>
-          <div class="tags-list">
-            <span class="tag" *ngFor="let role of selectedCourse.targetRoles">{{ role }}</span>
-          </div>
-        </div>
-
-        <div class="detail-section syllabus-section" *ngIf="selectedCourse.syllabus && selectedCourse.syllabus.length > 0">
-          <h4>Programme ({{ selectedCourse.syllabus.length }} module(s))</h4>
-          <div class="syllabus-preview">
-            <div class="module-preview" *ngFor="let module of selectedCourse.syllabus; let mIndex = index">
-              <div class="module-header">
-                <h5>Module {{ mIndex + 1 }}: {{ module.title }}</h5>
+          <div class="modal-body">
+            <div class="course-detail-header">
+              <h3>{{ selectedCourse.title }}</h3>
+              <div class="course-meta-info">
+                <span class="course-code">{{ selectedCourse.code }}</span>
+                <span class="course-badge" [class]="'badge-' + selectedCourse.level.toLowerCase()">{{ selectedCourse.level }}</span>
+                <span class="course-format">{{ selectedCourse.format }}</span>
               </div>
-              <p class="module-description" *ngIf="module.description">{{ module.description }}</p>
-              <div class="labs-preview" *ngIf="module.labs && module.labs.length > 0">
-                <strong>Laboratoires ({{ module.labs.length }}):</strong>
+            </div>
+            <div class="course-info-grid">
+              <div class="info-item">
+                <label>Durée</label>
+                <p>{{ selectedCourse.duration }}</p>
+              </div>
+              <div class="info-item">
+                <label>Prix</label>
+                <p>{{ selectedCourse.price }}€</p>
+              </div>
+              @if (selectedCourse.nextDate) {
+                <div class="info-item">
+                  <label>Prochaine date</label>
+                  <p>{{ selectedCourse.nextDate | date:'shortDate' }}</p>
+                </div>
+              }
+              @if (selectedCourse.syllabus && selectedCourse.syllabus.length > 0) {
+                <div class="info-item">
+                  <label>Programme</label>
+                  <p>{{ selectedCourse.syllabus.length }} module(s), {{ getTotalLabs(selectedCourse) }} lab(s)</p>
+                </div>
+              }
+            </div>
+            @if (selectedCourse.description) {
+              <div class="detail-section">
+                <h4>Description</h4>
+                <p>{{ selectedCourse.description }}</p>
+              </div>
+            }
+            @if (selectedCourse.objectives && selectedCourse.objectives.length > 0) {
+              <div class="detail-section">
+                <h4>Objectifs</h4>
                 <ul>
-                  <li *ngFor="let lab of module.labs">
-                    <span class="lab-name">{{ lab.name }}</span>
-                    <span class="lab-duration" *ngIf="lab.duration"> - {{ lab.duration }}</span>
-                  </li>
+                  @for (obj of selectedCourse.objectives; track obj) {
+                    <li>{{ obj }}</li>
+                  }
                 </ul>
               </div>
-            </div>
+            }
+            @if (selectedCourse.outcomes && selectedCourse.outcomes.length > 0) {
+              <div class="detail-section">
+                <h4>Résultats attendus</h4>
+                <ul>
+                  @for (outcome of selectedCourse.outcomes; track outcome) {
+                    <li>{{ outcome }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            @if (selectedCourse.prerequisites && selectedCourse.prerequisites.length > 0) {
+              <div class="detail-section">
+                <h4>Prérequis</h4>
+                <ul>
+                  @for (prereq of selectedCourse.prerequisites; track prereq) {
+                    <li>{{ prereq }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            @if (selectedCourse.targetRoles && selectedCourse.targetRoles.length > 0) {
+              <div class="detail-section">
+                <h4>Rôles ciblés</h4>
+                <div class="tags-list">
+                  @for (role of selectedCourse.targetRoles; track role) {
+                    <span class="tag">{{ role }}</span>
+                  }
+                </div>
+              </div>
+            }
+            @if (selectedCourse.syllabus && selectedCourse.syllabus.length > 0) {
+              <div class="detail-section syllabus-section">
+                <h4>Programme ({{ selectedCourse.syllabus.length }} module(s))</h4>
+                <div class="syllabus-preview">
+                  @for (module of selectedCourse.syllabus; track module; let mIndex = $index) {
+                    <div class="module-preview">
+                      <div class="module-header">
+                        <h5>Module {{ mIndex + 1 }}: {{ module.title }}</h5>
+                      </div>
+                      @if (module.description) {
+                        <p class="module-description">{{ module.description }}</p>
+                      }
+                      @if (module.labs && module.labs.length > 0) {
+                        <div class="labs-preview">
+                          <strong>Laboratoires ({{ module.labs.length }}):</strong>
+                          <ul>
+                            @for (lab of module.labs; track lab) {
+                              <li>
+                                <span class="lab-name">{{ lab.name }}</span>
+                                @if (lab.duration) {
+                                  <span class="lab-duration"> - {{ lab.duration }}</span>
+                                }
+                              </li>
+                            }
+                          </ul>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+            @if (selectedCourse.certification) {
+              <div class="detail-section">
+                <h4>Certification</h4>
+                <p>{{ selectedCourse.certification }}</p>
+              </div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">Fermer</button>
           </div>
         </div>
-
-        <div class="detail-section" *ngIf="selectedCourse.certification">
-          <h4>Certification</h4>
-          <p>{{ selectedCourse.certification }}</p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">Fermer</button>
-      </div>
+      }
     </div>
-  </div>
+  }
 
   <!-- Modal pour ajouter/modifier -->
-  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-    <div class="modal-content large" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>{{ editingCourse ? 'Modifier la formation' : 'Ajouter une formation' }}</h2>
-        <button class="btn-icon" (click)="closeModal()" [disabled]="loading">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <form class="modal-body" (ngSubmit)="saveCourse()" #courseForm="ngForm" *ngIf="!loading">
-        <div class="success-message" *ngIf="successMessage">{{ successMessage }}</div>
-        <div class="error-message" *ngIf="error">{{ error }}</div>
-        <div class="form-tabs">
-          <button type="button" class="tab-btn" [class.active]="activeTab === 'basic'" (click)="activeTab = 'basic'">Informations de base</button>
-          <button type="button" class="tab-btn" [class.active]="activeTab === 'details'" (click)="activeTab = 'details'">Détails</button>
-          <button type="button" class="tab-btn" [class.active]="activeTab === 'syllabus'" (click)="activeTab = 'syllabus'">Programme</button>
+  @if (showModal) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ editingCourse ? 'Modifier la formation' : 'Ajouter une formation' }}</h2>
+          <button class="btn-icon" (click)="closeModal()" [disabled]="loading">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
-
-        <!-- Onglet Informations de base -->
-        <div class="tab-content" *ngIf="activeTab === 'basic'">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="title">Titre *</label>
-              <input type="text" id="title" [(ngModel)]="formData.title" name="title" required>
+        @if (!loading) {
+          <form class="modal-body" (ngSubmit)="saveCourse()" #courseForm="ngForm">
+            @if (successMessage) {
+              <div class="success-message">{{ successMessage }}</div>
+            }
+            @if (error) {
+              <div class="error-message">{{ error }}</div>
+            }
+            <div class="form-tabs">
+              <button type="button" class="tab-btn" [class.active]="activeTab === 'basic'" (click)="activeTab = 'basic'">Informations de base</button>
+              <button type="button" class="tab-btn" [class.active]="activeTab === 'details'" (click)="activeTab = 'details'">Détails</button>
+              <button type="button" class="tab-btn" [class.active]="activeTab === 'syllabus'" (click)="activeTab = 'syllabus'">Programme</button>
             </div>
-            <div class="form-group">
-              <label for="code">Code *</label>
-              <input type="text" id="code" [(ngModel)]="formData.code" name="code" required>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="level">Niveau *</label>
-              <select id="level" [(ngModel)]="formData.level" name="level" required>
-                <option value="Débutant">Débutant</option>
-                <option value="Intermédiaire">Intermédiaire</option>
-                <option value="Avancé">Avancé</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="duration">Durée *</label>
-              <input type="text" id="duration" [(ngModel)]="formData.duration" name="duration" placeholder="ex: 5 jours" required>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="format">Format *</label>
-              <select id="format" [(ngModel)]="formData.format" name="format" required>
-                <option value="En ligne">En ligne</option>
-                <option value="Présentiel">Présentiel</option>
-                <option value="Hybride">Hybride</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="accessDelay">Délai d'accès</label>
-              <input type="text" id="accessDelay" [(ngModel)]="formData.accessDelay" name="accessDelay" placeholder="ex: 48h, 1 semaine, Immédiat">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="price">Prix (€) *</label>
-              <input type="number" id="price" [(ngModel)]="formData.price" name="price" required>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="role">Rôle *</label>
-              <select id="role" [(ngModel)]="formData.role" name="role" required>
-                <option value="administrator">Administrateur</option>
-                <option value="developer">Développeur</option>
-                <option value="architect">Architecte</option>
-                <option value="devops">DevOps</option>
-                <option value="security">Sécurité</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="language">Langue *</label>
-              <select id="language" [(ngModel)]="formData.language" name="language" required>
-                <option value="fr">Français</option>
-                <option value="en">Anglais</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="description">Description *</label>
-            <textarea id="description" [(ngModel)]="formData.description" name="description" rows="4" required></textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="certification">Certification</label>
-              <input type="text" id="certification" [(ngModel)]="formData.certification" name="certification">
-            </div>
-            <div class="form-group">
-              <label for="nextDate">Prochaine date</label>
-              <input type="date" id="nextDate" [(ngModel)]="formData.nextDate" name="nextDate">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="formData.popular" name="popular">
-              <span>Formation populaire</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Onglet Détails -->
-        <div class="tab-content" *ngIf="activeTab === 'details'">
-          <div class="form-group">
-            <label>Objectifs</label>
-            <div class="list-editor">
-              <div class="list-item" *ngFor="let obj of formData.objectives; let i = index">
-                <input type="text" [(ngModel)]="formData.objectives[i]" [name]="'objective-' + i">
-                <button type="button" class="btn-icon btn-small" (click)="removeItem('objectives', i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-              <button type="button" class="btn btn-secondary btn-small" (click)="addItem('objectives')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Ajouter un objectif
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Résultats attendus</label>
-            <div class="list-editor">
-              <div class="list-item" *ngFor="let outcome of formData.outcomes; let i = index">
-                <input type="text" [(ngModel)]="formData.outcomes[i]" [name]="'outcome-' + i">
-                <button type="button" class="btn-icon btn-small" (click)="removeItem('outcomes', i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-              <button type="button" class="btn btn-secondary btn-small" (click)="addItem('outcomes')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Ajouter un résultat
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Prérequis</label>
-            <div class="list-editor">
-              <div class="list-item" *ngFor="let prereq of formData.prerequisites; let i = index">
-                <input type="text" [(ngModel)]="formData.prerequisites[i]" [name]="'prereq-' + i">
-                <button type="button" class="btn-icon btn-small" (click)="removeItem('prerequisites', i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-              <button type="button" class="btn btn-secondary btn-small" (click)="addItem('prerequisites')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Ajouter un prérequis
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Rôles ciblés</label>
-            <div class="list-editor">
-              <div class="list-item" *ngFor="let role of formData.targetRoles; let i = index">
-                <input type="text" [(ngModel)]="formData.targetRoles[i]" [name]="'role-' + i">
-                <button type="button" class="btn-icon btn-small" (click)="removeItem('targetRoles', i)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-              <button type="button" class="btn btn-secondary btn-small" (click)="addItem('targetRoles')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Ajouter un rôle
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Onglet Programme -->
-        <div class="tab-content" *ngIf="activeTab === 'syllabus'">
-          <div class="syllabus-editor">
-            <div class="syllabus-item" *ngFor="let module of formData.syllabus; let i = index">
-              <div class="module-header-editor">
-                <div class="form-group">
-                  <label>Module {{ i + 1 }} - Titre</label>
-                  <input type="text" [(ngModel)]="formData.syllabus[i].title" [name]="'module-title-' + i" required>
+            <!-- Onglet Informations de base -->
+            @if (activeTab === 'basic') {
+              <div class="tab-content">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="title">Titre *</label>
+                    <input type="text" id="title" [(ngModel)]="formData.title" name="title" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="code">Code *</label>
+                    <input type="text" id="code" [(ngModel)]="formData.code" name="code" required>
+                  </div>
                 </div>
-                <button type="button" class="btn-icon btn-danger" (click)="removeModule(i)">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                  </svg>
-                </button>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="level">Niveau *</label>
+                    <select id="level" [(ngModel)]="formData.level" name="level" required>
+                      <option value="Débutant">Débutant</option>
+                      <option value="Intermédiaire">Intermédiaire</option>
+                      <option value="Avancé">Avancé</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="duration">Durée *</label>
+                    <input type="text" id="duration" [(ngModel)]="formData.duration" name="duration" placeholder="ex: 5 jours" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="format">Format *</label>
+                    <select id="format" [(ngModel)]="formData.format" name="format" required>
+                      <option value="En ligne">En ligne</option>
+                      <option value="Présentiel">Présentiel</option>
+                      <option value="Hybride">Hybride</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="accessDelay">Délai d'accès</label>
+                    <input type="text" id="accessDelay" [(ngModel)]="formData.accessDelay" name="accessDelay" placeholder="ex: 48h, 1 semaine, Immédiat">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="price">Prix (€) *</label>
+                    <input type="number" id="price" [(ngModel)]="formData.price" name="price" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="role">Rôle *</label>
+                    <select id="role" [(ngModel)]="formData.role" name="role" required>
+                      <option value="administrator">Administrateur</option>
+                      <option value="developer">Développeur</option>
+                      <option value="architect">Architecte</option>
+                      <option value="devops">DevOps</option>
+                      <option value="security">Sécurité</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="language">Langue *</label>
+                    <select id="language" [(ngModel)]="formData.language" name="language" required>
+                      <option value="fr">Français</option>
+                      <option value="en">Anglais</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="description">Description *</label>
+                  <textarea id="description" [(ngModel)]="formData.description" name="description" rows="4" required></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="certification">Certification</label>
+                    <input type="text" id="certification" [(ngModel)]="formData.certification" name="certification">
+                  </div>
+                  <div class="form-group">
+                    <label for="nextDate">Prochaine date</label>
+                    <input type="date" id="nextDate" [(ngModel)]="formData.nextDate" name="nextDate">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="formData.popular" name="popular">
+                    <span>Formation populaire</span>
+                  </label>
+                </div>
               </div>
-              <div class="form-group">
-                <label>Description du module</label>
-                <textarea [(ngModel)]="formData.syllabus[i].description" [name]="'module-desc-' + i" rows="2"></textarea>
-              </div>
-              <div class="form-group">
-                <label>Laboratoires</label>
-                <div class="labs-editor">
-                  <div class="lab-item" *ngFor="let lab of formData.syllabus[i].labs; let j = index">
-                    <input type="text" [(ngModel)]="formData.syllabus[i].labs[j].name" [name]="'lab-name-' + i + '-' + j" placeholder="Nom du lab">
-                    <input type="text" [(ngModel)]="formData.syllabus[i].labs[j].duration" [name]="'lab-duration-' + i + '-' + j" placeholder="Durée (ex: 2h)">
-                    <button type="button" class="btn-icon btn-small" (click)="removeLab(i, j)">
+            }
+            <!-- Onglet Détails -->
+            @if (activeTab === 'details') {
+              <div class="tab-content">
+                <div class="form-group">
+                  <label>Objectifs</label>
+                  <div class="list-editor">
+                    @for (obj of formData.objectives; track obj; let i = $index) {
+                      <div class="list-item">
+                        <input type="text" [(ngModel)]="formData.objectives[i]" [name]="'objective-' + i">
+                        <button type="button" class="btn-icon btn-small" (click)="removeItem('objectives', i)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    <button type="button" class="btn btn-secondary btn-small" (click)="addItem('objectives')">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
                       </svg>
+                      Ajouter un objectif
                     </button>
                   </div>
-                  <button type="button" class="btn btn-secondary btn-small" (click)="addLab(i)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                </div>
+                <div class="form-group">
+                  <label>Résultats attendus</label>
+                  <div class="list-editor">
+                    @for (outcome of formData.outcomes; track outcome; let i = $index) {
+                      <div class="list-item">
+                        <input type="text" [(ngModel)]="formData.outcomes[i]" [name]="'outcome-' + i">
+                        <button type="button" class="btn-icon btn-small" (click)="removeItem('outcomes', i)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    <button type="button" class="btn btn-secondary btn-small" (click)="addItem('outcomes')">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Ajouter un résultat
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Prérequis</label>
+                  <div class="list-editor">
+                    @for (prereq of formData.prerequisites; track prereq; let i = $index) {
+                      <div class="list-item">
+                        <input type="text" [(ngModel)]="formData.prerequisites[i]" [name]="'prereq-' + i">
+                        <button type="button" class="btn-icon btn-small" (click)="removeItem('prerequisites', i)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    <button type="button" class="btn btn-secondary btn-small" (click)="addItem('prerequisites')">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Ajouter un prérequis
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Rôles ciblés</label>
+                  <div class="list-editor">
+                    @for (role of formData.targetRoles; track role; let i = $index) {
+                      <div class="list-item">
+                        <input type="text" [(ngModel)]="formData.targetRoles[i]" [name]="'role-' + i">
+                        <button type="button" class="btn-icon btn-small" (click)="removeItem('targetRoles', i)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                    <button type="button" class="btn btn-secondary btn-small" (click)="addItem('targetRoles')">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Ajouter un rôle
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+            <!-- Onglet Programme -->
+            @if (activeTab === 'syllabus') {
+              <div class="tab-content">
+                <div class="syllabus-editor">
+                  @for (module of formData.syllabus; track module; let i = $index) {
+                    <div class="syllabus-item">
+                      <div class="module-header-editor">
+                        <div class="form-group">
+                          <label>Module {{ i + 1 }} - Titre</label>
+                          <input type="text" [(ngModel)]="formData.syllabus[i].title" [name]="'module-title-' + i" required>
+                        </div>
+                        <button type="button" class="btn-icon btn-danger" (click)="removeModule(i)">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="form-group">
+                        <label>Description du module</label>
+                        <textarea [(ngModel)]="formData.syllabus[i].description" [name]="'module-desc-' + i" rows="2"></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label>Laboratoires</label>
+                        <div class="labs-editor">
+                          @for (lab of formData.syllabus[i].labs; track lab; let j = $index) {
+                            <div class="lab-item">
+                              <input type="text" [(ngModel)]="formData.syllabus[i].labs[j].name" [name]="'lab-name-' + i + '-' + j" placeholder="Nom du lab">
+                              <input type="text" [(ngModel)]="formData.syllabus[i].labs[j].duration" [name]="'lab-duration-' + i + '-' + j" placeholder="Durée (ex: 2h)">
+                              <button type="button" class="btn-icon btn-small" (click)="removeLab(i, j)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <line x1="18" y1="6" x2="6" y2="18"/>
+                                  <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                              </button>
+                            </div>
+                          }
+                          <button type="button" class="btn btn-secondary btn-small" (click)="addLab(i)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <line x1="12" y1="5" x2="12" y2="19"/>
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Ajouter un lab
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  <button type="button" class="btn btn-secondary" (click)="addModule()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="5" x2="12" y2="19"/>
                       <line x1="5" y1="12" x2="19" y2="12"/>
                     </svg>
-                    Ajouter un lab
+                    Ajouter un module
                   </button>
                 </div>
               </div>
+            }
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="loading">Annuler</button>
+              <button type="submit" class="btn btn-primary" [disabled]="loading">
+                @if (loading) {
+                  <span>Enregistrement...</span>
+                }
+                @if (!loading) {
+                  <span>Enregistrer</span>
+                }
+              </button>
             </div>
-            <button type="button" class="btn btn-secondary" (click)="addModule()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Ajouter un module
-            </button>
+          </form>
+        }
+        @if (loading) {
+          <div class="loading-state">
+            <p>Enregistrement en cours...</p>
           </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="loading">Annuler</button>
-          <button type="submit" class="btn btn-primary" [disabled]="loading">
-            <span *ngIf="loading">Enregistrement...</span>
-            <span *ngIf="!loading">Enregistrer</span>
-          </button>
-        </div>
-      </form>
-      <div class="loading-state" *ngIf="loading">
-        <p>Enregistrement en cours...</p>
+        }
       </div>
     </div>
-</div>
+  }
 

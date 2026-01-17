@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
     selector: 'app-accessibility',
-    imports: [CommonModule],
+    imports: [],
     template: `
     <div class="accessibility-page">
       <div class="container">

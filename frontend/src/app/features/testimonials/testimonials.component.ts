@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { ApiService, Testimonial } from '../../core/services/api.service';
 import { SafeUrlPipe } from '../../core/pipes/safe-url.pipe';
 
 @Component({
     selector: 'app-testimonials',
-    imports: [CommonModule, RouterLink, SafeUrlPipe],
+    imports: [RouterLink, SafeUrlPipe],
     templateUrl: './testimonials.component.html',
     styleUrls: ['./testimonials.component.scss']
 })

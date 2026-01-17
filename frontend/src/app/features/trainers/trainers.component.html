@@ -11,8 +11,8 @@
       <div class="intro-content">
         <h2>Une équipe d'experts à votre service</h2>
         <p>
-          Tous nos formateurs sont certifiés Microsoft et possèdent une expérience terrain significative 
-          dans l'implémentation de solutions Azure en entreprise. Ils partagent avec vous leurs connaissances 
+          Tous nos formateurs sont certifiés Microsoft et possèdent une expérience terrain significative
+          dans l'implémentation de solutions Azure en entreprise. Ils partagent avec vous leurs connaissances
           pratiques et leurs meilleures pratiques acquises sur le terrain.
         </p>
       </div>
@@ -22,32 +22,35 @@
   <section class="trainers-grid-section">
     <div class="container">
       <div class="trainers-grid">
-        <div class="trainer-card" *ngFor="let trainer of trainers">
-          <div class="trainer-avatar">
-            <div class="avatar-placeholder">{{ trainer.name.charAt(0) }}</div>
-          </div>
-          <div class="trainer-content">
-            <h3>{{ trainer.name }}</h3>
-            <p class="trainer-role">{{ trainer.role }}</p>
-            <p class="trainer-experience">{{ trainer.experience }} d'expérience</p>
-            
-            <div class="trainer-certifications">
-              <h4>Certifications</h4>
-              <div class="cert-badges">
-                <span class="cert-badge" *ngFor="let cert of trainer.certifications">{{ cert }}</span>
+        @for (trainer of trainers; track trainer) {
+          <div class="trainer-card">
+            <div class="trainer-avatar">
+              <div class="avatar-placeholder">{{ trainer.name.charAt(0) }}</div>
+            </div>
+            <div class="trainer-content">
+              <h3>{{ trainer.name }}</h3>
+              <p class="trainer-role">{{ trainer.role }}</p>
+              <p class="trainer-experience">{{ trainer.experience }} d'expérience</p>
+              <div class="trainer-certifications">
+                <h4>Certifications</h4>
+                <div class="cert-badges">
+                  @for (cert of trainer.certifications; track cert) {
+                    <span class="cert-badge">{{ cert }}</span>
+                  }
+                </div>
               </div>
+              <div class="trainer-specialties">
+                <h4>Spécialités</h4>
+                <ul>
+                  @for (specialty of trainer.specialties; track specialty) {
+                    <li>{{ specialty }}</li>
+                  }
+                </ul>
+              </div>
+              <p class="trainer-bio">{{ trainer.bio }}</p>
             </div>
-            
-            <div class="trainer-specialties">
-              <h4>Spécialités</h4>
-              <ul>
-                <li *ngFor="let specialty of trainer.specialties">{{ specialty }}</li>
-              </ul>
-            </div>
-            
-            <p class="trainer-bio">{{ trainer.bio }}</p>
           </div>
-        </div>
+        }
       </div>
     </div>
   </section>
