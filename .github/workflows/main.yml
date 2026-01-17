@@ -79,6 +79,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${BACKEND_REMOTE}
           cd ${BACKEND_REMOTE}
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
@@ -107,6 +108,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${BACKEND_REMOTE}/vendor
           cd ${BACKEND_REMOTE}/vendor
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
@@ -166,6 +168,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${FRONTEND_REMOTE}
           cd ${FRONTEND_REMOTE}
           mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
