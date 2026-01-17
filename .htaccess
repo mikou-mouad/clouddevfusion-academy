@@ -12,5 +12,5 @@ RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 # Send /api/* to Symfony front controller
 RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 
-Frontend SPA routes -> index.html
+# Frontend SPA routes -> index.html
 RewriteRule ^ index.html [L]
