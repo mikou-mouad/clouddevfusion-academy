@@ -5,11 +5,11 @@ import { environment } from '../../../environments/environment';
 
 export interface Testimonial {
   id?: number;
-  quote: string;
-  author: string;
-  role: string;
-  company: string;
-  rating: number;
+  quote?: string;
+  author?: string;
+  role?: string;
+  company?: string;
+  rating?: number;
   videoUrl?: string;
   createdAt?: string;
   updatedAt?: string;

@@ -241,11 +241,11 @@ export class AdminTestimonialsComponent implements OnInit {
     }
 
     const testimonialData: Testimonial = {
-      quote: this.formData.quote?.trim() || '',
-      author: this.formData.author?.trim() || '',
-      role: this.formData.role?.trim() || '',
-      company: this.formData.company?.trim() || '',
-      rating: ratingValue,
+      quote: this.testimonialMode === 'video' ? undefined : (this.formData.quote?.trim() || ''),
+      author: this.testimonialMode === 'video' ? undefined : (this.formData.author?.trim() || ''),
+      role: this.testimonialMode === 'video' ? undefined : (this.formData.role?.trim() || ''),
+      company: this.testimonialMode === 'video' ? undefined : (this.formData.company?.trim() || ''),
+      rating: this.testimonialMode === 'video' ? undefined : ratingValue,
       videoUrl: this.formData.videoUrl?.trim() || undefined
     };
 
