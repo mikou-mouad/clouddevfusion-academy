@@ -232,7 +232,7 @@ export class AdminTestimonialsComponent implements OnInit {
 
     // Préparer les données avec le bon format
     // Convertir le rating en nombre si nécessaire
-    let ratingValue = this.formData.rating;
+    let ratingValue = this.formData.rating ?? 5;
     if (typeof ratingValue === 'string') {
       ratingValue = parseInt(ratingValue, 10);
     }
