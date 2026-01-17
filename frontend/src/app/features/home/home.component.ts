@@ -146,7 +146,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       description: 'Formations collectives pour petits groupes. Bénéficiez de tarifs préférentiels et d\'une dynamique d\'apprentissage collaborative.',
       features: [
         'Tarifs préférentiels',
-        'Groupes de 5 à 15 personnes',
+        'Groupes de 4 à 6 personnes',
         'Dates flexibles',
         'Ambiance collaborative',
         'Support post-formation'
@@ -232,11 +232,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   // PARTENAIRES
   // ============================================
   partners = [
+    { name: 'Qualiopi', logoPath: 'assets/qualiopi.png', imageError: false },
     { name: 'Microsoft', logoPath: 'assets/Microsoft-logo.png', imageError: false },
+    { name: 'Nexa School', logoPath: 'assets/nexa.png', imageError: false },
     { name: 'Azure', logoPath: 'assets/Microsoft-Azure.png', imageError: false },
-    { name: 'Kubernetes', logoPath: 'assets/Kubernetes_logo_without_workmark.svg.png', imageError: false },
-    { name: 'Docker', logoPath: 'assets/docker-logo-blue.png', imageError: false },
-    { name: 'GitHub', logoPath: 'assets/GitHub_Logo_White.png', imageError: false }
+    { name: 'Global Knowledge', logoPath: 'assets/globalKnowledge.png', imageError: false },
+    { name: 'Unlock Formation', logoPath: 'assets/unlock.png', imageError: false }
   ];
 
   // Dupliquer les partenaires pour l'effet de défilement infini
@@ -273,14 +274,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       step: 2,
       title: 'Inscription & Financement',
-      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (CPF, OPCO, entreprise).',
+      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (CPF, OPCO, entreprise). Directement ou à travers nos partenaires.',
       icon: 'financement',
       color: 'secondary'
     },
     {
       step: 3,
       title: 'Formation',
-      description: 'Suivez une formation immersive avec nos experts MCT, accédez aux labs pratiques et préparez-vous efficacement à la certification.',
+      description: 'Suivez une formation immersive avec nos experts MCT, avec une session live de 2h30 chaque semaine, accédez aux labs pratiques et préparez-vous efficacement à la certification.',
       icon: 'formation',
       color: 'success'
     },
@@ -327,14 +328,14 @@ export class HomeComponent implements OnInit, OnDestroy {
           {
             id: 1,
             question: 'Comment financer ma formation ?',
-            answer: 'Nos formations sont éligibles au CPF, aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
+            answer: 'Direct ou à travers un partenaire, nos formations sont éligibles au CPF, aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
             category: 'Financement',
             published: true
           },
           {
             id: 2,
             question: 'Quel niveau prérequis pour suivre une formation ?',
-            answer: 'Chaque formation indique son niveau requis. Nous proposons des parcours débutants (AZ-900) jusqu\'aux expertises avancées. Nos conseillers vous orientent vers la formation adaptée à votre profil.',
+            answer: 'Chaque formation indique son niveau requis. Nous proposons des parcours débutants (AZ-900) jusqu\'aux expertises avancées. Nos conseillers vous orientent vers la formation adaptée à votre profil. Vous pouvez aussi faire les tests de positionnement sur notre site.',
             category: 'Prérequis',
             published: true
           },

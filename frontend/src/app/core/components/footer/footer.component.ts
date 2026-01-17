@@ -10,5 +10,9 @@ import { RouterLink } from '@angular/router';
 })
 export class FooterComponent {
   currentYear = new Date().getFullYear();
+  socialLinks = {
+    linkedin: 'https://www.linkedin.com/company/94102030',
+    youtube: 'https://www.youtube.com/@CloudDevFusion'
+  }
 }
 

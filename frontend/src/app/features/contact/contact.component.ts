@@ -14,7 +14,7 @@ export class ContactComponent {
   activeTab: 'contact' | 'rdv' = 'contact';
   
   // Informations de contact
-  contactEmail = 'contact@clouddevfusion.com';
+  contactEmail = 'formation@clouddevfusion.com';
   contactPhone = '+33 7 58 59 75 95';
   contactAddress = {
     company: 'CloudDevFusion',
@@ -23,9 +23,8 @@ export class ContactComponent {
   };
   
   socialLinks = {
-    linkedin: 'https://www.linkedin.com/company/clouddevfusion',
-    twitter: 'https://twitter.com/clouddevfusion',
-    facebook: 'https://www.facebook.com/clouddevfusion'
+    linkedin: 'https://www.linkedin.com/company/94102030',
+    youtube: 'https://www.youtube.com/@CloudDevFusion'
   };
   
   formData = {

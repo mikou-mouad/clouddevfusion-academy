@@ -167,7 +167,7 @@ jobs:
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           cd ${FRONTEND_REMOTE}
-          mirror -R --delete --verbose \
+          mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
             --exclude-glob='node_modules' \
             --exclude-glob='.angular' \
