@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, ExamVoucher } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-exam-vouchers',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './exam-vouchers.component.html',
-  styleUrls: ['./exam-vouchers.component.scss']
+    selector: 'app-admin-exam-vouchers',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './exam-vouchers.component.html',
+    styleUrls: ['./exam-vouchers.component.scss']
 })
 export class AdminExamVouchersComponent implements OnInit {
   vouchers: ExamVoucher[] = [];

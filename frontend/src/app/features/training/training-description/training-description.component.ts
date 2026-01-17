@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 @Component({
-  selector: 'app-training-description',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './training-description.component.html',
-  styleUrls: ['./training-description.component.scss']
+    selector: 'app-training-description',
+    imports: [CommonModule, RouterLink],
+    templateUrl: './training-description.component.html',
+    styleUrls: ['./training-description.component.scss']
 })
 export class TrainingDescriptionComponent {
   trainerCertifications = [

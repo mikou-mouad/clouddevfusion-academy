@@ -5,11 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, Course } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-catalog-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  templateUrl: './catalog-list.component.html',
-  styleUrls: ['./catalog-list.component.scss']
+    selector: 'app-catalog-list',
+    imports: [CommonModule, RouterLink, FormsModule],
+    templateUrl: './catalog-list.component.html',
+    styleUrls: ['./catalog-list.component.scss']
 })
 export class CatalogListComponent implements OnInit {
   searchQuery: string = '';

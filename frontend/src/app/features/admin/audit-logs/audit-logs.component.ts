@@ -5,11 +5,10 @@ import { ApiService, AuditLog } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-admin-audit-logs',
-  standalone: true,
-  imports: [CommonModule, FormsModule, JsonPipe],
-  templateUrl: './audit-logs.component.html',
-  styleUrls: ['./audit-logs.component.scss']
+    selector: 'app-admin-audit-logs',
+    imports: [CommonModule, FormsModule, JsonPipe],
+    templateUrl: './audit-logs.component.html',
+    styleUrls: ['./audit-logs.component.scss']
 })
 export class AdminAuditLogsComponent implements OnInit {
   auditLogs: AuditLog[] = [];

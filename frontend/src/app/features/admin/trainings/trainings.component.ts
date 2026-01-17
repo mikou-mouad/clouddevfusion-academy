@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, Course, SyllabusModule, Lab } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-trainings',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './trainings.component.html',
-  styleUrls: ['./trainings.component.scss']
+    selector: 'app-admin-trainings',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './trainings.component.html',
+    styleUrls: ['./trainings.component.scss']
 })
 export class TrainingsComponent implements OnInit {
   courses: Course[] = [];

@@ -5,11 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, BlogPost, Course } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-blog-post',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  templateUrl: './blog-post.component.html',
-  styleUrls: ['./blog-post.component.scss']
+    selector: 'app-blog-post',
+    imports: [CommonModule, RouterLink, FormsModule],
+    templateUrl: './blog-post.component.html',
+    styleUrls: ['./blog-post.component.scss']
 })
 export class BlogPostComponent implements OnInit {
   post: BlogPost | null = null;

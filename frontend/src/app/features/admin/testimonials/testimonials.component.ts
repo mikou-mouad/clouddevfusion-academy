@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, Testimonial } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-testimonials',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './testimonials.component.html',
-  styleUrls: ['./testimonials.component.scss']
+    selector: 'app-admin-testimonials',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './testimonials.component.html',
+    styleUrls: ['./testimonials.component.scss']
 })
 export class AdminTestimonialsComponent implements OnInit {
   testimonials: Testimonial[] = [];

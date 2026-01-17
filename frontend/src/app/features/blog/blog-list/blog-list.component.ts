@@ -5,10 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, BlogPost } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-blog-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  template: `
+    selector: 'app-blog-list',
+    imports: [CommonModule, RouterLink, FormsModule],
+    template: `
     <div class="blog-page">
       <section class="blog-header">
         <div class="blog-header-content">
@@ -85,7 +84,7 @@ import { ApiService, BlogPost } from '../../../core/services/api.service';
       </section>
     </div>
   `,
-  styles: [`
+    styles: [`
     .blog-page {
       padding: 0;
       margin-top: 0;

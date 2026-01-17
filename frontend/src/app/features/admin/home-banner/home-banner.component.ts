@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, HomeBanner } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-home-banner',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './home-banner.component.html',
-  styleUrls: ['./home-banner.component.scss']
+    selector: 'app-admin-home-banner',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './home-banner.component.html',
+    styleUrls: ['./home-banner.component.scss']
 })
 export class AdminHomeBannerComponent implements OnInit {
   banner: HomeBanner | null = null;

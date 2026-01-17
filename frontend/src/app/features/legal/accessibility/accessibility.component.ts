@@ -2,10 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-accessibility',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-accessibility',
+    imports: [CommonModule],
+    template: `
     <div class="accessibility-page">
       <div class="container">
         <div class="page-header">
@@ -184,7 +183,7 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .accessibility-page {
       padding: 60px 0;
       min-height: calc(100vh - 200px);

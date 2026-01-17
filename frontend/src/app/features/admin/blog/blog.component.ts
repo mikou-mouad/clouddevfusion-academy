@@ -5,11 +5,10 @@ import { ApiService, BlogPost } from '../../../core/services/api.service';
 import { QuillModule } from 'ngx-quill';
 
 @Component({
-  selector: 'app-admin-blog',
-  standalone: true,
-  imports: [CommonModule, FormsModule, QuillModule],
-  templateUrl: './blog.component.html',
-  styleUrls: ['./blog.component.scss']
+    selector: 'app-admin-blog',
+    imports: [CommonModule, FormsModule, QuillModule],
+    templateUrl: './blog.component.html',
+    styleUrls: ['./blog.component.scss']
 })
 export class AdminBlogComponent implements OnInit {
   blogPosts: BlogPost[] = [];
