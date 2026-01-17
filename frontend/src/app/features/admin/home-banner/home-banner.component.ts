@@ -20,8 +20,8 @@ export class AdminHomeBannerComponent implements OnInit {
 
   formData: HomeBanner = {
     logoPath: 'assets/cdfL.png',
-    kpi1Number: '500+',
-    kpi1Label: 'Étudiants formés',
+    kpi1Number: '100+',
+    kpi1Label: 'Professionnels formés',
     kpi2Number: '98%',
     kpi2Label: 'Taux de réussite',
     kpi3Number: '50+',

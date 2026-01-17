@@ -85,9 +85,9 @@ export class TrainingDescriptionComponent {
       description: 'Note moyenne de satisfaction de nos formations'
     },
     {
-      value: '500+',
-      label: 'Étudiants formés',
-      description: 'Plus de 500 professionnels formés avec succès'
+      value: '100+',
+      label: 'Professionnels formés',
+      description: 'Plus de 100 professionnels formés avec succès'
     },
     {
       value: '98%',

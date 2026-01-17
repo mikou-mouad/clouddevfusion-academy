@@ -39,7 +39,7 @@ final class Version20251226130000 extends AbstractMigration
         
         // Insérer une entrée par défaut
         $this->addSql("INSERT INTO home_banners (id, logo_path, kpi1_number, kpi1_label, kpi2_number, kpi2_label, kpi3_number, kpi3_label, active, created_at) 
-            VALUES (1, 'assets/cdfL.png', '500+', 'Étudiants formés', '98%', 'Taux de réussite', '50+', 'Certifications disponibles', true, NOW()) 
+            VALUES (1, 'assets/cdfL.png', '100+', 'Professionnels formés', '98%', 'Taux de réussite', '50+', 'Certifications disponibles', true, NOW()) 
             ON CONFLICT (id) DO NOTHING");
     }
 

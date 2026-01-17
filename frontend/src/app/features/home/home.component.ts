@@ -42,7 +42,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Home Banner Data
   bannerData = {
     logoPath: 'assets/cdfL.png',
-    kpi1: { number: '500+', label: 'Étudiants formés' },
+    kpi1: { number: '100+', label: 'Professionnels formés' },
     kpi2: { number: '98%', label: 'Taux de réussite' },
     kpi3: { number: '50+', label: 'Certifications disponibles' }
   };
