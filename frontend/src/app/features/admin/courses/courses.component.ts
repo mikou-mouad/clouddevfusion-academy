@@ -18,7 +18,7 @@ export class CoursesComponent implements OnInit {
   showDetailsModal = false;
   selectedCourse: Course | null = null;
   editingCourse: Course | null = null;
-  activeTab: 'basic' | 'details' | 'syllabus' = 'basic';
+  activeTab: 'basic' | 'details' | 'syllabus' | 'placement' = 'basic';
   loading = false;
   error: string | null = null;
   successMessage: string | null = null;

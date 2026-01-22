@@ -47,6 +47,48 @@ export interface SyllabusModule {
   labs: Lab[];
 }
 
+export interface PlacementAnswer {
+  id?: number;
+  text: string;
+  score: number;
+  isCorrect: boolean;
+  orderIndex: number;
+}
+
+export interface PlacementQuestion {
+  id?: number;
+  question: string;
+  explanation?: string;
+  orderIndex: number;
+  answers: PlacementAnswer[];
+}
+
+export interface PlacementTest {
+  id?: number;
+  course?: Course;
+  title: string;
+  description?: string;
+  passingScore: number;
+  timeLimit: number; // en minutes
+  isActive: boolean;
+  questions: PlacementQuestion[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PlacementTestResult {
+  id?: number;
+  placementTest?: PlacementTest;
+  userEmail?: string;
+  userName?: string;
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  passed: boolean;
+  answers?: { [questionId: number]: number }; // questionId -> answerId
+  completedAt?: string;
+}
+
 export interface Course {
   id?: number;
   title: string;
@@ -68,6 +110,7 @@ export interface Course {
   prerequisites: string[];
   targetRoles: string[];
   syllabus: SyllabusModule[];
+  placementTest?: PlacementTest;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -384,6 +427,119 @@ export class ApiService {
 
   deleteExamVoucher(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/exam_vouchers/${id}`, { headers: this.getHeaders() });
+  }
+
+  // ============================================
+  // PLACEMENT TESTS
+  // ============================================
+  getPlacementTests(): Observable<PlacementTest[]> {
+    return this.http.get<any>(`${this.apiUrl}/placement_tests`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    }).pipe(
+      map(response => this.extractCollection<PlacementTest>(response))
+    );
+  }
+
+  getPlacementTest(id: number): Observable<PlacementTest> {
+    return this.http.get<PlacementTest>(`${this.apiUrl}/placement_tests/${id}`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  getPlacementTestByCourse(courseId: number): Observable<PlacementTest | null> {
+    return this.http.get<any>(`${this.apiUrl}/placement_tests?course.id=${courseId}`, { headers: this.getHeaders() }).pipe(
+      map(response => {
+        const collection = this.extractCollection<PlacementTest>(response);
+        return collection.length > 0 ? collection[0] : null;
+      })
+    );
+  }
+
+  createPlacementTest(test: PlacementTest): Observable<PlacementTest> {
+    return this.http.post<PlacementTest>(`${this.apiUrl}/placement_tests`, test, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  updatePlacementTest(id: number, test: PlacementTest): Observable<PlacementTest> {
+    return this.http.put<PlacementTest>(`${this.apiUrl}/placement_tests/${id}`, test, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  deletePlacementTest(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/placement_tests/${id}`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  // Questions
+  createPlacementQuestion(question: PlacementQuestion): Observable<PlacementQuestion> {
+    return this.http.post<PlacementQuestion>(`${this.apiUrl}/placement_questions`, question, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  updatePlacementQuestion(id: number, question: PlacementQuestion): Observable<PlacementQuestion> {
+    return this.http.put<PlacementQuestion>(`${this.apiUrl}/placement_questions/${id}`, question, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  deletePlacementQuestion(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/placement_questions/${id}`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  // Answers
+  getPlacementAnswer(id: number): Observable<PlacementAnswer> {
+    return this.http.get<PlacementAnswer>(`${this.apiUrl}/placement_answers/${id}`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  createPlacementAnswer(answer: PlacementAnswer): Observable<PlacementAnswer> {
+    const answerData: any = {
+      ...answer,
+      score: answer.score?.toString() || '0.00'
+    };
+    return this.http.post<PlacementAnswer>(`${this.apiUrl}/placement_answers`, answerData, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  updatePlacementAnswer(id: number, answer: PlacementAnswer): Observable<PlacementAnswer> {
+    const answerData: any = {
+      ...answer,
+      score: answer.score?.toString() || '0.00'
+    };
+    return this.http.put<PlacementAnswer>(`${this.apiUrl}/placement_answers/${id}`, answerData, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  deletePlacementAnswer(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/placement_answers/${id}`, { 
+      headers: this.getHeaders(),
+      withCredentials: true
+    });
+  }
+
+  // Submit test result
+  submitPlacementTestResult(result: PlacementTestResult): Observable<PlacementTestResult> {
+    return this.http.post<PlacementTestResult>(`${this.apiUrl}/placement_test_results`, result, { headers: this.getHeaders() });
   }
 }
 

@@ -52,11 +52,16 @@ export const ADMIN_ROUTES: Routes = [
         path: 'home-banner',
         loadComponent: () => import('./home-banner/home-banner.component').then(m => m.AdminHomeBannerComponent)
       },
-      {
+    {
         path: 'audit-logs',
         loadComponent: () => import('./audit-logs/audit-logs.component').then(m => m.AdminAuditLogsComponent),
         canActivate: [superAdminGuard]
-      }
+    },
+    {
+        path: 'placement-tests',
+        loadComponent: () => import('./placement-tests/placement-tests.component').then(m => m.PlacementTestsComponent),
+        canActivate: [authGuard]
+    }
     ]
   }
 ];

@@ -123,6 +123,10 @@ class Course
     #[MaxDepth(2)]
     private Collection $syllabus;
 
+    #[ORM\OneToOne(mappedBy: 'course', targetEntity: PlacementTest::class, cascade: ['persist', 'remove'])]
+    #[Groups(['course:read'])]
+    private ?PlacementTest $placementTest = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -421,6 +425,17 @@ class Course
     public function setUpdatedAtValue(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function getPlacementTest(): ?PlacementTest
+    {
+        return $this->placementTest;
+    }
+
+    public function setPlacementTest(?PlacementTest $placementTest): static
+    {
+        $this->placementTest = $placementTest;
+        return $this;
     }
 }
 

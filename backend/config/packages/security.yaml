@@ -16,6 +16,12 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        # Autoriser les requêtes OPTIONS (CORS preflight) sans authentification
+        cors:
+            pattern: ^/api/
+            stateless: true
+            security: false
+            methods: [OPTIONS]
         login:
             pattern: ^/api/login
             stateless: false

@@ -47,6 +47,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/exam-vouchers/exam-vouchers.component').then(m => m.ExamVouchersComponent)
   },
   {
+    path: 'placement-test/:courseId',
+    loadComponent: () => import('./features/placement-test/placement-test.component').then(m => m.PlacementTestComponent)
+  },
+  {
     path: 'legal',
     loadChildren: () => import('./features/legal/legal.routes').then(m => m.LEGAL_ROUTES)
   },
