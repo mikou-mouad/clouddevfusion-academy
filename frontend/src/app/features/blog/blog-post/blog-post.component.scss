@@ -115,6 +115,7 @@
   font-size: 1.05rem;
   word-break: break-word;
   overflow-wrap: break-word;
+  min-width: 0;
   
   h2 {
     background: linear-gradient(135deg, var(--primary-blue) 0%, #0052a3 100%);
@@ -234,13 +235,13 @@
   
   img {
     max-width: 100%;
-    width: 100%;
     height: auto;
     margin: var(--spacing-xl) 0;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     display: block;
     transition: transform 0.3s ease;
+    box-sizing: border-box;
     
     &:hover {
       transform: scale(1.02);
