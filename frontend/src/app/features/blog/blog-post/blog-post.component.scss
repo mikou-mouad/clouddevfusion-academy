@@ -95,6 +95,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   min-width: 0;
+  overflow: hidden;
 }
 
 .post-image {
@@ -247,7 +248,8 @@
     display: block;
     transition: transform 0.3s ease;
     box-sizing: border-box;
-    
+    transform: none !important;
+
     &:hover {
       transform: scale(1.02);
     }
@@ -262,11 +264,25 @@
     }
   }
   
+  img[src^="data:"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
   // Paragraphes avec images
   p {
     img {
       margin: var(--spacing-md) 0;
     }
+  }
+
+    p {
+      img[src^="data:"] {
+        max-width: 100% !important;
+        width: 100% !important;
+        height: auto !important;
+      }
   }
 }
 
