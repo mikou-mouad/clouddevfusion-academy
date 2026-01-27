@@ -113,8 +113,8 @@
   line-height: 1.9;
   color: #374151;
   font-size: 1.05rem;
-  overflow-x: hidden;
-  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
   
   h2 {
     background: linear-gradient(135deg, var(--primary-blue) 0%, #0052a3 100%);
