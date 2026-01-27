@@ -72,7 +72,7 @@
 
 .post-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--spacing-xl);
   padding: 0 var(--spacing-xl);
   max-width: 1400px;
@@ -95,7 +95,6 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   min-width: 0;
-  overflow: hidden;
 }
 
 .post-image {
@@ -107,9 +106,10 @@
     width: 100%;
     height: auto;
     max-height: 300px;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
-    display: block;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -240,12 +240,21 @@
   }
   
   img {
+    width: 100%;
     max-width: 100%;
     height: auto;
+    display: block;
+
+    /* important: pas de zoom dans le contenu */
+    transition: none;
+    transform: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
     margin: var(--spacing-xl) 0;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    display: block;
     transition: transform 0.3s ease;
     box-sizing: border-box;
     transform: none !important;
