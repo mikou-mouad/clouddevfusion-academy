@@ -75,7 +75,9 @@
   grid-template-columns: 1fr 380px;
   gap: var(--spacing-xl);
   padding: 0 var(--spacing-xl);
-  max-width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
   
   @media (min-width: 1600px) {
     padding: 0 calc((100% - 1600px) / 2);
@@ -92,17 +94,20 @@
   padding: var(--spacing-xl);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
+  min-width: 0;
+  overflow: hidden;
 
 .post-image {
   max-width: 500px;
   margin: var(--spacing-xl) auto;
+  width: 100%;
   
   img {
     width: 100%;
     height: auto;
     max-height: 300px;
     object-fit: cover;
+    display: block;
     display: block;
   }
 }
