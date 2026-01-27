@@ -113,6 +113,8 @@
   line-height: 1.9;
   color: #374151;
   font-size: 1.05rem;
+  overflow-x: hidden;
+  word-wrap: break-word;
   
   h2 {
     background: linear-gradient(135deg, var(--primary-blue) 0%, #0052a3 100%);
@@ -209,6 +211,7 @@
     overflow-x: auto;
     margin: var(--spacing-lg) 0;
     border-left: 4px solid var(--primary-blue);
+    max-width: 100%;
     
     code {
       background: transparent;
@@ -231,6 +234,7 @@
   
   img {
     max-width: 100%;
+    width: 100%;
     height: auto;
     margin: var(--spacing-xl) 0;
     border-radius: 12px;
