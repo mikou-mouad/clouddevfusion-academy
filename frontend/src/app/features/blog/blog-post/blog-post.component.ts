@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService, BlogPost, Course } from '../../../core/services/api.service';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 
 @Component({
     selector: 'app-blog-post',
@@ -20,7 +22,8 @@ export class BlogPostComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit() {
@@ -86,10 +89,14 @@ export class BlogPostComponent implements OnInit {
     }
   }
 
-  formatContent(content: string | undefined): string {
+  formatContent(content?: string): SafeHtml {
     if (!content) return '';
-    // Le contenu est déjà en HTML depuis l'API
-    return content;
+    const clean = DOMPurify.sanitize(content, {
+      USE_PROFILES: { html: true },
+      ALLOWED_TAGS: ['p','br','h2','h3','h4','ul','ol','li','strong','em','a','img','blockquote','pre','code','table','thead','tbody','tr','th','td'],
+      ALLOWED_ATTR: ['href','src','alt','title','target','rel','style']
+    });
+    return this.sanitizer.bypassSecurityTrustHtml(clean);
   }
 }
 

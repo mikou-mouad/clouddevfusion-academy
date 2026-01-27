@@ -119,8 +119,9 @@
   line-height: 1.9;
   color: #374151;
   font-size: 1.05rem;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: auto; 
   min-width: 0;
   
   h2 {
