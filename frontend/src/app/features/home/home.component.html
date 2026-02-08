@@ -11,7 +11,7 @@
           <img src="assets/Microsoft-logo.png" alt="Microsoft" class="logo-microsoft">
         </div>
         <h1 class="hero-title">
-          Boostez vos compétences Cloud<br>
+          Boostez votre carrière<br>
           <span class="title-highlight">Formez-vous avec des experts certifiés Microsoft</span>
         </h1>
         <p class="hero-description">
@@ -55,23 +55,18 @@
       <h2 class="section-title">Qui Sommes-Nous</h2>
       <p class="section-subtitle">Votre partenaire de confiance pour l'excellence en formation Azure</p>
     </div>
-    
+
     <!-- Mission et Certification côte à côte -->
     <div class="mission-cert-grid">
       <!-- Notre Mission -->
       <div class="mission-block">
         <div class="mission-content">
-          <div class="mission-icon-wrapper">
-            <div class="mission-icon">
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
+          <div class="microsoft-cert-badge">
+            <img src="assets/qualiopi.png" alt="Certifié Qualiopi" class="microsoft-cert-logo">
+            <div class="cert-glow"></div>
           </div>
           <div class="mission-text">
-            <h3>Notre Mission</h3>
+            <h3>Certifié Qualiopi</h3>
             <p class="mission-intro">Accompagner les professionnels et les organisations dans leur transformation digitale.</p>
             <p>Nous nous engageons à fournir des formations Azure d'excellence, certifiantes et adaptées à vos besoins spécifiques. Notre approche combine apprentissage pratique, formateurs experts et suivi personnalisé pour garantir votre réussite.</p>
             <div class="mission-highlights">
@@ -106,11 +101,11 @@
             <div class="cert-glow"></div>
           </div>
           <div class="cert-text">
-            <h3>Certifié Microsoft Gold Partner</h3>
-            <p>Formations alignées sur les standards officiels Microsoft. Formateurs MCT certifiés, curricula officiels et accès exclusif aux ressources MS Learn.</p>
+            <h3>Membre du Programme Microsoft Training Partner</h3>
+            <p>Formations alignées sur les standards officiels Microsoft. Formateurs MCT certifiés, curriculum officiels et accès exclusif aux ressources MS Learn.</p>
             <div class="cert-badges">
               <span class="cert-badge-item">MCT Certifié</span>
-              <span class="cert-badge-item">MS Learn</span>
+              <span class="cert-badge-item">Qualiopi Certifié</span>
               <span class="cert-badge-item">98% Réussite</span>
             </div>
           </div>
@@ -193,38 +188,52 @@
       <p class="section-subtitle">Une expertise reconnue pour votre réussite professionnelle</p>
     </div>
     <div class="features-grid">
-      <div class="feature-item" *ngFor="let feature of features">
-        <div class="feature-icon-wrapper">
-          <div class="feature-icon">
-            <ng-container [ngSwitch]="feature.icon">
-              <svg *ngSwitchCase="'certification'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg *ngSwitchCase="'labs'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg *ngSwitchCase="'cpf'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg *ngSwitchCase="'expert'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg *ngSwitchCase="'support'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg *ngSwitchCase="'flexible'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </ng-container>
+      @for (feature of features; track feature) {
+        <div class="feature-item">
+          <div class="feature-icon-wrapper">
+            <div class="feature-icon">
+              @switch (feature.icon) {
+                @case ('certification') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('labs') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('cpf') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('expert') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('support') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('flexible') {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+              }
+            </div>
           </div>
+          <h3 class="feature-title">{{ feature.title }}</h3>
+          <p class="feature-description">{{ feature.description }}</p>
         </div>
-        <h3 class="feature-title">{{ feature.title }}</h3>
-        <p class="feature-description">{{ feature.description }}</p>
-      </div>
+      }
     </div>
   </div>
 </section>
@@ -237,57 +246,67 @@
       <p class="section-subtitle">Des solutions adaptées à vos besoins, que vous soyez une entreprise, un groupe ou une école</p>
     </div>
     <div class="offers-grid">
-      <div class="offer-card" *ngFor="let offer of offers">
-        <div class="offer-icon-wrapper">
-          <div class="offer-icon" [ngClass]="'offer-icon-' + offer.type">
-            <ng-container [ngSwitch]="offer.type">
-              <svg *ngSwitchCase="'entreprise'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 22V12H15V22" stroke-linecap="round" stroke-linejoin="round"/>
+      @for (offer of offers; track offer) {
+        <div class="offer-card">
+          <div class="offer-icon-wrapper">
+            <div class="offer-icon" [ngClass]="'offer-icon-' + offer.type">
+              @switch (offer.type) {
+                @case ('entreprise') {
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 22V12H15V22" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('groupe') {
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+                @case ('ecole') {
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5C4 18.837 4.26339 18.2011 4.73223 17.7322C5.20107 17.2634 5.83696 17 6.5 17H17.5C18.163 17 18.7989 17.2634 19.2678 17.7322C19.7366 18.2011 20 18.837 20 19.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2V17" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12H22" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M7 7L12 2L17 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+              }
+            </div>
+          </div>
+          <h3 class="offer-title">{{ offer.title }}</h3>
+          <p class="offer-description">{{ offer.description }}</p>
+          <ul class="offer-features">
+            @for (feature of offer.features; track feature) {
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{{ feature }}</span>
+              </li>
+            }
+          </ul>
+          <div class="offer-cta">
+            <a routerLink="/catalog" class="btn btn-primary btn-catalog">
+              <span>En savoir plus</span>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <svg *ngSwitchCase="'groupe'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke-linecap="round" stroke-linejoin="round"/>
+            </a>
+            <a routerLink="/contact" class="btn btn-secondary btn-rdv">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
-              <svg *ngSwitchCase="'ecole'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 19.5C4 18.837 4.26339 18.2011 4.73223 17.7322C5.20107 17.2634 5.83696 17 6.5 17H17.5C18.163 17 18.7989 17.2634 19.2678 17.7322C19.7366 18.2011 20 18.837 20 19.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 2V17" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12H22" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M7 7L12 2L17 7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </ng-container>
+              <span>Prendre RDV</span>
+            </a>
           </div>
         </div>
-        <h3 class="offer-title">{{ offer.title }}</h3>
-        <p class="offer-description">{{ offer.description }}</p>
-        <ul class="offer-features">
-          <li *ngFor="let feature of offer.features">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>{{ feature }}</span>
-          </li>
-        </ul>
-        <div class="offer-cta">
-          <a routerLink="/catalog" class="btn btn-primary btn-catalog">
-            <span>En savoir plus</span>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </a>
-          <a routerLink="/contact" class="btn btn-secondary btn-rdv">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span>Prendre RDV</span>
-          </a>
-        </div>
-      </div>
+      }
     </div>
   </div>
 </section>
@@ -299,85 +318,103 @@
       <h2 class="section-title">Ce qu'ils disent de nous</h2>
       <p class="section-subtitle">Les avis de nos clients</p>
     </div>
-    
+
     <div class="testimonials-wrapper">
       <button class="testimonial-nav-btn prev-btn" (click)="previousTestimonial()" aria-label="Témoignage précédent">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
       </button>
-      
+
       <div class="testimonials-slider">
         <div class="testimonials-slider-track" [style.transform]="'translateX(-' + (currentTestimonialSlide * 100) + '%)'">
-          <div class="testimonial-box" *ngFor="let testimonial of testimonials; let i = index">
-            <div class="testimonial-card" *ngIf="testimonial && (testimonial.quote || testimonial.videoUrl)">
-              <!-- Vidéo si disponible -->
-              <div class="testimonial-video-container" *ngIf="testimonial.videoUrl">
-                <!-- Vidéo uploadée -->
-                <div class="video-wrapper" *ngIf="isUploadedVideo(testimonial.videoUrl)">
-                  <video controls [src]="testimonial.videoUrl" class="uploaded-video">
-                    Votre navigateur ne supporte pas la lecture de vidéos.
-                  </video>
+          @for (testimonial of testimonials; track testimonial; let i = $index) {
+            <div class="testimonial-box">
+              @if (testimonial && (testimonial.quote || testimonial.videoUrl)) {
+                <div class="testimonial-card">
+                  <!-- Vidéo si disponible -->
+                  @if (testimonial.videoUrl) {
+                    <div class="testimonial-video-container">
+                      <!-- Vidéo uploadée -->
+                      @if (isUploadedVideo(testimonial.videoUrl)) {
+                        <div class="video-wrapper">
+                          <video controls [src]="testimonial.videoUrl" class="uploaded-video">
+                            Votre navigateur ne supporte pas la lecture de vidéos.
+                          </video>
+                        </div>
+                      }
+                      <!-- Vidéo externe -->
+                      @if (!isUploadedVideo(testimonial.videoUrl) && isVideoUrl(testimonial.videoUrl)) {
+                        <div class="video-wrapper">
+                          <iframe
+                            [src]="getVideoEmbedUrl(testimonial.videoUrl) | safe"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen
+                            loading="lazy">
+                          </iframe>
+                        </div>
+                      }
+                    </div>
+                  }
+                  <div class="testimonial-header">
+                    <div class="quote-icon-wrapper">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 21c3-3.6 5.4-6 9-6s6 2.4 6 6v1H3v-1z" fill="currentColor" opacity="0.1"/>
+                        <path d="M6 8c0-1.1.9-2 2-2s2 .9 2 2v4c0 1.1-.9 2-2 2H7c-.6 0-1-.4-1-1V8z" fill="currentColor" opacity="0.2"/>
+                        <path d="M14 8c0-1.1.9-2 2-2s2 .9 2 2v4c0 1.1-.9 2-2 2h-1c-.6 0-1-.4-1-1V8z" fill="currentColor" opacity="0.2"/>
+                      </svg>
+                    </div>
+                    <div class="testimonial-rating">
+                      @for (star of [1,2,3,4,5]; track star) {
+                        <svg width="18" height="18" viewBox="0 0 24 24" [attr.fill]="star <= (testimonial?.rating || 5) ? 'currentColor' : 'none'" fill="currentColor" stroke="currentColor" stroke-width="1">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      }
+                    </div>
+                  </div>
+                  @if (testimonial?.quote) {
+                    <p class="testimonial-quote">{{ testimonial.quote }}</p>
+                  }
+                  @if (testimonial?.author) {
+                    <div class="testimonial-author">
+                      <div class="author-avatar">
+                        <div class="avatar-initial">{{ testimonial.author?.charAt(0) || '?' }}</div>
+                      </div>
+                      <div class="author-details">
+                        <h4 class="author-name">{{ testimonial.author }}</h4>
+                        @if (testimonial.role) {
+                          <p class="author-role">{{ testimonial.role }}</p>
+                        }
+                        @if (testimonial.company) {
+                          <p class="author-company">{{ testimonial.company }}</p>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
-                <!-- Vidéo externe -->
-                <div class="video-wrapper" *ngIf="!isUploadedVideo(testimonial.videoUrl) && isVideoUrl(testimonial.videoUrl)">
-                  <iframe 
-                    [src]="getVideoEmbedUrl(testimonial.videoUrl) | safe" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen
-                    loading="lazy">
-                  </iframe>
-                </div>
-              </div>
-              
-              <div class="testimonial-header">
-                <div class="quote-icon-wrapper">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M3 21c3-3.6 5.4-6 9-6s6 2.4 6 6v1H3v-1z" fill="currentColor" opacity="0.1"/>
-                    <path d="M6 8c0-1.1.9-2 2-2s2 .9 2 2v4c0 1.1-.9 2-2 2H7c-.6 0-1-.4-1-1V8z" fill="currentColor" opacity="0.2"/>
-                    <path d="M14 8c0-1.1.9-2 2-2s2 .9 2 2v4c0 1.1-.9 2-2 2h-1c-.6 0-1-.4-1-1V8z" fill="currentColor" opacity="0.2"/>
-                  </svg>
-                </div>
-                <div class="testimonial-rating">
-                  <svg *ngFor="let star of [1,2,3,4,5]" width="18" height="18" viewBox="0 0 24 24" [attr.fill]="star <= (testimonial?.rating || 5) ? 'currentColor' : 'none'" fill="currentColor" stroke="currentColor" stroke-width="1">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                </div>
-              </div>
-              
-              <p class="testimonial-quote" *ngIf="testimonial?.quote">{{ testimonial.quote }}</p>
-              
-              <div class="testimonial-author" *ngIf="testimonial?.author">
-                <div class="author-avatar">
-                  <div class="avatar-initial">{{ testimonial.author.charAt(0) || '?' }}</div>
-                </div>
-                <div class="author-details">
-                  <h4 class="author-name">{{ testimonial.author }}</h4>
-                  <p class="author-role" *ngIf="testimonial.role">{{ testimonial.role }}</p>
-                  <p class="author-company" *ngIf="testimonial.company">{{ testimonial.company }}</p>
-                </div>
-              </div>
+              }
             </div>
-          </div>
+          }
         </div>
       </div>
-      
+
       <button class="testimonial-nav-btn next-btn" (click)="nextTestimonial()" aria-label="Témoignage suivant">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       </button>
     </div>
-    
+
     <div class="testimonials-indicators">
-      <button 
-        class="indicator-dot" 
-        *ngFor="let i of testimonialIndicators"
-        [class.active]="i === currentTestimonialSlide"
-        (click)="goToTestimonial(i)"
-        [attr.aria-label]="'Aller au témoignage ' + (i + 1)">
-      </button>
+      @for (i of testimonialIndicators; track i) {
+        <button
+          class="indicator-dot"
+          [class.active]="i === currentTestimonialSlide"
+          (click)="goToTestimonial(i)"
+          [attr.aria-label]="'Aller au témoignage ' + (i + 1)">
+        </button>
+      }
     </div>
   </div>
 </section>
@@ -392,14 +429,20 @@
     <div class="partners-carousel-wrapper">
       <div class="partners-carousel">
         <div class="partners-track">
-          <div class="partner-logo-card" *ngFor="let partner of duplicatedPartners; let i = index">
-            <div class="logo-wrapper">
-              <img [src]="partner.logoPath" [alt]="partner.name + ' logo'" class="partner-logo-img" *ngIf="partner.logoPath && !partner.imageError" (error)="onImageError($event, i % partners.length)">
-              <div class="logo-fallback" [ngClass]="getFallbackClass(partner.name)" *ngIf="shouldShowFallback(partner)">
-                <span>{{ partner.name }}</span>
+          @for (partner of duplicatedPartners; track partner; let i = $index) {
+            <div class="partner-logo-card">
+              <div class="logo-wrapper">
+                @if (partner.logoPath && !partner.imageError) {
+                  <img [src]="partner.logoPath" [alt]="partner.name + ' logo'" class="partner-logo-img" (error)="onImageError($event, i % partners.length)">
+                }
+                @if (shouldShowFallback(partner)) {
+                  <div class="logo-fallback" [ngClass]="getFallbackClass(partner.name)">
+                    <span>{{ partner.name }}</span>
+                  </div>
+                }
               </div>
             </div>
-          </div>
+          }
         </div>
       </div>
     </div>
@@ -414,37 +457,49 @@
       <p class="section-subtitle">Un processus simple et accompagné pour votre réussite</p>
     </div>
     <div class="process-timeline">
-      <div class="process-step" *ngFor="let step of processSteps; let i = index">
-        <div class="step-number-wrapper">
-          <div class="step-number" [attr.data-step]="step.step">{{ step.step }}</div>
-          <div class="step-connector" *ngIf="i < processSteps.length - 1"></div>
-        </div>
-        <div class="step-content">
-          <div class="step-icon-wrapper">
-            <div class="step-icon" [ngClass]="'step-icon-' + step.color">
-              <ng-container [ngSwitch]="step.icon">
-                <svg *ngSwitchCase="'consultation'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M12 11V13M12 7V7.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <svg *ngSwitchCase="'financement'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <svg *ngSwitchCase="'formation'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <svg *ngSwitchCase="'certification'" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </ng-container>
-            </div>
+      @for (step of processSteps; track step; let i = $index) {
+        <div class="process-step">
+          <div class="step-number-wrapper">
+            <div class="step-number" [attr.data-step]="step.step">{{ step.step }}</div>
+            @if (i < processSteps.length - 1) {
+              <div class="step-connector"></div>
+            }
           </div>
-          <h3 class="step-title">{{ step.title }}</h3>
-          <p class="step-description">{{ step.description }}</p>
+          <div class="step-content">
+            <div class="step-icon-wrapper">
+              <div class="step-icon" [ngClass]="'step-icon-' + step.color">
+                @switch (step.icon) {
+                  @case ('consultation') {
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M12 11V13M12 7V7.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                  @case ('financement') {
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                  @case ('formation') {
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                  @case ('certification') {
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                }
+              </div>
+            </div>
+            <h3 class="step-title">{{ step.title }}</h3>
+            <p class="step-description">{{ step.description }}</p>
+          </div>
         </div>
-      </div>
+      }
     </div>
     <div class="process-cta">
       <a routerLink="/contact" class="btn btn-primary btn-large">
@@ -465,19 +520,21 @@
       <p class="section-subtitle">Trouvez rapidement les réponses à vos questions</p>
     </div>
     <div class="faq-grid">
-      <div class="faq-item" *ngFor="let faq of faqItems; let i = index" [class.open]="isFaqOpen(faq)">
-        <div class="faq-question" (click)="toggleFaq(faq)">
-          <h3>{{ faq.question }}</h3>
-          <div class="faq-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      @for (faq of faqItems; track faq; let i = $index) {
+        <div class="faq-item" [class.open]="isFaqOpen(faq)">
+          <div class="faq-question" (click)="toggleFaq(faq)">
+            <h3>{{ faq.question }}</h3>
+            <div class="faq-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="faq-answer">
+            <p>{{ faq.answer }}</p>
           </div>
         </div>
-        <div class="faq-answer">
-          <p>{{ faq.answer }}</p>
-        </div>
-      </div>
+      }
     </div>
     <div class="faq-cta">
       <a routerLink="/faq" class="btn btn-secondary btn-large">
@@ -502,10 +559,10 @@
 </section>
 
 <!-- Bouton flottant "Prendre RDV" -->
-<a routerLink="/contact" 
-   class="floating-rdv-button" 
-   [class.visible]="showFloatingButton"
-   title="Prendre rendez-vous">
+<a routerLink="/contact"
+  class="floating-rdv-button"
+  [class.visible]="showFloatingButton"
+  title="Prendre rendez-vous">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path d="M8 7V3M16 7V3M5 10H19M5 10H4C3.46957 10 2.96086 10.2107 2.58579 10.5858C2.21071 10.9609 2 11.4696 2 12V19C2 19.5304 2.21071 20.0391 2.58579 20.4142C2.96086 20.7893 3.46957 21 4 21H20C20.5304 21 21.0391 20.7893 21.4142 20.4142C21.7893 20.0391 22 19.5304 22 19V12C22 11.4696 21.7893 10.9609 21.4142 10.5858C21.0391 10.2107 20.5304 10 20 10H19M5 10V6C5 5.46957 5.21071 4.96086 5.58579 4.58579C5.96086 4.21071 6.46957 4 7 4H17C17.5304 4 18.0391 4.21071 18.4142 4.58579C18.7893 4.96086 19 5.46957 19 6V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>

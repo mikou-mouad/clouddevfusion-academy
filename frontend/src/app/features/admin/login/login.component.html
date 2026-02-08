@@ -8,50 +8,56 @@
       </div>
 
       <form class="login-form" (ngSubmit)="onSubmit()" #loginForm="ngForm">
-        <div class="error-message" *ngIf="error">{{ error }}</div>
+        @if (error) {
+          <div class="error-message">{{ error }}</div>
+        }
 
         <div class="form-group">
           <label for="email">Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            [(ngModel)]="email" 
-            name="email" 
-            placeholder="admin@clouddevfusion.com"
+          <input
+            type="email"
+            id="email"
+            [(ngModel)]="email"
+            name="email"
+            placeholder="Insérez votre nom d'utilisateur"
             class="form-input"
             required
             [disabled]="loading">
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input
+              type="password"
+              id="password"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="••••••••"
+              class="form-input"
+              required
+              [disabled]="loading">
+            </div>
+
+            <button
+              type="submit"
+              class="btn btn-primary btn-block"
+              [disabled]="loading || !email || !password">
+              @if (loading) {
+                <span>Connexion...</span>
+              }
+              @if (!loading) {
+                <span>Se connecter</span>
+              }
+            </button>
+          </form>
+
+          <div class="login-footer">
+            <p class="login-info">
+              <strong>Comptes par défaut</strong><br>
+              Utilisez votre compte admin pour gérer le contenu<br>
+              Utilisez votre compte super-admin pour gérer les utilisateurs
+            </p>
+          </div>
         </div>
-
-        <div class="form-group">
-          <label for="password">Mot de passe</label>
-          <input 
-            type="password" 
-            id="password" 
-            [(ngModel)]="password" 
-            name="password" 
-            placeholder="••••••••"
-            class="form-input"
-            required
-            [disabled]="loading">
-        </div>
-
-        <button 
-          type="submit" 
-          class="btn btn-primary btn-block" 
-          [disabled]="loading || !email || !password">
-          <span *ngIf="loading">Connexion...</span>
-          <span *ngIf="!loading">Se connecter</span>
-        </button>
-      </form>
-
-      <div class="login-footer">
-        <p class="login-info">
-          <strong>Comptes par défaut</strong><br>
-          Admin - admin&#64;clouddevfusion.com / admin123<br>
-          Super Admin - superadmin&#64;clouddevfusion.com / superadmin123
-        </p>
       </div>
     </div>
-  </div>
-</div>

@@ -1,15 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 import { AuthService, User } from '../../core/services/auth.service';
 import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-admin-layout',
-  standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
-  templateUrl: './admin-layout.component.html',
-  styleUrls: ['./admin-layout.component.scss']
+    selector: 'app-admin-layout',
+    imports: [RouterLink, RouterLinkActive, RouterOutlet],
+    templateUrl: './admin-layout.component.html',
+    styleUrls: ['./admin-layout.component.scss']
 })
 export class AdminLayoutComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;

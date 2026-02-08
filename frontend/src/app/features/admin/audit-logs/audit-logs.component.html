@@ -7,118 +7,165 @@
   </div>
 
   <!-- Accès refusé si pas super admin -->
-  <div class="error-state" *ngIf="error && error.includes('Accès refusé')">
-    <p>{{ error }}</p>
-  </div>
+  @if (error && error.includes('Accès refusé')) {
+    <div class="error-state">
+      <p>{{ error }}</p>
+    </div>
+  }
 
   <!-- Filtres -->
-  <div class="filters-section" *ngIf="!error || !error.includes('Accès refusé')">
-    <div class="filters-card">
-      <h3>Filtres</h3>
-      <div class="filters-grid">
-        <div class="form-group">
-          <label for="filterUserEmail">Email utilisateur</label>
-          <input 
-            type="text" 
-            id="filterUserEmail" 
-            [(ngModel)]="filterUserEmail" 
-            placeholder="admin@clouddevfusion.com"
-            class="form-input">
-        </div>
-        <div class="form-group">
-          <label for="filterEntityType">Type d'entité</label>
-          <select id="filterEntityType" [(ngModel)]="filterEntityType" class="form-input">
-            <option value="">Tous</option>
-            <option *ngFor="let type of entityTypes" [value]="type">{{ type }}</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="filterAction">Action</label>
-          <select id="filterAction" [(ngModel)]="filterAction" class="form-input">
-            <option value="">Toutes</option>
-            <option *ngFor="let action of actions" [value]="action">{{ getActionLabel(action) }}</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="limit">Nombre de résultats</label>
-          <input 
-            type="number" 
-            id="limit" 
-            [(ngModel)]="limit" 
-            min="10" 
-            max="1000" 
-            step="10"
-            class="form-input">
-        </div>
-      </div>
-      <div class="filters-actions">
-        <button class="btn btn-primary" (click)="applyFilters()" [disabled]="loading">
-          Appliquer les filtres
-        </button>
-        <button class="btn btn-secondary" (click)="resetFilters()" [disabled]="loading">
-          Réinitialiser
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div class="loading-state" *ngIf="loading">
-    <p>Chargement des logs...</p>
-  </div>
-
-  <!-- Liste des logs -->
-  <div class="logs-container" *ngIf="!loading && (!error || !error.includes('Accès refusé'))">
-    <div class="logs-list" *ngIf="filteredLogs.length > 0">
-      <div class="log-item" *ngFor="let log of filteredLogs" [class]="'log-action-' + getActionColor(log.action)">
-        <div class="log-header">
-          <div class="log-action-badge" [class]="'badge-' + getActionColor(log.action)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10" *ngIf="getActionIcon(log.action) === 'plus'"/>
-              <path d="M12 5v14M5 12h14" *ngIf="getActionIcon(log.action) === 'plus'"/>
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" *ngIf="getActionIcon(log.action) === 'edit'"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" *ngIf="getActionIcon(log.action) === 'edit'"/>
-              <polyline points="3 6 5 6 21 6" *ngIf="getActionIcon(log.action) === 'trash'"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" *ngIf="getActionIcon(log.action) === 'trash'"/>
-              <path d="M15 3v6M9 3v6" *ngIf="getActionIcon(log.action) === 'log-in'"/>
-              <path d="M12 15h7a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-0a2 2 0 0 1 2-2z" *ngIf="getActionIcon(log.action) === 'log-in'"/>
-              <path d="M9 21v-6M15 21v-6" *ngIf="getActionIcon(log.action) === 'log-out'"/>
-              <path d="M12 9H5a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h7" *ngIf="getActionIcon(log.action) === 'log-out'"/>
-            </svg>
-            <span>{{ getActionLabel(log.action) }}</span>
-          </div>
-          <div class="log-date">{{ formatDate(log.createdAt) }}</div>
-        </div>
-        <div class="log-content">
-          <div class="log-main-info">
-            <div class="log-user">
-              <strong>{{ log.username }}</strong>
-              <span class="log-email">({{ log.userEmail }})</span>
+  @if (!error || !error.includes('Accès refusé')) {
+    <div class="filters-section">
+      <div class="filters-card">
+        <h3>Filtres</h3>
+        <div class="filters-grid">
+          <div class="form-group">
+            <label for="filterUserEmail">Email utilisateur</label>
+            <input
+              type="text"
+              id="filterUserEmail"
+              [(ngModel)]="filterUserEmail"
+              placeholder="admin@clouddevfusion.com"
+              class="form-input">
             </div>
-            <div class="log-entity">
-              <span class="entity-type">{{ log.entityType }}</span>
-              <span class="entity-title" *ngIf="log.entityTitle">: {{ log.entityTitle }}</span>
-              <span class="entity-id" *ngIf="log.entityId">#{{ log.entityId }}</span>
+            <div class="form-group">
+              <label for="filterEntityType">Type d'entité</label>
+              <select id="filterEntityType" [(ngModel)]="filterEntityType" class="form-input">
+                <option value="">Tous</option>
+                @for (type of entityTypes; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filterAction">Action</label>
+              <select id="filterAction" [(ngModel)]="filterAction" class="form-input">
+                <option value="">Toutes</option>
+                @for (action of actions; track action) {
+                  <option [value]="action">{{ getActionLabel(action) }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="limit">Nombre de résultats</label>
+              <input
+                type="number"
+                id="limit"
+                [(ngModel)]="limit"
+                min="10"
+                max="1000"
+                step="10"
+                class="form-input">
+              </div>
+            </div>
+            <div class="filters-actions">
+              <button class="btn btn-primary" (click)="applyFilters()" [disabled]="loading">
+                Appliquer les filtres
+              </button>
+              <button class="btn btn-secondary" (click)="resetFilters()" [disabled]="loading">
+                Réinitialiser
+              </button>
             </div>
           </div>
-          <div class="log-description" *ngIf="log.description">
-            {{ log.description }}
-          </div>
-          <div class="log-changes" *ngIf="hasChanges(log.changes)">
-            <details>
-              <summary>Voir les modifications</summary>
-              <pre>{{ log.changes | json }}</pre>
-            </details>
-          </div>
-          <div class="log-meta">
-            <span class="log-ip" *ngIf="log.ipAddress">IP: {{ log.ipAddress }}</span>
-          </div>
         </div>
-      </div>
-    </div>
+      }
 
-    <div class="empty-state" *ngIf="filteredLogs.length === 0 && !loading">
-      <p>Aucun log trouvé</p>
+      <!-- Loading State -->
+      @if (loading) {
+        <div class="loading-state">
+          <p>Chargement des logs...</p>
+        </div>
+      }
+
+      <!-- Liste des logs -->
+      @if (!loading && (!error || !error.includes('Accès refusé'))) {
+        <div class="logs-container">
+          @if (filteredLogs.length > 0) {
+            <div class="logs-list">
+              @for (log of filteredLogs; track log) {
+                <div class="log-item" [class]="'log-action-' + getActionColor(log.action)">
+                  <div class="log-header">
+                    <div class="log-action-badge" [class]="'badge-' + getActionColor(log.action)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        @if (getActionIcon(log.action) === 'plus') {
+                          <circle cx="12" cy="12" r="10"/>
+                        }
+                        @if (getActionIcon(log.action) === 'plus') {
+                          <path d="M12 5v14M5 12h14"/>
+                        }
+                        @if (getActionIcon(log.action) === 'edit') {
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        }
+                        @if (getActionIcon(log.action) === 'edit') {
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        }
+                        @if (getActionIcon(log.action) === 'trash') {
+                          <polyline points="3 6 5 6 21 6"/>
+                        }
+                        @if (getActionIcon(log.action) === 'trash') {
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        }
+                        @if (getActionIcon(log.action) === 'log-in') {
+                          <path d="M15 3v6M9 3v6"/>
+                        }
+                        @if (getActionIcon(log.action) === 'log-in') {
+                          <path d="M12 15h7a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-0a2 2 0 0 1 2-2z"/>
+                        }
+                        @if (getActionIcon(log.action) === 'log-out') {
+                          <path d="M9 21v-6M15 21v-6"/>
+                        }
+                        @if (getActionIcon(log.action) === 'log-out') {
+                          <path d="M12 9H5a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h7"/>
+                        }
+                      </svg>
+                      <span>{{ getActionLabel(log.action) }}</span>
+                    </div>
+                    <div class="log-date">{{ formatDate(log.createdAt) }}</div>
+                  </div>
+                  <div class="log-content">
+                    <div class="log-main-info">
+                      <div class="log-user">
+                        <strong>{{ log.username }}</strong>
+                        <span class="log-email">({{ log.userEmail }})</span>
+                      </div>
+                      <div class="log-entity">
+                        <span class="entity-type">{{ log.entityType }}</span>
+                        @if (log.entityTitle) {
+                          <span class="entity-title">: {{ log.entityTitle }}</span>
+                        }
+                        @if (log.entityId) {
+                          <span class="entity-id">#{{ log.entityId }}</span>
+                        }
+                      </div>
+                    </div>
+                    @if (log.description) {
+                      <div class="log-description">
+                        {{ log.description }}
+                      </div>
+                    }
+                    @if (hasChanges(log.changes)) {
+                      <div class="log-changes">
+                        <details>
+                          <summary>Voir les modifications</summary>
+                          <pre>{{ log.changes | json }}</pre>
+                        </details>
+                      </div>
+                    }
+                    <div class="log-meta">
+                      @if (log.ipAddress) {
+                        <span class="log-ip">IP: {{ log.ipAddress }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          @if (filteredLogs.length === 0 && !loading) {
+            <div class="empty-state">
+              <p>Aucun log trouvé</p>
+            </div>
+          }
+        </div>
+      }
     </div>
-  </div>
-</div>

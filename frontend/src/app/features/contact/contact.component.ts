@@ -1,21 +1,20 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-contact',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './contact.component.html',
-  styleUrls: ['./contact.component.scss']
+    selector: 'app-contact',
+    imports: [FormsModule, RouterLink],
+    templateUrl: './contact.component.html',
+    styleUrls: ['./contact.component.scss']
 })
 export class ContactComponent {
   activeTab: 'contact' | 'rdv' = 'contact';
   
   // Informations de contact
-  contactEmail = 'contact@clouddevfusion.com';
+  contactEmail = 'formation@clouddevfusion.com';
   contactPhone = '+33 7 58 59 75 95';
   contactAddress = {
     company: 'CloudDevFusion',
@@ -24,9 +23,8 @@ export class ContactComponent {
   };
   
   socialLinks = {
-    linkedin: 'https://www.linkedin.com/company/clouddevfusion',
-    twitter: 'https://twitter.com/clouddevfusion',
-    facebook: 'https://www.facebook.com/clouddevfusion'
+    linkedin: 'https://www.linkedin.com/company/94102030',
+    youtube: 'https://www.youtube.com/@CloudDevFusion'
   };
   
   formData = {

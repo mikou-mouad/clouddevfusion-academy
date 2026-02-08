@@ -66,12 +66,14 @@
           </svg>
           <span>Tests de positionnement</span>
         </a>
-        <a routerLink="/admin/audit-logs" routerLinkActive="active" class="nav-item" *ngIf="isSuperAdmin()">
-          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-          <span>Traçabilité</span>
-        </a>
+        @if (isSuperAdmin()) {
+          <a routerLink="/admin/audit-logs" routerLinkActive="active" class="nav-item">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span>Traçabilité</span>
+          </a>
+        }
         <a routerLink="/" class="nav-item nav-item-exit">
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -86,20 +88,26 @@
       <header class="admin-header">
         <div class="header-content">
           <h1 class="back-office-title">Back Office</h1>
-          <div class="header-user-info" *ngIf="currentUser">
-            <div class="user-details">
-              <span class="user-name">{{ currentUser.username }}</span>
-              <span class="user-role" *ngIf="isSuperAdmin()">Super Admin</span>
-              <span class="user-role" *ngIf="!isSuperAdmin()">Admin</span>
+          @if (currentUser) {
+            <div class="header-user-info">
+              <div class="user-details">
+                <span class="user-name">{{ currentUser.username }}</span>
+                @if (isSuperAdmin()) {
+                  <span class="user-role">Super Admin</span>
+                }
+                @if (!isSuperAdmin()) {
+                  <span class="user-role">Admin</span>
+                }
+              </div>
+              <button class="btn-logout" (click)="logout()" title="Déconnexion">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
             </div>
-            <button class="btn-logout" (click)="logout()" title="Déconnexion">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-          </div>
+          }
         </div>
       </header>
       <div class="admin-content-wrapper">

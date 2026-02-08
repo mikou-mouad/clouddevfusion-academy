@@ -23,63 +23,62 @@ header('Content-Type: text/html; charset=utf-8');
     
     <?php
     try {
-        require __DIR__ . '/../vendor/autoload.php';
-        
-        // Charger le .env
-        if (file_exists(__DIR__ . '/../.env')) {
-            $dotenv = new Symfony\Component\Dotenv\Dotenv();
-            $dotenv->load(__DIR__ . '/../.env');
-        }
-        
-        $kernel = new App\Kernel('prod', false);
-        $kernel->boot();
-        
         echo "<div class='info'>📋 Suppression du cache...</div>";
         echo "<pre>";
         
-        // Supprimer le cache prod
-        $cacheDir = __DIR__ . '/../var/cache/prod';
-        if (is_dir($cacheDir)) {
-            $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($cacheDir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::CHILD_FIRST
-            );
-            
-            $count = 0;
-            foreach ($files as $fileinfo) {
-                if ($fileinfo->isDir()) {
-                    @rmdir($fileinfo->getRealPath());
-                } else {
-                    @unlink($fileinfo->getRealPath());
-                    $count++;
+        // Chemins des caches à vider
+        $cacheDirs = [
+            __DIR__ . '/../var/cache/prod',
+            __DIR__ . '/../var/cache/dev',
+        ];
+        
+        $totalCount = 0;
+        
+        // Supprimer tous les caches
+        foreach ($cacheDirs as $cacheDir) {
+            if (is_dir($cacheDir)) {
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($cacheDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::CHILD_FIRST
+                );
+                
+                $count = 0;
+                foreach ($files as $fileinfo) {
+                    if ($fileinfo->isDir()) {
+                        @rmdir($fileinfo->getRealPath());
+                    } else {
+                        @unlink($fileinfo->getRealPath());
+                        $count++;
+                    }
+                }
+                
+                if ($count > 0) {
+                    echo "✅ $count fichiers supprimés de " . basename($cacheDir) . "\n";
+                    $totalCount += $count;
                 }
             }
-            echo "✅ $count fichiers supprimés du cache prod\n";
         }
         
-        // Vider OPcache
+        // Vider OPcache si disponible
         if (function_exists('opcache_reset')) {
             opcache_reset();
             echo "✅ OPcache vidé\n";
         }
         
-        // Exécuter cache:clear via console
-        $application = new Symfony\Bundle\FrameworkBundle\Console\Application($kernel);
-        $application->setAutoExit(false);
-        
-        $input = new Symfony\Component\Console\Input\ArrayInput([
-            'command' => 'cache:clear',
-            '--env' => 'prod',
-            '--no-warmup' => true,
-        ]);
-        
-        $output = new Symfony\Component\Console\Output\BufferedOutput();
-        $application->run($input, $output);
-        
-        echo $output->fetch();
+        // Vider APC cache si disponible
+        if (function_exists('apcu_clear_cache')) {
+            apcu_clear_cache();
+            echo "✅ APCu cache vidé\n";
+        }
         
         echo "</pre>";
-        echo "<div class='success'>✅ Cache vidé complètement !</div>";
+        
+        if ($totalCount > 0) {
+            echo "<div class='success'>✅ Cache vidé complètement ($totalCount fichiers) !</div>";
+        } else {
+            echo "<div class='info'>ℹ️ Aucun fichier de cache à supprimer (cache déjà vide)</div>";
+        }
+        
         echo "<div class='info'>📋 Testez maintenant:</div>";
         echo "<ul>";
         echo "<li><a href='/api/courses' style='color: #569cd6;'>/api/courses</a></li>";

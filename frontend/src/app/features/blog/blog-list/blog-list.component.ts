@@ -5,10 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, BlogPost } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-blog-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  template: `
+    selector: 'app-blog-list',
+    imports: [CommonModule, RouterLink, FormsModule],
+    template: `
     <div class="blog-page">
       <section class="blog-header">
         <div class="blog-header-content">
@@ -16,63 +15,89 @@ import { ApiService, BlogPost } from '../../../core/services/api.service';
           <p class="blog-subtitle">Actualités, conseils et guides Azure</p>
         </div>
       </section>
-
+    
       <section class="categories-section">
         <div class="container">
           <div class="categories">
-            <button 
-              *ngFor="let category of categories" 
-              [class.active]="selectedCategory === category"
-              (click)="selectedCategory = category"
-              class="category-btn">
-              {{ category }}
-            </button>
+            @for (category of categories; track category) {
+              <button
+                [class.active]="selectedCategory === category"
+                (click)="selectedCategory = category"
+                class="category-btn">
+                {{ category }}
+              </button>
+            }
           </div>
         </div>
       </section>
-
+    
       <section class="posts-section">
         <div class="container">
-          <div class="loading-state" *ngIf="loading">
-            <p>Chargement des articles...</p>
-          </div>
-          
-          <div class="error-state" *ngIf="error">
-            <p>{{ error }}</p>
-          </div>
-
-          <div class="posts-grid" *ngIf="!loading && !error">
-            <article class="post-card" *ngFor="let post of filteredPosts">
-              <div *ngIf="post && post.category">
-                <div class="post-image" *ngIf="post.image">
-                  <img [src]="post.image" [alt]="post.title">
-                </div>
-                <div class="post-content">
-                  <div class="post-meta">
-                    <span class="category">{{ post?.category }}</span>
-                    <span class="date" *ngIf="post?.createdAt">{{ post.createdAt | date:'dd MMM yyyy' }}</span>
-                    <span class="read-time" *ngIf="post?.readTime">{{ post.readTime }} min de lecture</span>
-                  </div>
-                  <h2>
-                    <a [routerLink]="['/blog', post.slug]" *ngIf="post?.slug">{{ post?.title }}</a>
-                    <span *ngIf="!post?.slug">{{ post?.title }}</span>
-                  </h2>
-                  <p class="excerpt" *ngIf="post?.excerpt">{{ post.excerpt }}</p>
-                  <div class="post-author">
-                    <strong>{{ post?.author }}</strong>
-                  </div>
-                  <a [routerLink]="['/blog', post.slug]" class="read-more" *ngIf="post?.slug">Lire la suite →</a>
-                </div>
-              </div>
-            </article>
-            
-            <div class="empty-state" *ngIf="filteredPosts.length === 0">
-              <p>Aucun article disponible pour le moment.</p>
+          @if (loading) {
+            <div class="loading-state">
+              <p>Chargement des articles...</p>
             </div>
-          </div>
+          }
+    
+          @if (error) {
+            <div class="error-state">
+              <p>{{ error }}</p>
+            </div>
+          }
+    
+          @if (!loading && !error) {
+            <div class="posts-grid">
+              @for (post of filteredPosts; track post) {
+                <article class="post-card">
+                  @if (post && post.category) {
+                    <div>
+                      @if (post.image) {
+                        <div class="post-image">
+                          <img [src]="post.image" [alt]="post.title">
+                        </div>
+                      }
+                      <div class="post-content">
+                        <div class="post-meta">
+                          <span class="category">{{ post?.category }}</span>
+                          @if (post?.createdAt) {
+                            <span class="date">{{ post.createdAt | date:'dd MMM yyyy' }}</span>
+                          }
+                          @if (post?.readTime) {
+                            <span class="read-time">{{ post.readTime }} min de lecture</span>
+                          }
+                        </div>
+                        <h2>
+                          @if (post?.slug) {
+                            <a [routerLink]="['/blog', post.slug]">{{ post?.title }}</a>
+                          }
+                          @if (!post?.slug) {
+                            <span>{{ post?.title }}</span>
+                          }
+                        </h2>
+                        @if (post?.excerpt) {
+                          <p class="excerpt">{{ post.excerpt }}</p>
+                        }
+                        <div class="post-author">
+                          <strong>{{ post?.author }}</strong>
+                        </div>
+                        @if (post?.slug) {
+                          <a [routerLink]="['/blog', post.slug]" class="read-more">Lire la suite →</a>
+                        }
+                      </div>
+                    </div>
+                  }
+                </article>
+              }
+              @if (filteredPosts.length === 0) {
+                <div class="empty-state">
+                  <p>Aucun article disponible pour le moment.</p>
+                </div>
+              }
+            </div>
+          }
         </div>
       </section>
-
+    
       <section class="newsletter-section">
         <div class="container">
           <h2>Newsletter</h2>
@@ -84,8 +109,8 @@ import { ApiService, BlogPost } from '../../../core/services/api.service';
         </div>
       </section>
     </div>
-  `,
-  styles: [`
+    `,
+    styles: [`
     .blog-page {
       padding: 0;
       margin-top: 0;

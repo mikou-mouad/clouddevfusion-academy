@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Testimonial } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-testimonials',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './testimonials.component.html',
-  styleUrls: ['./testimonials.component.scss']
+    selector: 'app-admin-testimonials',
+    imports: [FormsModule],
+    templateUrl: './testimonials.component.html',
+    styleUrls: ['./testimonials.component.scss']
 })
 export class AdminTestimonialsComponent implements OnInit {
   testimonials: Testimonial[] = [];
@@ -233,7 +232,7 @@ export class AdminTestimonialsComponent implements OnInit {
 
     // Préparer les données avec le bon format
     // Convertir le rating en nombre si nécessaire
-    let ratingValue = this.formData.rating;
+    let ratingValue = this.formData.rating ?? 5;
     if (typeof ratingValue === 'string') {
       ratingValue = parseInt(ratingValue, 10);
     }
@@ -242,11 +241,11 @@ export class AdminTestimonialsComponent implements OnInit {
     }
 
     const testimonialData: Testimonial = {
-      quote: this.formData.quote?.trim() || '',
-      author: this.formData.author?.trim() || '',
-      role: this.formData.role?.trim() || '',
-      company: this.formData.company?.trim() || '',
-      rating: ratingValue,
+      quote: this.testimonialMode === 'video' ? undefined : (this.formData.quote?.trim() || ''),
+      author: this.testimonialMode === 'video' ? undefined : (this.formData.author?.trim() || ''),
+      role: this.testimonialMode === 'video' ? undefined : (this.formData.role?.trim() || ''),
+      company: this.testimonialMode === 'video' ? undefined : (this.formData.company?.trim() || ''),
+      rating: this.testimonialMode === 'video' ? undefined : ratingValue,
       videoUrl: this.formData.videoUrl?.trim() || undefined
     };
 

@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Faq } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-faq',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './faq.component.html',
-  styleUrls: ['./faq.component.scss']
+    selector: 'app-admin-faq',
+    imports: [FormsModule],
+    templateUrl: './faq.component.html',
+    styleUrls: ['./faq.component.scss']
 })
 export class AdminFaqComponent implements OnInit {
   faqs: Faq[] = [];

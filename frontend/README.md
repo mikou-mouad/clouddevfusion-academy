@@ -1,6 +1,6 @@
 #  Frontend
 
-Frontend Angular pour KubeLaunch by CloudDevFusion - Plateforme de formation Azure et Kubernetes.
+Frontend Angular pour CloudAcademy by CloudDevFusion - Plateforme de formation Azure et Kubernetes.
 
 ## Structure du projet
 

@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
-  selector: 'app-privacy',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-privacy',
+    imports: [],
+    template: `
     <div class="legal-page">
       <div class="container">
         <h1>Politique de confidentialité</h1>
@@ -26,7 +25,7 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .legal-page {
       padding: var(--spacing-xl) 0;
       min-height: calc(100vh - 200px);

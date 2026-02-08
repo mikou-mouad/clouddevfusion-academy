@@ -13,28 +13,27 @@ interface Partner {
 }
 
 @Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, SafeUrlPipe],
-  templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss'],
-  animations: [
-    trigger('fadeInUp', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(30px)' }),
-        animate('0.8s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
-      ])
-    ]),
-    trigger('countUp', [
-      transition(':enter', [
-        animate('2s ease-out', keyframes([
-          style({ opacity: 0, offset: 0 }),
-          style({ opacity: 1, offset: 0.2 }),
-          style({ opacity: 1, offset: 1 })
-        ]))
-      ])
-    ])
-  ]
+    selector: 'app-home',
+    imports: [CommonModule, RouterLink, FormsModule, SafeUrlPipe],
+    templateUrl: './home.component.html',
+    styleUrls: ['./home.component.scss'],
+    animations: [
+        trigger('fadeInUp', [
+            transition(':enter', [
+                style({ opacity: 0, transform: 'translateY(30px)' }),
+                animate('0.8s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+            ])
+        ]),
+        trigger('countUp', [
+            transition(':enter', [
+                animate('2s ease-out', keyframes([
+                    style({ opacity: 0, offset: 0 }),
+                    style({ opacity: 1, offset: 0.2 }),
+                    style({ opacity: 1, offset: 1 })
+                ]))
+            ])
+        ])
+    ]
 })
 export class HomeComponent implements OnInit, OnDestroy {
   cloudDevLogoPath = 'assets/cdfL.png';
@@ -147,7 +146,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       description: 'Formations collectives pour petits groupes. Bénéficiez de tarifs préférentiels et d\'une dynamique d\'apprentissage collaborative.',
       features: [
         'Tarifs préférentiels',
-        'Groupes de 5 à 15 personnes',
+        'Groupes de 4 à 6 personnes',
         'Dates flexibles',
         'Ambiance collaborative',
         'Support post-formation'
@@ -183,12 +182,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       icon: 'labs',
       title: 'Certifié Microsoft',
-      description: 'Partenaire Microsoft Gold certifié, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
+      description: 'Membre du programme Microsoft Training Partners, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
     },
     {
       icon: 'cpf',
       title: 'Financement CPF',
-      description: 'Éligible au financement CPF, OPCO et autres dispositifs pour faciliter votre accès à la formation.'
+      description: 'Éligible au financement CPF, OPCO et autres dispositifs, directement ou à travers nos partenaires, pour faciliter votre accès à la formation.'
     },
     {
       icon: 'expert',
@@ -197,8 +196,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     },
     {
       icon: 'support',
-      title: 'Support Continu',
-      description: 'Accompagnement personnalisé avant, pendant et après la formation avec un support dédié.'
+      title: 'Groupes Restreints & Support Continu',
+      description: 'Groupes de 5 ou 6 Personnes avec accompagnement personnalisé avant, pendant et après la formation avec un support dédié.'
     },
     {
       icon: 'flexible',
@@ -233,11 +232,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   // PARTENAIRES
   // ============================================
   partners = [
+    { name: 'Qualiopi', logoPath: 'assets/qualiopi.png', imageError: false },
     { name: 'Microsoft', logoPath: 'assets/Microsoft-logo.png', imageError: false },
+    { name: 'Nexa School', logoPath: 'assets/nexa.png', imageError: false },
     { name: 'Azure', logoPath: 'assets/Microsoft-Azure.png', imageError: false },
-    { name: 'Kubernetes', logoPath: 'assets/Kubernetes_logo_without_workmark.svg.png', imageError: false },
-    { name: 'Docker', logoPath: 'assets/docker-logo-blue.png', imageError: false },
-    { name: 'GitHub', logoPath: 'assets/GitHub_Logo_White.png', imageError: false }
+    { name: 'Global Knowledge', logoPath: 'assets/globalKnowledge.png', imageError: false },
+    { name: 'Unlock Formation', logoPath: 'assets/unlock.png', imageError: false }
   ];
 
   // Dupliquer les partenaires pour l'effet de défilement infini
@@ -274,14 +274,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       step: 2,
       title: 'Inscription & Financement',
-      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (CPF, OPCO, entreprise).',
+      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (CPF, OPCO, entreprise). Directement ou à travers nos partenaires.',
       icon: 'financement',
       color: 'secondary'
     },
     {
       step: 3,
       title: 'Formation',
-      description: 'Suivez une formation immersive avec nos experts MCT, accédez aux labs pratiques et préparez-vous efficacement à la certification.',
+      description: 'Suivez une formation immersive avec nos experts MCT, avec une session live de 2h30 chaque semaine, accédez aux labs pratiques et préparez-vous efficacement à la certification.',
       icon: 'formation',
       color: 'success'
     },
@@ -328,14 +328,14 @@ export class HomeComponent implements OnInit, OnDestroy {
           {
             id: 1,
             question: 'Comment financer ma formation ?',
-            answer: 'Nos formations sont éligibles au CPF, aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
+            answer: 'Direct ou à travers un partenaire, nos formations sont éligibles au CPF, aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
             category: 'Financement',
             published: true
           },
           {
             id: 2,
             question: 'Quel niveau prérequis pour suivre une formation ?',
-            answer: 'Chaque formation indique son niveau requis. Nous proposons des parcours débutants (AZ-900) jusqu\'aux expertises avancées. Nos conseillers vous orientent vers la formation adaptée à votre profil.',
+            answer: 'Chaque formation indique son niveau requis. Nous proposons des parcours débutants (AZ-900) jusqu\'aux expertises avancées. Nos conseillers vous orientent vers la formation adaptée à votre profil. Vous pouvez aussi faire les tests de positionnement sur notre site.',
             category: 'Prérequis',
             published: true
           },

@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService, Course } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-course-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './course-detail.component.html',
-  styleUrls: ['./course-detail.component.scss']
+    selector: 'app-course-detail',
+    imports: [RouterLink],
+    templateUrl: './course-detail.component.html',
+    styleUrls: ['./course-detail.component.scss']
 })
 export class CourseDetailComponent implements OnInit {
   course: Course | null = null;

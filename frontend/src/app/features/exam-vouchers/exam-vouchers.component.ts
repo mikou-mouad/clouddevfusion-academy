@@ -1,15 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService, ExamVoucher } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-exam-vouchers',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
-  templateUrl: './exam-vouchers.component.html',
-  styleUrls: ['./exam-vouchers.component.scss']
+    selector: 'app-exam-vouchers',
+    imports: [RouterLink, FormsModule],
+    templateUrl: './exam-vouchers.component.html',
+    styleUrls: ['./exam-vouchers.component.scss']
 })
 export class ExamVouchersComponent implements OnInit {
   vouchers: ExamVoucher[] = [];

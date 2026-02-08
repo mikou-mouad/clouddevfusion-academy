@@ -1,15 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { ApiService, Testimonial } from '../../core/services/api.service';
 import { SafeUrlPipe } from '../../core/pipes/safe-url.pipe';
 
 @Component({
-  selector: 'app-testimonials',
-  standalone: true,
-  imports: [CommonModule, RouterLink, SafeUrlPipe],
-  templateUrl: './testimonials.component.html',
-  styleUrls: ['./testimonials.component.scss']
+    selector: 'app-testimonials',
+    imports: [RouterLink, SafeUrlPipe],
+    templateUrl: './testimonials.component.html',
+    styleUrls: ['./testimonials.component.scss']
 })
 export class TestimonialsComponent implements OnInit {
   testimonials: Testimonial[] = [];

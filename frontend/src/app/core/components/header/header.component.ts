@@ -1,11 +1,9 @@
 import { Component, HostListener } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-header',
-  standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })
@@ -13,12 +11,12 @@ export class HeaderComponent {
   isMobileMenuOpen = false;
   isScrolled = false;
 
-  @HostListener('window:scroll', ['$event'])
+  @HostListener('window:scroll')
   onWindowScroll() {
     this.isScrolled = window.scrollY > 50;
   }
 
-  @HostListener('window:resize', ['$event'])
+  @HostListener('window:resize')
   onWindowResize() {
     if (window.innerWidth > 768 && this.isMobileMenuOpen) {
       this.isMobileMenuOpen = false;
@@ -27,11 +25,7 @@ export class HeaderComponent {
 
   toggleMobileMenu() {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
-    if (this.isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
   }
 
   closeMobileMenu() {

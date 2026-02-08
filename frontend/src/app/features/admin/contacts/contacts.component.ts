@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ApiService, Contact } from '../../../core/services/api.service';
 
 @Component({
-  selector: 'app-admin-contacts',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './contacts.component.html',
-  styleUrls: ['./contacts.component.scss']
+    selector: 'app-admin-contacts',
+    imports: [FormsModule],
+    templateUrl: './contacts.component.html',
+    styleUrls: ['./contacts.component.scss']
 })
 export class ContactsComponent implements OnInit {
   contacts: Contact[] = [];

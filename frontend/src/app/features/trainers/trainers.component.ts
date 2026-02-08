@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 
 @Component({
-  selector: 'app-trainers',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './trainers.component.html',
-  styleUrls: ['./trainers.component.scss']
+    selector: 'app-trainers',
+    imports: [RouterLink],
+    templateUrl: './trainers.component.html',
+    styleUrls: ['./trainers.component.scss']
 })
 export class TrainersComponent {
   trainers = [

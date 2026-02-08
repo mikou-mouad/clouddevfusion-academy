@@ -7,173 +7,188 @@
   </div>
 
   <!-- Loading State -->
-  <div class="loading-state" *ngIf="loading && !banner">
-    <p>Chargement...</p>
-  </div>
+  @if (loading && !banner) {
+    <div class="loading-state">
+      <p>Chargement...</p>
+    </div>
+  }
 
   <!-- Error State -->
-  <div class="error-state" *ngIf="error && !loading">
-    <p>{{ error }}</p>
-  </div>
+  @if (error && !loading) {
+    <div class="error-state">
+      <p>{{ error }}</p>
+    </div>
+  }
 
   <!-- Form -->
-  <div class="banner-form-container" *ngIf="!loading || banner">
-    <form class="banner-form" (ngSubmit)="saveBanner()" #bannerForm="ngForm">
-      <div class="success-message" *ngIf="successMessage">{{ successMessage }}</div>
-      <div class="error-message" *ngIf="error">{{ error }}</div>
-
-      <!-- Logo Section -->
-      <div class="form-section">
-        <h2 class="section-title">Logo du bandeau</h2>
-        
-        <!-- Upload Logo -->
-        <div class="form-group">
-          <label for="logoUpload">Télécharger un logo</label>
-          <div class="upload-container">
-            <input 
-              type="file" 
-              id="logoUpload" 
-              accept="image/*"
-              (change)="onLogoSelected($event)"
-              class="file-input"
-              [disabled]="uploadingLogo">
-            <label for="logoUpload" class="file-label" [class.uploading]="uploadingLogo">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span *ngIf="!uploadingLogo">{{ selectedLogoFile ? selectedLogoFile.name : 'Choisir un fichier' }}</span>
-              <span *ngIf="uploadingLogo">Upload en cours...</span>
-            </label>
+  @if (!loading || banner) {
+    <div class="banner-form-container">
+      <form class="banner-form" (ngSubmit)="saveBanner()" #bannerForm="ngForm">
+        @if (successMessage) {
+          <div class="success-message">{{ successMessage }}</div>
+        }
+        @if (error) {
+          <div class="error-message">{{ error }}</div>
+        }
+        <!-- Logo Section -->
+        <div class="form-section">
+          <h2 class="section-title">Logo du bandeau</h2>
+          <!-- Upload Logo -->
+          <div class="form-group">
+            <label for="logoUpload">Télécharger un logo</label>
+            <div class="upload-container">
+              <input
+                type="file"
+                id="logoUpload"
+                accept="image/*"
+                (change)="onLogoSelected($event)"
+                class="file-input"
+                [disabled]="uploadingLogo">
+                <label for="logoUpload" class="file-label" [class.uploading]="uploadingLogo">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  @if (!uploadingLogo) {
+                    <span>{{ selectedLogoFile ? selectedLogoFile.name : 'Choisir un fichier' }}</span>
+                  }
+                  @if (uploadingLogo) {
+                    <span>Upload en cours...</span>
+                  }
+                </label>
+              </div>
+              <small class="form-hint">Formats acceptés : JPG, PNG, SVG (max 5MB)</small>
+            </div>
+            <!-- Preview -->
+            @if (logoPreview || formData.logoPath) {
+              <div class="logo-preview">
+                <p class="preview-label">Aperçu :</p>
+                <div class="preview-badge">
+                  <img [src]="logoPreview || formData.logoPath" alt="Logo preview" class="preview-logo" (error)="onImageError($event)">
+                  @if (logoPreview || selectedLogoFile) {
+                    <button
+                      type="button"
+                      class="btn-remove-logo"
+                      (click)="removeLogoPreview()"
+                      title="Supprimer l'aperçu">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
           </div>
-          <small class="form-hint">Formats acceptés : JPG, PNG, SVG (max 5MB)</small>
-        </div>
-
-        <!-- Preview -->
-        <div class="logo-preview" *ngIf="logoPreview || formData.logoPath">
-          <p class="preview-label">Aperçu :</p>
-          <div class="preview-badge">
-            <img [src]="logoPreview || formData.logoPath" alt="Logo preview" class="preview-logo" (error)="onImageError($event)">
-            <button 
-              type="button" 
-              class="btn-remove-logo" 
-              (click)="removeLogoPreview()"
-              *ngIf="logoPreview || selectedLogoFile"
-              title="Supprimer l'aperçu">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPIs Section -->
-      <div class="form-section">
-        <h2 class="section-title">Indicateurs de performance (KPIs)</h2>
-        <div class="kpis-grid">
-          <!-- KPI 1 -->
-          <div class="kpi-card">
-            <h3 class="kpi-title">KPI 1</h3>
-            <div class="form-group">
-              <label for="kpi1Number">Nombre / Valeur</label>
-              <input 
-                type="text" 
-                id="kpi1Number" 
-                [(ngModel)]="formData.kpi1Number" 
-                name="kpi1Number" 
-                placeholder="ex: 500+"
-                class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="kpi1Label">Libellé</label>
-              <input 
-                type="text" 
-                id="kpi1Label" 
-                [(ngModel)]="formData.kpi1Label" 
-                name="kpi1Label" 
-                placeholder="ex: Étudiants formés"
-                class="form-input">
-            </div>
-          </div>
-
-          <!-- KPI 2 -->
-          <div class="kpi-card">
-            <h3 class="kpi-title">KPI 2</h3>
-            <div class="form-group">
-              <label for="kpi2Number">Nombre / Valeur</label>
-              <input 
-                type="text" 
-                id="kpi2Number" 
-                [(ngModel)]="formData.kpi2Number" 
-                name="kpi2Number" 
-                placeholder="ex: 98%"
-                class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="kpi2Label">Libellé</label>
-              <input 
-                type="text" 
-                id="kpi2Label" 
-                [(ngModel)]="formData.kpi2Label" 
-                name="kpi2Label" 
-                placeholder="ex: Taux de réussite"
-                class="form-input">
-            </div>
-          </div>
-
-          <!-- KPI 3 -->
-          <div class="kpi-card">
-            <h3 class="kpi-title">KPI 3</h3>
-            <div class="form-group">
-              <label for="kpi3Number">Nombre / Valeur</label>
-              <input 
-                type="text" 
-                id="kpi3Number" 
-                [(ngModel)]="formData.kpi3Number" 
-                name="kpi3Number" 
-                placeholder="ex: 50+"
-                class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="kpi3Label">Libellé</label>
-              <input 
-                type="text" 
-                id="kpi3Label" 
-                [(ngModel)]="formData.kpi3Label" 
-                name="kpi3Label" 
-                placeholder="ex: Certifications disponibles"
-                class="form-input">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Status -->
-      <div class="form-section">
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input 
-              type="checkbox" 
-              [(ngModel)]="formData.active" 
-              name="active"
-              [checked]="formData.active !== false">
-            <span>Bannière active</span>
-          </label>
-          <small class="form-hint">Désactivez cette option pour masquer la bannière sur la page d'accueil</small>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" [disabled]="loading || uploadingLogo">
-          <span *ngIf="uploadingLogo">Upload du logo...</span>
-          <span *ngIf="!uploadingLogo && loading">Enregistrement...</span>
-          <span *ngIf="!uploadingLogo && !loading">Enregistrer les modifications</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+          <!-- KPIs Section -->
+          <div class="form-section">
+            <h2 class="section-title">Indicateurs de performance (KPIs)</h2>
+            <div class="kpis-grid">
+              <!-- KPI 1 -->
+              <div class="kpi-card">
+                <h3 class="kpi-title">KPI 1</h3>
+                <div class="form-group">
+                  <label for="kpi1Number">Nombre / Valeur</label>
+                  <input
+                    type="text"
+                    id="kpi1Number"
+                    [(ngModel)]="formData.kpi1Number"
+                    name="kpi1Number"
+                    placeholder="ex: 500+"
+                    class="form-input">
+                  </div>
+                  <div class="form-group">
+                    <label for="kpi1Label">Libellé</label>
+                    <input
+                      type="text"
+                      id="kpi1Label"
+                      [(ngModel)]="formData.kpi1Label"
+                      name="kpi1Label"
+                      placeholder="ex: Étudiants formés"
+                      class="form-input">
+                    </div>
+                  </div>
+                  <!-- KPI 2 -->
+                  <div class="kpi-card">
+                    <h3 class="kpi-title">KPI 2</h3>
+                    <div class="form-group">
+                      <label for="kpi2Number">Nombre / Valeur</label>
+                      <input
+                        type="text"
+                        id="kpi2Number"
+                        [(ngModel)]="formData.kpi2Number"
+                        name="kpi2Number"
+                        placeholder="ex: 98%"
+                        class="form-input">
+                      </div>
+                      <div class="form-group">
+                        <label for="kpi2Label">Libellé</label>
+                        <input
+                          type="text"
+                          id="kpi2Label"
+                          [(ngModel)]="formData.kpi2Label"
+                          name="kpi2Label"
+                          placeholder="ex: Taux de réussite"
+                          class="form-input">
+                        </div>
+                      </div>
+                      <!-- KPI 3 -->
+                      <div class="kpi-card">
+                        <h3 class="kpi-title">KPI 3</h3>
+                        <div class="form-group">
+                          <label for="kpi3Number">Nombre / Valeur</label>
+                          <input
+                            type="text"
+                            id="kpi3Number"
+                            [(ngModel)]="formData.kpi3Number"
+                            name="kpi3Number"
+                            placeholder="ex: 50+"
+                            class="form-input">
+                          </div>
+                          <div class="form-group">
+                            <label for="kpi3Label">Libellé</label>
+                            <input
+                              type="text"
+                              id="kpi3Label"
+                              [(ngModel)]="formData.kpi3Label"
+                              name="kpi3Label"
+                              placeholder="ex: Certifications disponibles"
+                              class="form-input">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Status -->
+                      <div class="form-section">
+                        <div class="form-group checkbox-group">
+                          <label class="checkbox-label">
+                            <input
+                              type="checkbox"
+                              [(ngModel)]="formData.active"
+                              name="active"
+                              [checked]="formData.active !== false">
+                              <span>Bannière active</span>
+                            </label>
+                            <small class="form-hint">Désactivez cette option pour masquer la bannière sur la page d'accueil</small>
+                          </div>
+                        </div>
+                        <!-- Actions -->
+                        <div class="form-actions">
+                          <button type="submit" class="btn btn-primary" [disabled]="loading || uploadingLogo">
+                            @if (uploadingLogo) {
+                              <span>Upload du logo...</span>
+                            }
+                            @if (!uploadingLogo && loading) {
+                              <span>Enregistrement...</span>
+                            }
+                            @if (!uploadingLogo && !loading) {
+                              <span>Enregistrer les modifications</span>
+                            }
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  }
+                </div>

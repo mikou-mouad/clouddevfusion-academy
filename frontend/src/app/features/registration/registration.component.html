@@ -16,36 +16,48 @@
         <h2>Comment s'inscrire ?</h2>
         <p class="section-subtitle">Un processus simple en 4 étapes</p>
       </div>
-      
+
       <div class="steps-container">
-        <div class="step-card" *ngFor="let step of steps; let i = index">
-          <div class="step-number-wrapper">
-            <div class="step-number">{{ i + 1 }}</div>
-            <div class="step-connector" *ngIf="i < steps.length - 1"></div>
-          </div>
-          <div class="step-content">
-            <div class="step-icon-wrapper">
-              <svg *ngIf="i === 0" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-              <svg *ngIf="i === 1" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <svg *ngIf="i === 2" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              <svg *ngIf="i === 3" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
+        @for (step of steps; track step; let i = $index) {
+          <div class="step-card">
+            <div class="step-number-wrapper">
+              <div class="step-number">{{ i + 1 }}</div>
+              @if (i < steps.length - 1) {
+                <div class="step-connector"></div>
+              }
             </div>
-            <h3>{{ step.title }}</h3>
-            <p>{{ step.description }}</p>
+            <div class="step-content">
+              <div class="step-icon-wrapper">
+                @if (i === 0) {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                }
+                @if (i === 1) {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                }
+                @if (i === 2) {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                }
+                @if (i === 3) {
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                }
+              </div>
+              <h3>{{ step.title }}</h3>
+              <p>{{ step.description }}</p>
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
   </section>
@@ -64,23 +76,27 @@
         <h2>Inscription avec le CPF</h2>
         <p class="section-subtitle">Utilisez votre Compte Personnel de Formation pour financer votre formation</p>
       </div>
-      
+
       <div class="cpf-steps">
-        <div class="cpf-step-card" *ngFor="let cpfStep of cpfSteps; let i = index">
-          <div class="cpf-step-number">{{ i + 1 }}</div>
-          <div class="cpf-step-content">
-            <h4>{{ cpfStep.title }}</h4>
-            <p>{{ cpfStep.description }}</p>
-            <a *ngIf="cpfStep.link" [href]="cpfStep.link" target="_blank" class="cpf-link">
-              {{ cpfStep.linkText }}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                <polyline points="15 3 21 3 21 9"/>
-                <line x1="10" y1="14" x2="21" y2="3"/>
-              </svg>
-            </a>
+        @for (cpfStep of cpfSteps; track cpfStep; let i = $index) {
+          <div class="cpf-step-card">
+            <div class="cpf-step-number">{{ i + 1 }}</div>
+            <div class="cpf-step-content">
+              <h4>{{ cpfStep.title }}</h4>
+              <p>{{ cpfStep.description }}</p>
+              @if (cpfStep.link) {
+                <a [href]="cpfStep.link" target="_blank" class="cpf-link">
+                  {{ cpfStep.linkText }}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
   </section>
@@ -98,17 +114,19 @@
         <h2>À quoi s'attendre après l'inscription ?</h2>
         <p class="section-subtitle">Tout ce que vous recevrez pour préparer votre formation</p>
       </div>
-      
+
       <div class="expect-grid">
-        <div class="expect-card" *ngFor="let item of expectations">
-          <div class="expect-icon-wrapper">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
+        @for (item of expectations; track item) {
+          <div class="expect-card">
+            <div class="expect-icon-wrapper">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h4>{{ item.title }}</h4>
+            <p>{{ item.description }}</p>
           </div>
-          <h4>{{ item.title }}</h4>
-          <p>{{ item.description }}</p>
-        </div>
+        }
       </div>
     </div>
   </section>

@@ -1,6 +1,10 @@
-<app-header *ngIf="!isAdminRoute"></app-header>
+@if (!isAdminRoute) {
+  <app-header></app-header>
+}
 <main [class.admin-main-wrapper]="isAdminRoute">
   <router-outlet></router-outlet>
 </main>
-<app-footer *ngIf="!isAdminRoute"></app-footer>
+@if (!isAdminRoute) {
+  <app-footer></app-footer>
+}
 
