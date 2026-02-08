@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000/api'
+  // Backend déployé : proxy /api -> https://academy.clouddevfusion.com
+  apiUrl: '/api'
 };
 

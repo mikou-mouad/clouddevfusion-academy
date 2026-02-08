@@ -70,7 +70,8 @@
               "buildTarget": "kubelaunch:build:production"
             },
             "development": {
-              "buildTarget": "kubelaunch:build:development"
+              "buildTarget": "kubelaunch:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

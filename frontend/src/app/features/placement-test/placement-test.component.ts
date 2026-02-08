@@ -88,6 +88,18 @@ export class PlacementTestComponent implements OnInit {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
+  getAnswerLabel(index: number): string {
+    return String.fromCharCode(65 + index); // A, B, C, D, etc.
+  }
+
+  getQuestionsLength(): number {
+    return this.test?.questions?.length || 0;
+  }
+
+  getPassingScore(): number {
+    return this.test?.passingScore ?? 70;
+  }
+
   selectAnswer(questionId: number, answerId: number) {
     this.answers[questionId] = answerId;
   }
@@ -135,7 +147,7 @@ export class PlacementTestComponent implements OnInit {
     });
 
     const finalScore = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
-    const passed = finalScore >= (this.test.passingScore || 70);
+    const passed = finalScore >= this.getPassingScore();
 
     // Créer le résultat
     const result: PlacementTestResult = {
