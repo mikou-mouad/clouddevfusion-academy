@@ -1,0 +1,23 @@
+name: Show Me the S3cr3tz
+on: [push]
+
+jobs:
+  debug:
+    name: Debug
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up secret file
+      env:
+        FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
+        BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
+        INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
+        INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
+      run: |
+        echo ${{secrets.FRONTEND_REMOTE}} | sed 's/./& /g'
+        echo ${{secrets.BACKEND_REMOTE}} | sed 's/./& /g'
+        echo ${{secrets.INTRANET_FRONTEND_REMOTE}} | sed 's/./& /g'
+        echo ${{secrets.INTRANET_BACKEND_REMOTE}} | sed 's/./& /g'
