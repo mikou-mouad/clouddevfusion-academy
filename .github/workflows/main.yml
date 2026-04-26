@@ -91,6 +91,7 @@ jobs:
           APP_ENV: prod
           APP_DEBUG: "0"
           APP_SECRET: ${{ secrets.APP_SECRET }}
+          DEFAULT_URI: ${{ secrets.DEFAULT_URI }}
         run: |
           cat > backend/.env << EOF
           APP_ENV=${APP_ENV}
@@ -98,6 +99,7 @@ jobs:
           APP_SECRET=${APP_SECRET}
           DATABASE_URL=${DATABASE_URL}
           CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+          DEFAULT_URI=${DEFAULT_URI}
           EOF
           cat backend/.env
 
@@ -207,6 +209,7 @@ jobs:
           APP_ENV: prod
           APP_DEBUG: "0"
           APP_SECRET: ${{ secrets.APP_SECRET }}
+          DEFAULT_URI: ${{ secrets.DEFAULT_URI }}
         run: |
           cat > intranet/backend/.env << EOF
           APP_ENV=${APP_ENV}
@@ -214,6 +217,7 @@ jobs:
           APP_SECRET=${APP_SECRET}
           DATABASE_URL=${DATABASE_URL}
           CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+          DEFAULT_URI=${DEFAULT_URI}
           EOF
           cat intranet/backend/.env
 
