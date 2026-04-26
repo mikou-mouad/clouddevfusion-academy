@@ -23,6 +23,19 @@ final class IntranetController extends AbstractController
         return new JsonResponse(null, 204);
     }
 
+    #[Route('/debug', name: 'debug', methods: ['GET'])]
+    public function debug(Request $request): JsonResponse
+    {
+        return $this->json([
+            'REQUEST_URI' => $request->server->get('REQUEST_URI'),
+            'PATH_INFO' => $request->server->get('PATH_INFO'),
+            'SCRIPT_NAME' => $request->server->get('SCRIPT_NAME'),
+            'getPathInfo' => $request->getPathInfo(),
+            'getBasePath' => $request->getBasePath(),
+            'getBaseUrl' => $request->getBaseUrl(),
+        ]);
+    }
+
     #[Route('/health', name: 'health', methods: ['GET'])]
     public function health(): JsonResponse
     {
