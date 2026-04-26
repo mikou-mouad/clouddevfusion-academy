@@ -78,8 +78,8 @@ export class App implements OnDestroy {
   newTrainerFirstName = signal('');
   newTrainerLastName = signal('');
   newTrainerEmail = signal('');
-  newTrainerPassword = signal('trainer123');
   planningRows = signal<PlanningInput[]>([{ date: '', slot: '09:00 - 12:30', topic: '' }]);
+  planningDateFilter = signal('');
   apprenticeRows = signal<ApprenticeInput[]>([{ firstName: '', lastName: '', email: '', birthDate: '' }]);
   sortedPlanningRows = computed(() => [...this.planningRows()].sort((a, b) => new Date(a.date || '9999-12-31').getTime() - new Date(b.date || '9999-12-31').getTime()));
   selectedAttendanceFormation = signal('');
@@ -280,7 +280,16 @@ export class App implements OnDestroy {
   selectedAdminFormationSessions = computed(() => {
     const formation = this.selectedAdminFormation();
     if (!formation) return [];
-    return this.attendanceSessions().filter((session) => session.formationTitle === formation.title);
+    return this.attendanceSessions()
+      .filter((session) => session.formationTitle === formation.title)
+      .sort((a, b) => {
+        const byDate = a.date.localeCompare(b.date);
+        if (byDate !== 0) return byDate;
+        const aStart = this.parseSlotRange(a.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        const bStart = this.parseSlotRange(b.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.slot.localeCompare(b.slot);
+      });
   });
   selectedAdminFormationAttendanceSummary = computed(() => {
     const records = this.selectedAdminFormationSessions().flatMap((session) => session.records);
@@ -566,11 +575,7 @@ export class App implements OnDestroy {
           startDate: this.editFormationStartDate().trim(),
           endDate: this.editFormationEndDate().trim(),
           teamsLink: this.editFormationTeamsLink().trim(),
-          planning: this.editPlanningRows().map((row) => ({
-            date: row.date.trim(),
-            slot: row.slot.trim(),
-            topic: row.topic.trim()
-          }))
+          planning: this.normalizePlanningPayload(this.editPlanningRows())
         },
         { headers: this.authHeaders() }
       )
@@ -1036,6 +1041,23 @@ export class App implements OnDestroy {
     return hh * 60 + mm;
   }
 
+  private normalizePlanningPayload(rows: PlanningInput[]): PlanningInput[] {
+    return rows
+      .map((row) => ({
+        date: row.date.trim(),
+        slot: row.slot.trim(),
+        topic: row.topic.trim()
+      }))
+      .sort((a, b) => {
+        const byDate = a.date.localeCompare(b.date);
+        if (byDate !== 0) return byDate;
+        const aStart = this.parseSlotRange(a.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        const bStart = this.parseSlotRange(b.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.slot.localeCompare(b.slot);
+      });
+  }
+
   private nextPlanningTime(value: string): string {
     const current = this.toMinutes(value);
     const candidate = this.planningTimeOptions.find((option) => this.toMinutes(option) > current);
@@ -1198,6 +1220,16 @@ export class App implements OnDestroy {
         return `${student.firstName} ${student.lastName} ${student.email}`.toLowerCase().includes(q);
       })
   );
+  filteredPlanningRowsForCreate = computed(() => {
+    const selectedDate = this.planningDateFilter().trim();
+    const rows = this.planningRows();
+    if (!selectedDate) {
+      return rows.map((row, index) => ({ row, index }));
+    }
+    return rows
+      .map((row, index) => ({ row, index }))
+      .filter((item) => item.row.date === selectedDate);
+  });
 
   getStudentNameById(studentId: number): string {
     const student = this.adminStudents().find((item) => item.id === studentId);
@@ -1339,11 +1371,7 @@ export class App implements OnDestroy {
           classLabel: this.newFormationClassLabel().trim() || `Classe ${selectedCatalogFormation.title}`,
           capacity: this.newFormationCapacity(),
           studentIds: this.selectedStudentIds(),
-          planning: this.planningRows().map((row) => ({
-            date: row.date.trim(),
-            slot: row.slot.trim(),
-            topic: row.topic.trim()
-          }))
+          planning: this.normalizePlanningPayload(this.planningRows())
         },
         { headers: this.authHeaders() }
       )
@@ -1551,7 +1579,6 @@ export class App implements OnDestroy {
           firstName: this.newTrainerFirstName().trim(),
           lastName: this.newTrainerLastName().trim(),
           email: this.newTrainerEmail().trim(),
-          password: this.newTrainerPassword().trim(),
           formationIds: this.selectedFormationIdsForTrainer()
         },
         { headers: this.authHeaders() }
@@ -1563,7 +1590,6 @@ export class App implements OnDestroy {
           this.newTrainerFirstName.set('');
           this.newTrainerLastName.set('');
           this.newTrainerEmail.set('');
-          this.newTrainerPassword.set('trainer123');
           this.selectedFormationIdsForTrainer.set([]);
           this.selectedFormationToAddForTrainer.set('');
           this.loadDashboard();
@@ -1927,6 +1953,7 @@ export class App implements OnDestroy {
     this.newFormationTeamsLink.set('');
     this.newFormationClassLabel.set('');
     this.newFormationCapacity.set(20);
+    this.planningDateFilter.set('');
     this.selectedStudentIds.set([]);
     this.selectedStudentToAdd.set(null);
     this.planningRows.set([{ date: '', slot: '09:00 - 12:30', topic: '' }]);

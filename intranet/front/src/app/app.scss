@@ -1562,10 +1562,14 @@ button:disabled {
   display: none;
 }
 
+.student-selector .student-selector-search {
+  display: none;
+}
+
 .student-selector[open] .admin-students-grid {
   display: grid;
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 54px);
   left: 0;
   right: 0;
   z-index: 40;
@@ -1576,6 +1580,34 @@ button:disabled {
   border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+.student-selector[open] .student-selector-search {
+  display: block;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 41;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: #ffffff;
+}
+
+.student-selector[open] .student-selector-search input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.student-selector-empty {
+  margin: 2px 0 0;
+  padding: 4px 2px;
 }
 
 .student-check {
@@ -2015,6 +2047,37 @@ button:disabled {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding-right: 14px;
+}
+
+.admin-form-actions .support-btn,
+.admin-form-actions .ghost-btn,
+.admin-form-actions .archive-btn {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: center;
+  line-height: 1.2;
+}
+
+@media (max-width: 1400px) {
+  .admin-form-actions {
+    justify-content: flex-start;
+  }
+}
+
+.create-session-btn {
+  min-height: 38px;
+  padding: 10px 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: 13px;
 }
 
 .attendance-head {
