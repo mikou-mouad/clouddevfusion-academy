@@ -13,6 +13,7 @@ export class CourseDetailComponent implements OnInit {
   course: Course | null = null;
   loading = false;
   error: string | null = null;
+  hasPlacementTest = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -31,10 +32,19 @@ export class CourseDetailComponent implements OnInit {
   loadCourse(id: number) {
     this.loading = true;
     this.error = null;
+    this.hasPlacementTest = false;
     this.apiService.getCourse(id).subscribe({
       next: (course) => {
         this.course = course;
         this.loading = false;
+        if (course.placementTest != null) {
+          this.hasPlacementTest = true;
+        } else {
+          this.apiService.getPlacementTestByCourse(id).subscribe({
+            next: (test) => { this.hasPlacementTest = test != null; },
+            error: () => {}
+          });
+        }
       },
       error: (err) => {
         console.error('Error loading course:', err);

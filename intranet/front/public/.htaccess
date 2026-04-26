@@ -1,0 +1,14 @@
+RewriteEngine On
+RewriteBase /intranet/
+
+# Route API calls to intranet Symfony backend (avoid rewrite loops).
+RewriteCond %{REQUEST_URI} !^/intranet/api/public/ [NC]
+RewriteRule ^api/(.*)$ api/public/index.php/api/$1 [QSA,L]
+
+# Keep existing files/directories as-is.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# SPA fallback
+RewriteRule ^ index.html [L]

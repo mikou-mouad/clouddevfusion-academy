@@ -19,7 +19,8 @@ api_platform:
     defaults:
         formats:
             json: ['application/json']
-        stateless: true
+        # stateless: false pour permettre l'auth par session (login admin)
+        stateless: false
         normalization_context:
             enable_max_depth: true
 

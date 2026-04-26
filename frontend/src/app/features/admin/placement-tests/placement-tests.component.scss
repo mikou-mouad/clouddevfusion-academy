@@ -1,0 +1,340 @@
+.placement-tests-page {
+  padding: 2rem;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+  }
+
+  .tests-list {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .test-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+
+      .test-info {
+        flex: 1;
+
+        h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.25rem;
+        }
+
+        .test-course {
+          display: inline-block;
+          padding: 0.25rem 0.75rem;
+          background: #e3f2fd;
+          color: #1976d2;
+          border-radius: 4px;
+          font-size: 0.875rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .test-meta {
+          display: flex;
+          gap: 1rem;
+          font-size: 0.875rem;
+          color: #666;
+
+          .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+
+            &.active {
+              background: #c8e6c9;
+              color: #2e7d32;
+            }
+
+            &.inactive {
+              background: #ffcdd2;
+              color: #c62828;
+            }
+          }
+        }
+      }
+
+      .test-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+    }
+
+    .test-questions {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e0e0e0;
+
+      .questions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h4 {
+          margin: 0;
+        }
+      }
+
+      .question-item {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+
+        .question-header {
+          display: flex;
+          align-items: start;
+          gap: 1rem;
+          margin-bottom: 0.75rem;
+
+          .question-number {
+            font-weight: bold;
+            color: #1976d2;
+            min-width: 2rem;
+          }
+
+          .question-text {
+            flex: 1;
+            margin: 0;
+          }
+
+          .question-actions {
+            display: flex;
+            gap: 0.5rem;
+          }
+        }
+
+        .answers-list {
+          margin-left: 3rem;
+          margin-bottom: 0.75rem;
+
+          .answer-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+
+            .answer-label {
+              font-weight: bold;
+              min-width: 1.5rem;
+            }
+
+            .answer-text {
+              flex: 1;
+            }
+
+            .answer-score {
+              font-size: 0.875rem;
+              color: #666;
+            }
+
+            .answer-badge {
+              padding: 0.25rem 0.5rem;
+              background: #c8e6c9;
+              color: #2e7d32;
+              border-radius: 4px;
+              font-size: 0.75rem;
+            }
+
+            .answer-actions {
+              display: flex;
+              gap: 0.25rem;
+            }
+          }
+        }
+      }
+    }
+
+    .no-questions {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+    }
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+
+    .form-group {
+      margin-bottom: 1.5rem;
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea,
+      select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      textarea {
+        resize: vertical;
+      }
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &.btn-primary {
+      background: #1976d2;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: #1565c0;
+      }
+    }
+
+    &.btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+
+      &:hover:not(:disabled) {
+        background: #d0d0d0;
+      }
+    }
+
+    &.btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &.btn-danger {
+      color: #c62828;
+
+      &:hover {
+        background: #ffebee;
+      }
+    }
+
+    &.btn-small {
+      padding: 0.25rem;
+    }
+  }
+
+  .success-message {
+    background: #c8e6c9;
+    color: #2e7d32;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .error-message {
+    background: #ffcdd2;
+    color: #c62828;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+  }
+}

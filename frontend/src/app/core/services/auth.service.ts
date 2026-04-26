@@ -11,10 +11,13 @@ export interface User {
   roles: string[];
 }
 
+const SESSION_ID_KEY = 'apiSessionId';
+
 export interface LoginResponse {
   success: boolean;
   message: string;
   user?: User;
+  sessionId?: string;
   error?: string;
 }
 
@@ -34,10 +37,13 @@ export class AuthService {
   }
 
   private getHeaders(): HttpHeaders {
-    return new HttpHeaders({
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-    });
+    };
+    const sid = this.getSessionId();
+    if (sid) headers['X-Session-Id'] = sid;
+    return new HttpHeaders(headers);
   }
 
   checkAuthStatus(): void {
@@ -77,6 +83,9 @@ export class AuthService {
       tap((response) => {
         if (response.success && response.user) {
           this.currentUserSubject.next(response.user);
+          if (response.sessionId) {
+            sessionStorage.setItem(SESSION_ID_KEY, response.sessionId);
+          }
         }
       })
     );
@@ -88,10 +97,15 @@ export class AuthService {
       withCredentials: true
     }).pipe(
       tap(() => {
+        sessionStorage.removeItem(SESSION_ID_KEY);
         this.currentUserSubject.next(null);
         this.router.navigate(['/admin/login']);
       })
     );
+  }
+
+  getSessionId(): string | null {
+    return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SESSION_ID_KEY) : null;
   }
 
   getCurrentUser(): User | null {

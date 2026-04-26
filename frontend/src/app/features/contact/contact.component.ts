@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 
 @Component({
@@ -10,7 +10,7 @@ import { ApiService } from '../../core/services/api.service';
     templateUrl: './contact.component.html',
     styleUrls: ['./contact.component.scss']
 })
-export class ContactComponent {
+export class ContactComponent implements OnInit {
   activeTab: 'contact' | 'rdv' = 'contact';
   
   // Informations de contact
@@ -50,7 +50,20 @@ export class ContactComponent {
   successMessage: string | null = null;
   errorMessage: string | null = null;
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      const subject = params['subject'];
+      if (subject) {
+        this.formData.subject = 'exam-voucher';
+        this.formData.message = `Je suis intéressé par : ${subject}`;
+      }
+    });
+  }
 
   onSubmit() {
     if (!this.formData.consent) {

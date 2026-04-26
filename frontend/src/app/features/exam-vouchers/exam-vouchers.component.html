@@ -24,53 +24,6 @@
     </div>
   </section>
 
-  <!-- Options Section -->
-  <section class="options-section">
-    <h2 class="section-title">Nos Options</h2>
-    <div class="container">
-      <div class="options-grid">
-        <!-- Option 1: Voucher Only -->
-        @for (type of ['voucher-only', 'training-voucher', 'retake']; track type) {
-          <div class="option-card">
-            <div class="option-icon" [class]="'icon-' + type">
-              @if (getTypeIcon(type) === 'ticket') {
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
-                  <line x1="9" y1="9" x2="15" y2="9"/>
-                  <line x1="9" y1="15" x2="15" y2="15"/>
-                </svg>
-              }
-              @if (getTypeIcon(type) === 'book-ticket') {
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                  <path d="M9 12l2 2 4-4"/>
-                </svg>
-              }
-              @if (getTypeIcon(type) === 'refresh') {
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <polyline points="1 20 1 14 7 14"/>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-              }
-            </div>
-            <h3>{{ getTypeLabel(type) }}</h3>
-            <p>{{ getTypeDescription(type) }}</p>
-            @if (vouchersByType[type] && vouchersByType[type].length > 0) {
-              <div class="option-price">
-                À partir de {{ vouchersByType[type][0].price }} €
-              </div>
-            }
-            <button class="btn btn-secondary" (click)="filterType = filterType === type ? '' : type">
-              Voir les options
-            </button>
-          </div>
-        }
-      </div>
-    </div>
-  </section>
-
   <!-- Filters Section -->
   <section class="filters-section">
     <div class="container">
@@ -97,9 +50,10 @@
     </div>
   </section>
 
-  <!-- Vouchers Table Section -->
+  <!-- Tableau des bons d'examen pour vendre les certificats -->
   <section class="vouchers-table-section">
-    <h2 class="section-title">Détails par Examen</h2>
+    <h2 class="section-title">Bons d'examen – Certifications à la vente</h2>
+    <p class="section-subtitle">Contactez-nous pour acheter un bon d'examen et passer votre certification Microsoft.</p>
     <div class="container">
       @if (loading) {
         <div class="loading-state">
@@ -118,31 +72,33 @@
           <table class="vouchers-table">
             <thead>
               <tr>
-                <th>Code Examen</th>
-                <th>Type</th>
+                <th>Code</th>
+                <th>Titre</th>
                 <th>Prix</th>
-                <th>Validité</th>
-                <th>Actions</th>
+                <th>Type</th>
+                <th>CTA</th>
               </tr>
             </thead>
             <tbody>
               @for (voucher of filteredVouchers; track voucher) {
                 <tr>
+                  <td class="code-cell">{{ voucher.code }}</td>
                   <td>
                     <strong>{{ voucher.examCode }}</strong>
-                    <span class="voucher-code">{{ voucher.code }}</span>
+                    @if (voucher.description) {
+                      <span class="voucher-desc">{{ voucher.description }}</span>
+                    }
                   </td>
+                  <td class="price-cell">{{ voucher.price }} €</td>
                   <td>
                     <span class="type-badge" [class]="'type-' + voucher.type">
                       {{ getTypeLabel(voucher.type) }}
                     </span>
                   </td>
-                  <td class="price-cell">{{ voucher.price }} €</td>
-                  <td>{{ voucher.validityPeriod }} jours</td>
-                  <td>
-                    <button class="btn btn-primary btn-sm" (click)="openDetailsModal(voucher)">
-                      Voir détails
-                    </button>
+                  <td class="action-cell">
+                    <a [routerLink]="['/contact']" [queryParams]="getContactQueryParams(voucher)" class="btn btn-primary btn-contact">
+                      Contactez-nous
+                    </a>
                   </td>
                 </tr>
               }
@@ -168,37 +124,34 @@
     <h2 class="section-title">Comment Utiliser</h2>
     <div class="container">
       <div class="timeline">
-        @for (step of [1, 2, 3, 4]; track step; let i = $index) {
-          <div class="timeline-item">
-            <div class="timeline-number">{{ step }}</div>
-            <div class="timeline-content">
-              @if (step === 1) {
-                <h3>Comment échanger</h3>
-              }
-              @if (step === 2) {
-                <h3>Où planifier</h3>
-              }
-              @if (step === 3) {
-                <h3>Exigences d'identité</h3>
-              }
-              @if (step === 4) {
-                <h3>Règles de report</h3>
-              }
-              @if (step === 1) {
-                <p>Une fois votre bon d'examen acheté, vous recevrez un code d'échange par email. Utilisez ce code sur le site Microsoft pour activer votre examen.</p>
-              }
-              @if (step === 2) {
-                <p>Planifiez votre examen sur le site officiel Microsoft Learn ou via Pearson VUE. Les liens seront fournis avec votre bon d'examen.</p>
-              }
-              @if (step === 3) {
-                <p>Préparez une pièce d'identité officielle avec photo (passeport, carte d'identité) pour le jour de l'examen. Le nom doit correspondre exactement à celui utilisé lors de l'inscription.</p>
-              }
-              @if (step === 4) {
-                <p>Vous pouvez reporter votre examen jusqu'à 24 heures avant la date prévue. Au-delà, des frais supplémentaires peuvent s'appliquer.</p>
-              }
-            </div>
+        <div class="timeline-item">
+          <div class="timeline-number">1</div>
+          <div class="timeline-content">
+            <h3>Contactez-nous</h3>
+            <p>Contactez-nous avec le code du voucher.</p>
           </div>
-        }
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">2</div>
+          <div class="timeline-content">
+            <h3>Virement</h3>
+            <p>Faites un virement avec le montant de l'examen.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">3</div>
+          <div class="timeline-content">
+            <h3>Réception du voucher</h3>
+            <p>Nous vous enverrons par mail le voucher avec les instructions pour l'utiliser pour l'achat de l'examen sur la plateforme Microsoft.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">4</div>
+          <div class="timeline-content">
+            <h3>C'est parti</h3>
+            <p>Achetez votre voucher et bon courage.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -298,8 +251,8 @@
             </div>
           }
           <div class="modal-footer">
-            <a routerLink="/contact" class="btn btn-primary" (click)="closeDetailsModal()">
-              Contacter pour achat
+            <a [routerLink]="['/contact']" [queryParams]="selectedVoucher ? getContactQueryParams(selectedVoucher) : {}" class="btn btn-primary" (click)="closeDetailsModal()">
+              Contactez-nous
             </a>
           </div>
         </div>
