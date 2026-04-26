@@ -6,6 +6,8 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "intranet/backend/**"
+      - "intranet/frontend/**"
       - ".htaccess"
       - ".github/workflows/main.yml"
   workflow_dispatch: {}
@@ -23,6 +25,10 @@ jobs:
       backend_deps: ${{ steps.filter.outputs.backend_deps }}
       frontend: ${{ steps.filter.outputs.frontend }}
       htaccess: ${{ steps.filter.outputs.htaccess }}
+      intranet_backend: ${{ steps.filter.outputs.intranet_backend }}
+      intranet_backend_deps: ${{ steps.filter.outputs.intranet_backend_deps }}
+      intranet_frontend: ${{ steps.filter.outputs.intranet_frontend }}
+      intranet_htaccess: ${{ steps.filter.outputs.intranet_htaccess }}
     steps:
       - uses: actions/checkout@v4
       - id: filter
@@ -38,6 +44,15 @@ jobs:
               - 'frontend/**'
             htaccess:
               - '.htaccess'
+            intranet_backend:
+              - 'intranet/backend/**'
+            intranet_backend_deps:
+              - 'intranet/backend/composer.lock'
+              - 'intranet/backend/composer.json'
+            intranet_frontend:
+              - 'intranet/frontend/**'
+            intranet_htaccess:
+              - 'intranet/backend/.htaccess'
 
   deploy-backend:
     name: Deploy Backend (Symfony)
@@ -155,6 +170,122 @@ jobs:
             exit 1
           fi
 
+  deploy-intranet-backend:
+    name: Deploy Intranet Backend (Symfony)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.intranet_backend == 'true' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+
+      - name: Install lftp + curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp curl
+
+      - name: Composer install (prod, no scripts)
+        working-directory: intranet/backend
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --optimize-autoloader \
+            --no-scripts
+
+      - name: Prepare .env for deployment
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ALLOW_ORIGIN: ${{ secrets.CORS_ALLOW_ORIGIN }}
+          APP_ENV: prod
+          APP_DEBUG: "0"
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+        run: |
+          cat > intranet/backend/.env << EOF
+          APP_ENV=${APP_ENV}
+          APP_DEBUG=${APP_DEBUG}
+          APP_SECRET=${APP_SECRET}
+          DATABASE_URL=${DATABASE_URL}
+          CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+          EOF
+          cat intranet/backend/.env
+
+      - name: Upload intranet backend files (including .env)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_BACKEND_REMOTE}
+          cd ${INTRANET_BACKEND_REMOTE}
+          mirror -R --only-newer --verbose \
+            --exclude-glob='.git*' \
+            --exclude-glob='.env.local' \
+            --exclude-glob='.env.*.local' \
+            --exclude-glob='var/' \
+            --exclude-glob='vendor/' \
+            --exclude-glob='node_modules/' \
+            --exclude-glob='*.log' \
+            --exclude-glob='.DS_Store' \
+            intranet/backend/ ./
+          bye
+          "
+
+      - name: Upload vendor (only when deps changed)
+        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_BACKEND_REMOTE}/vendor
+          cd ${INTRANET_BACKEND_REMOTE}/vendor
+          mirror -R --only-newer --verbose \
+            --exclude-glob='.git*' \
+            intranet/backend/vendor/ ./
+          bye
+          "
+          
+      - name: Clear Symfony cache
+        run: |
+          sleep 2
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/public/clear-cache-complete.php" || echo "000")"
+          echo "Cache clear HTTP code: $code"
+          sleep 2
+          
+      - name: Verify intranet backend endpoint
+        run: |
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/courses" || echo "000")"
+          echo "HTTP_CODE=$code"
+          if [ "$code" != "200" ] && [ "$code" != "401" ] && [ "$code" != "403" ]; then
+            echo "Unexpected intranet backend status: $code"
+            exit 1
+          fi
+
   deploy-frontend:
     name: Deploy Frontend (Angular)
     runs-on: ubuntu-latest
@@ -236,12 +367,92 @@ jobs:
           echo "Frontend did not recover after ${MAX_RETRIES} attempts"
           exit 1
 
+  deploy-intranet-frontend:
+    name: Deploy Intranet Frontend (Angular)
+    runs-on: ubuntu-latest
+    needs: changes 
+    if: ${{ needs.changes.outputs.intranet_frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: intranet/frontend/package-lock.json
+
+      - name: Install lftp + curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp curl
+
+      - name: Install deps + build
+        working-directory: intranet/frontend
+        run: |
+          npm ci
+          npm run build
+          test -d dist
+          
+      - name: Upload dist to FTP (delete removed files)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_FRONTEND_REMOTE}
+          cd ${INTRANET_FRONTEND_REMOTE}
+          mirror -R --delete --only-newer --parallel=4 --verbose \
+            --exclude-glob='.git*' \
+            --exclude-glob='node_modules' \
+            --exclude-glob='backend/**' \
+            --exclude-glob='.angular' \
+            --exclude-glob='*.map' \
+            --exclude-glob='*.htaccess' \
+            intranet/frontend/dist/front/browser/ ./
+          bye
+          "
+      - name: Verify intranet frontend (retry)
+        run: |
+          set -e
+
+          URL="https://academy.clouddevfusion.com/intranet"
+          MAX_RETRIES=10
+          SLEEP_SECONDS=6
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            code="$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")"
+            echo "Attempt $i/$MAX_RETRIES → HTTP $code"
+
+            if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
+              echo "Intranet frontend is up"
+              exit 0
+            fi
+
+            if [ "$i" -lt "$MAX_RETRIES" ]; then
+              echo "Waiting ${SLEEP_SECONDS}s before retry..."
+              sleep "$SLEEP_SECONDS"
+            fi
+          done
+
+          echo "Intranet frontend did not recover after ${MAX_RETRIES} attempts"
+          exit 1
 
   deploy-htaccess:
     name: Deploy .htaccess
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.htaccess == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.htaccess == 'true' || needs.changes.outputs.intranet_htaccess == 'true' || github.event_name == 'workflow_dispatch' }}
     
     steps:
       - name: Checkout
@@ -252,7 +463,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lftp
 
-      - name: Upload .htaccess to root
+      - name: Upload .htaccess global file
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -271,7 +482,25 @@ jobs:
           bye
           "
 
+      - name: Upload intranet .htaccess
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          cd ${INTRANET_BACKEND_REMOTE}
+          put intranet/backend/.htaccess
+          bye
+          "
+
       - name: Verify upload
         run: |
-          echo ".htaccess deployed successfully"
-
+          echo "Global and intranet .htaccess files deployed successfully"
