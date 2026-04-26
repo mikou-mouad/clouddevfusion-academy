@@ -124,6 +124,11 @@
     background: #d1fae5;
     color: #065f46;
   }
+
+  &.post-status-draft {
+    background: #fef3c7;
+    color: #92400e;
+  }
 }
 
 .post-actions {
@@ -506,7 +511,23 @@
     
     .ql-editor {
       min-height: 400px;
-      
+      white-space: pre-wrap;
+      word-wrap: break-word;
+
+      /* Alignement préservé au collage (Word, etc.) */
+      .ql-align-center {
+        text-align: center;
+      }
+      .ql-align-right {
+        text-align: right;
+      }
+      .ql-align-justify {
+        text-align: justify;
+      }
+      .ql-align-left {
+        text-align: left;
+      }
+
       p {
         margin-bottom: var(--spacing-md);
         line-height: 1.8;
@@ -615,6 +636,12 @@
   
   span {
     font-weight: normal;
+  }
+  
+  .checkbox-hint {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-left: 4px;
   }
 }
 

@@ -1,0 +1,111 @@
+.placement-results-page {
+  padding: var(--spacing-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+
+    h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--dark-blue, #1e3a5f);
+    }
+  }
+
+  .error-message {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: #6b7280;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    thead {
+      background: #f9fafb;
+      th {
+        padding: var(--spacing-md) var(--spacing-lg);
+        text-align: left;
+        font-weight: 600;
+        color: var(--dark-blue, #1e3a5f);
+        border-bottom: 2px solid #e5e7eb;
+      }
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #e5e7eb;
+      &:hover {
+        background: #f9fafb;
+      }
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: var(--spacing-md) var(--spacing-lg);
+      color: #374151;
+      vertical-align: middle;
+    }
+
+    .score-cell {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary-blue, #0066cc);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+
+      &.passed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      &.failed {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 2px dashed #e5e7eb;
+    color: #6b7280;
+
+    .hint {
+      font-size: 0.9rem;
+      margin-top: var(--spacing-sm);
+    }
+  }
+}

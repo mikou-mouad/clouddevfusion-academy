@@ -117,6 +117,18 @@
             "src/Kernel.php"
         ]
     },
+    "symfony/mailer": {
+        "version": "6.4",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "4.3",
+            "ref": "09051cfde49476e3c12cd3a0e44289ace1c75a4f"
+        },
+        "files": [
+            "config/packages/mailer.yaml"
+        ]
+    },
     "symfony/maker-bundle": {
         "version": "1.65",
         "recipe": {
@@ -148,8 +160,8 @@
             "ref": "2ae08430db28c8eb4476605894296c82a642028f"
         },
         "files": [
-            "./config/packages/security.yaml",
-            "./config/routes/security.yaml"
+            "config/packages/security.yaml",
+            "config/routes/security.yaml"
         ]
     },
     "symfony/twig-bundle": {

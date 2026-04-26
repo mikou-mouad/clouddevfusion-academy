@@ -16,10 +16,19 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        login:
-            pattern: ^/api/login
+        # Autoriser les requêtes OPTIONS (CORS preflight) sans authentification
+        cors:
+            pattern: ^/api/
+            stateless: true
+            security: false
+            methods: [OPTIONS]
+        # Un seul firewall pour /api/ : login + session partagent la même clé _security_main
+        main:
+            pattern: ^/api/
             stateless: false
             provider: app_user_provider
+            lazy: true
+            entry_point: App\Security\ApiAuthenticationEntryPoint
             form_login:
                 login_path: /api/login
                 check_path: /api/login
@@ -30,14 +39,6 @@ security:
                 failure_handler: App\Security\LoginFailureHandler
                 require_previous_session: false
                 enable_csrf: false
-            logout:
-                path: /api/logout
-                target: /api/login
-        main:
-            pattern: ^/api/
-            stateless: false
-            provider: app_user_provider
-            lazy: true
             logout:
                 path: /api/logout
                 target: /api/login
@@ -62,6 +63,14 @@ security:
         - { path: ^/api/home_banners$, roles: PUBLIC_ACCESS }
         - { path: ^/api/home_banners/, roles: PUBLIC_ACCESS }
         - { path: ^/api/contacts$, roles: PUBLIC_ACCESS }
+        # Bons d'examen : lecture publique (page de vente des certificats)
+        - { path: ^/api/exam_vouchers, roles: PUBLIC_ACCESS }
+        # Tests de positionnement : lecture publique (page "Tester" du front) + envoi du résultat
+        - { path: ^/api/placement_tests, roles: PUBLIC_ACCESS }
+        - { path: ^/api/placement_questions, roles: PUBLIC_ACCESS }
+        - { path: ^/api/placement_answers, roles: PUBLIC_ACCESS }
+        - { path: ^/api/placement_test_results$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/placement_test_results/, roles: PUBLIC_ACCESS }
         # Toutes les autres routes API nécessitent ROLE_ADMIN
         - { path: ^/api/, roles: ROLE_ADMIN }
 

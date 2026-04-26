@@ -46,7 +46,8 @@ export class AdminLoginComponent implements OnInit {
       },
       error: (err) => {
         console.error('Login error:', err);
-        this.error = err.error?.message || 'Identifiants incorrects';
+        const msg = err.error?.message || err.error?.error || (err.status === 0 ? 'Impossible de joindre le serveur. Vérifiez que le backend tourne (ex. symfony serve).' : 'Identifiants incorrects');
+        this.error = msg;
         this.loading = false;
       }
     });

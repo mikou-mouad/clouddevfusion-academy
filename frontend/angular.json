@@ -70,7 +70,8 @@
               "buildTarget": "cloudacademy:build:production"
             },
             "development": {
-              "buildTarget": "cloudacademy:build:development"
+              "buildTarget": "cloudacademy:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

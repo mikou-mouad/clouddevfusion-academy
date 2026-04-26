@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-admin-dashboard',
-    imports: [RouterLink, RouterLinkActive, RouterOutlet],
+    imports: [RouterLink],
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.scss']
 })
