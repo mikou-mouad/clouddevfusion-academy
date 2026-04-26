@@ -230,8 +230,18 @@
     color: var(--dark-blue);
     font-size: 2rem;
     font-weight: 700;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
     width: 100%;
+    padding: 0 var(--spacing-xl);
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .section-subtitle {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-lg);
     padding: 0 var(--spacing-xl);
     max-width: 1400px;
     margin-left: auto;
@@ -308,6 +318,37 @@
           color: #6b7280;
           margin-top: 4px;
           font-family: 'Courier New', monospace;
+        }
+
+        .voucher-desc {
+          display: block;
+          font-size: 0.9rem;
+          color: #6b7280;
+          margin-top: 4px;
+          line-height: 1.4;
+        }
+
+        &.action-cell {
+          white-space: nowrap;
+          text-align: left;
+
+          .btn-contact {
+            margin-right: var(--spacing-sm);
+          }
+
+          .btn-link-details {
+            background: none;
+            border: none;
+            color: var(--primary-blue);
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+
+            &:hover {
+              color: var(--dark-blue);
+            }
+          }
         }
         
         .type-badge {

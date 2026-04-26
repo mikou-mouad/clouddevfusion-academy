@@ -1,0 +1,7 @@
+<svg width="160" height="36" viewBox="0 0 160 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="36" height="36" rx="10" fill="#1D4ED8"/>
+  <path d="M10 19.5C10 14.8056 13.8056 11 18.5 11H26V15H18.5C16.0147 15 14 17.0147 14 19.5C14 21.9853 16.0147 24 18.5 24H26V28H18.5C13.8056 28 10 24.1944 10 19.5Z" fill="white"/>
+  <path d="M30 8H34V28H30V8Z" fill="#93C5FD"/>
+  <text x="44" y="15" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">CloudDev</text>
+  <text x="44" y="29" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="600">Academy Intranet</text>
+</svg>

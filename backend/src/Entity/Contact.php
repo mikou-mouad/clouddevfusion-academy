@@ -18,11 +18,25 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new GetCollection(normalizationContext: ['groups' => ['contact:read']]),
-        new Post(denormalizationContext: ['groups' => ['contact:write']]),
-        new Get(normalizationContext: ['groups' => ['contact:read']]),
-        new Put(denormalizationContext: ['groups' => ['contact:write']]),
-        new Delete(),
+        // Lecture réservée à l'admin (affichage dans l'admin)
+        new GetCollection(
+            normalizationContext: ['groups' => ['contact:read']],
+            security: 'is_granted("ROLE_ADMIN")'
+        ),
+        // Création publique depuis le site (page Contact)
+        new Post(
+            denormalizationContext: ['groups' => ['contact:write']],
+            security: 'is_granted("PUBLIC_ACCESS")'
+        ),
+        new Get(
+            normalizationContext: ['groups' => ['contact:read']],
+            security: 'is_granted("ROLE_ADMIN")'
+        ),
+        new Put(
+            denormalizationContext: ['groups' => ['contact:write']],
+            security: 'is_granted("ROLE_ADMIN")'
+        ),
+        new Delete(security: 'is_granted("ROLE_ADMIN")'),
     ]
 )]
 class Contact
@@ -67,9 +81,11 @@ class Contact
     private bool $read = false;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[Groups(['contact:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[Groups(['contact:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct()

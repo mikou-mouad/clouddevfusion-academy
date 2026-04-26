@@ -36,13 +36,12 @@ final class Version20251209132305 extends AbstractMigration
         $this->addSql('COMMENT ON COLUMN testimonials.updated_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('ALTER TABLE labs ADD CONSTRAINT FK_87661F13AFC2B591 FOREIGN KEY (module_id) REFERENCES syllabus_modules (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE syllabus_modules ADD CONSTRAINT FK_5863F4D591CC992 FOREIGN KEY (course_id) REFERENCES courses (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
-        $this->addSql('ALTER TABLE product DROP CONSTRAINT fk_d34a04ad83fa6dd0');
-        $this->addSql('ALTER TABLE orders DROP CONSTRAINT fk_e52ffdee83fa6dd0');
-        $this->addSql('DROP TABLE product');
-        $this->addSql('DROP TABLE orders');
-        $this->addSql('DROP TABLE commercant');
-        $this->addSql('DROP TABLE users');
-        $this->addSql('DROP TABLE messenger_messages');
+        // Anciennes tables d'un autre projet : supprimer seulement si elles existent (base vide = pas d'erreur)
+        $this->addSql('DROP TABLE IF EXISTS product CASCADE');
+        $this->addSql('DROP TABLE IF EXISTS orders CASCADE');
+        $this->addSql('DROP TABLE IF EXISTS commercant CASCADE');
+        $this->addSql('DROP TABLE IF EXISTS users CASCADE');
+        $this->addSql('DROP TABLE IF EXISTS messenger_messages CASCADE');
     }
 
     public function down(Schema $schema): void

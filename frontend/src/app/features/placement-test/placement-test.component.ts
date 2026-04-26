@@ -22,6 +22,14 @@ export class PlacementTestComponent implements OnInit {
   result: PlacementTestResult | null = null;
   loading = false;
   error: string | null = null;
+  saveError: string | null = null;   // erreur d'enregistrement côté API
+  saveSuccess = false;               // enregistrement réussi
+
+  userFirstName = '';
+  userLastName = '';
+  userEmail = '';
+  userPhone = '';
+  userInfoValid = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -63,6 +71,12 @@ export class PlacementTestComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  validateUserInfo() {
+    if (this.userFirstName?.trim() && this.userLastName?.trim() && this.userEmail?.trim()) {
+      this.userInfoValid = true;
+    }
   }
 
   startTest() {
@@ -149,9 +163,26 @@ export class PlacementTestComponent implements OnInit {
     const finalScore = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
     const passed = finalScore >= this.getPassingScore();
 
-    // Créer le résultat
+    const userName = `${this.userFirstName.trim()} ${this.userLastName.trim()}`;
+
+    // Payload pour l'API (placementTest en IRI, score en string pour le backend)
+    const payload = {
+      placementTest: `/api/placement_tests/${this.test!.id}`,
+      userName,
+      userEmail: this.userEmail.trim(),
+      userPhone: this.userPhone?.trim() || undefined,
+      score: finalScore.toFixed(2), // string pour l'entité backend (DECIMAL)
+      totalQuestions,
+      correctAnswers,
+      passed,
+      answers: this.answers
+    };
+
     const result: PlacementTestResult = {
       placementTest: this.test,
+      userName,
+      userEmail: this.userEmail.trim(),
+      userPhone: this.userPhone?.trim() || undefined,
       score: finalScore,
       totalQuestions,
       correctAnswers,
@@ -159,21 +190,31 @@ export class PlacementTestComponent implements OnInit {
       answers: this.answers
     };
 
+    this.saveError = null;
+    this.saveSuccess = false;
     this.loading = true;
-    this.apiService.submitPlacementTestResult(result).subscribe({
+    this.apiService.submitPlacementTestResult(payload as unknown as PlacementTestResult).subscribe({
       next: (savedResult) => {
         this.result = savedResult;
         this.testCompleted = true;
         this.loading = false;
+        this.saveSuccess = true;
       },
       error: (err) => {
         console.error('Error submitting result:', err);
-        // Afficher quand même le résultat même si l'enregistrement échoue
+        this.saveError = err.error?.message || err.message || 'Le résultat n\'a pas pu être enregistré.';
         this.result = result;
         this.testCompleted = true;
         this.loading = false;
       }
     });
+  }
+
+  getResultScore(): string {
+    if (!this.result) return '0';
+    const s = this.result.score;
+    const n = typeof s === 'number' ? s : parseFloat(String(s));
+    return isNaN(n) ? '0' : n.toFixed(1);
   }
 
   goToContact() {

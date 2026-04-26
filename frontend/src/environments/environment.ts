@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  // Backend déployé : proxy /api -> https://academy.clouddevfusion.com
+  // Tout en local : proxy /api -> http://localhost:8000 (backend Symfony)
   apiUrl: '/api'
 };
 

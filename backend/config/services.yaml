@@ -4,12 +4,36 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    placement_notify_email: 'ossamadghoughi2@gmail.com'
+    contact_notify_email: 'ossamadghoughi2@gmail.com'
+    mailer_from: 'clouddevfusion.academy@gmail.com'
 
 services:
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # Charger les commandes console (app:create-admin, etc.)
+    App\Command\:
+        resource: '../src/Command/'
+        tags: ['console.command']
+
+    # Listeners (ex. SessionIdHeaderListener)
+    App\EventListener\:
+        resource: '../src/EventListener/'
+
+    # Controllers (pour injection EntityManager etc.)
+    App\Controller\:
+        resource: '../src/Controller/'
+        tags: ['controller.service_arguments']
+        exclude:
+            - '../src/Controller/FileUploadController.php'
+
+    App\Controller\FileUploadController:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+        tags: ['controller.service_arguments']
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
@@ -59,3 +83,16 @@ services:
         autowire: true
         autoconfigure: true
 
+    App\Security\ApiAuthenticationEntryPoint:
+        autowire: true
+        autoconfigure: true
+
+    App\Service\PlacementTestResultNotificationService:
+        arguments:
+            $notifyEmail: '%placement_notify_email%'
+            $fromEmail: '%mailer_from%'
+
+    App\Service\ContactNotificationService:
+        arguments:
+            $notifyEmail: '%contact_notify_email%'
+            $fromEmail: '%mailer_from%'

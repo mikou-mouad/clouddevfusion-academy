@@ -4,7 +4,7 @@
   "description": "CloudAcademy by CloudDevFusion - Frontend Angular Application",
   "scripts": {
     "ng": "ng",
-    "start": "concurrently \"node local-api-proxy.js\" \"ng serve\"",
+    "start": "ng serve",
     "start:proxy": "node local-api-proxy.js",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { Observable, map, catchError, of, throwError, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface Testimonial {
@@ -81,6 +81,7 @@ export interface PlacementTestResult {
   placementTest?: PlacementTest;
   userEmail?: string;
   userName?: string;
+  userPhone?: string;
   score: number;
   totalQuestions: number;
   correctAnswers: number;
@@ -152,10 +153,15 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   private getHeaders(): HttpHeaders {
-    return new HttpHeaders({
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-    });
+    };
+    const sessionId = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('apiSessionId') : null;
+    if (sessionId) {
+      headers['X-Session-Id'] = sessionId;
+    }
+    return new HttpHeaders(headers);
   }
 
   // Helper pour extraire les données d'une réponse API Platform (JSON-LD ou JSON)
@@ -234,25 +240,158 @@ export class ApiService {
   // BLOG POSTS
   // ============================================
   getBlogPosts(): Observable<BlogPost[]> {
-    return this.http.get<any>(`${this.apiUrl}/blog_posts`, { headers: this.getHeaders() }).pipe(
-      map(response => this.extractCollection<BlogPost>(response))
+    return this.http.get(`${this.apiUrl}/blog_posts`, {
+      headers: this.getHeaders(),
+      responseType: 'text',
+      withCredentials: true
+    }).pipe(
+      map(body => {
+        if (!body?.trim()) return [];
+        try {
+          const response = JSON.parse(body);
+          const rawList = this.extractCollection<any>(response);
+          const normalized: BlogPost[] = [];
+          for (const raw of rawList) {
+            const post = this.normalizeBlogPostResponse(raw);
+            if (post) normalized.push(post);
+          }
+          return normalized;
+        } catch {
+          return [];
+        }
+      }),
+      catchError(() => of([]))
     );
   }
 
   getBlogPost(id: number): Observable<BlogPost> {
-    return this.http.get<BlogPost>(`${this.apiUrl}/blog_posts/${id}`, { headers: this.getHeaders() });
+    return this.http.get<BlogPost>(`${this.apiUrl}/blog_posts/${id}`, { headers: this.getHeaders(), withCredentials: true });
   }
 
-  createBlogPost(blogPost: BlogPost): Observable<BlogPost> {
-    return this.http.post<BlogPost>(`${this.apiUrl}/blog_posts`, blogPost, { headers: this.getHeaders() });
+  private buildBlogPostCreatePayload(blogPost: BlogPost): Record<string, unknown> {
+    const p: Record<string, unknown> = {
+      title: blogPost.title ?? '',
+      slug: blogPost.slug ?? (blogPost.title ? blogPost.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : ''),
+      content: blogPost.content ?? '',
+      category: blogPost.category ?? 'Azure',
+      author: blogPost.author ?? '',
+      published: !!blogPost.published
+    };
+    if (blogPost['excerpt'] != null && blogPost['excerpt'] !== '') p['excerpt'] = blogPost['excerpt'];
+    if (blogPost['image'] != null && blogPost['image'] !== '') p['image'] = blogPost['image'];
+    const rt = blogPost['readTime'];
+    p['readTime'] = typeof rt === 'number' && !isNaN(rt) ? rt : 5;
+    return p;
   }
 
-  updateBlogPost(id: number, blogPost: BlogPost): Observable<BlogPost> {
-    return this.http.put<BlogPost>(`${this.apiUrl}/blog_posts/${id}`, blogPost, { 
+  createBlogPost(blogPost: BlogPost): Observable<BlogPost | null> {
+    const payload = this.buildBlogPostCreatePayload(blogPost);
+    return this.http.post(`${this.apiUrl}/blog_posts`, payload, {
       headers: this.getHeaders(),
-      observe: 'body',
-      responseType: 'json'
-    });
+      observe: 'response',
+      responseType: 'text',
+      withCredentials: true
+    }).pipe(
+      switchMap((res: HttpResponse<string>) => {
+        const saved = this.parseBlogPostBody(res);
+        if (saved?.id != null && Number(saved.id) > 0) return of(saved);
+        if (res.status >= 200 && res.status < 300) {
+          const location = res.headers.get('Location') || res.headers.get('Content-Location');
+          const id = location ? location.replace(/.*\//, '').replace(/\?.*$/, '').trim() : null;
+          if (id && /^\d+$/.test(id)) {
+            const numId = parseInt(id, 10);
+            return this.http.get(`${this.apiUrl}/blog_posts/${id}`, {
+              headers: this.getHeaders(),
+              responseType: 'text'
+            }).pipe(
+              map(body => {
+                try {
+                  const raw = JSON.parse(body?.trim() || '{}');
+                  const normalized = this.normalizeBlogPostResponse(raw);
+                  if (normalized) return normalized;
+                  return { id: numId, title: 'Article créé', slug: '', category: 'Azure', author: '', published: false } as BlogPost;
+                } catch {
+                  return { id: numId, title: 'Article créé', slug: '', category: 'Azure', author: '', published: false } as BlogPost;
+                }
+              }),
+              catchError(() => of({ id: numId, title: 'Article créé', slug: '', category: 'Azure', author: '', published: false } as BlogPost))
+            );
+          }
+        }
+        return of(null);
+      }),
+      catchError((err) => {
+        if (err.status >= 200 && err.status < 300 && err.error != null) {
+          try {
+            const body = typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
+            const parsed = this.normalizeBlogPostResponse(JSON.parse(body));
+            return of(parsed);
+          } catch { }
+        }
+        return throwError(() => err);
+      })
+    );
+  }
+
+  updateBlogPost(id: number, blogPost: BlogPost): Observable<BlogPost | null> {
+    return this.http.put(`${this.apiUrl}/blog_posts/${id}`, blogPost, {
+      headers: this.getHeaders(),
+      observe: 'response',
+      responseType: 'text'
+    }).pipe(
+      map((res: HttpResponse<string>) => this.parseBlogPostBody(res)),
+      catchError((err) => {
+        if (err.status >= 200 && err.status < 300 && err.error != null) {
+          try {
+            const body = typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
+            const parsed = this.normalizeBlogPostResponse(JSON.parse(body));
+            return of(parsed);
+          } catch { }
+        }
+        return throwError(() => err);
+      })
+    );
+  }
+
+  private parseBlogPostBody(res: HttpResponse<string>): BlogPost | null {
+    if (res.status < 200 || res.status >= 300) return null;
+    const body = res.body?.trim();
+    if (!body) return null;
+    try {
+      const parsed = JSON.parse(body);
+      const raw = Array.isArray(parsed) && parsed.length > 0
+        ? parsed[0]
+        : parsed?.data ?? parsed?.result ?? parsed;
+      return this.normalizeBlogPostResponse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeBlogPostResponse(raw: any): BlogPost | null {
+    if (!raw || typeof raw !== 'object') return null;
+    let id: number | undefined;
+    if (typeof raw.id === 'number') id = raw.id;
+    else if (typeof raw.id === 'string') id = parseInt(raw.id, 10);
+    else if (typeof raw['@id'] === 'string') {
+      const match = raw['@id'].match(/\/(\d+)$/);
+      if (match) id = parseInt(match[1], 10);
+    }
+    const title = (raw.title ?? raw['title'] ?? '').toString().trim() || (raw.slug ?? raw['slug'] ?? '').toString().trim() || 'Sans titre';
+    return {
+      id: isNaN(id as number) ? undefined : id,
+      title: String(title),
+      slug: raw.slug ?? raw['slug'] ?? raw.title ?? '',
+      excerpt: raw.excerpt ?? raw['excerpt'],
+      content: raw.content ?? raw['content'] ?? '',
+      image: raw.image ?? raw['image'],
+      category: raw.category ?? raw['category'] ?? 'Azure',
+      author: raw.author ?? raw['author'] ?? '',
+      readTime: raw.readTime ?? raw['readTime'],
+      published: raw.published ?? raw['published'] ?? false,
+      createdAt: raw.createdAt ?? raw['createdAt'],
+      updatedAt: raw.updatedAt ?? raw['updatedAt']
+    };
   }
 
   deleteBlogPost(id: number): Observable<void> {
@@ -357,13 +496,13 @@ export class ApiService {
   // CONTACTS
   // ============================================
   getContacts(): Observable<Contact[]> {
-    return this.http.get<any>(`${this.apiUrl}/contacts`, { headers: this.getHeaders() }).pipe(
+    return this.http.get<any>(`${this.apiUrl}/contacts`, { headers: this.getHeaders(), withCredentials: true }).pipe(
       map(response => this.extractCollection<Contact>(response))
     );
   }
 
   getContact(id: number): Observable<Contact> {
-    return this.http.get<Contact>(`${this.apiUrl}/contacts/${id}`, { headers: this.getHeaders() });
+    return this.http.get<Contact>(`${this.apiUrl}/contacts/${id}`, { headers: this.getHeaders(), withCredentials: true });
   }
 
   createContact(contact: Contact): Observable<Contact> {
@@ -373,13 +512,14 @@ export class ApiService {
   updateContact(id: number, contact: Contact): Observable<Contact> {
     return this.http.put<Contact>(`${this.apiUrl}/contacts/${id}`, contact, { 
       headers: this.getHeaders(),
+      withCredentials: true,
       observe: 'body',
       responseType: 'json'
     });
   }
 
   deleteContact(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/contacts/${id}`, { headers: this.getHeaders() });
+    return this.http.delete<void>(`${this.apiUrl}/contacts/${id}`, { headers: this.getHeaders(), withCredentials: true });
   }
 
   // ============================================
@@ -540,6 +680,15 @@ export class ApiService {
   // Submit test result
   submitPlacementTestResult(result: PlacementTestResult): Observable<PlacementTestResult> {
     return this.http.post<PlacementTestResult>(`${this.apiUrl}/placement_test_results`, result, { headers: this.getHeaders() });
+  }
+
+  getPlacementTestResults(): Observable<PlacementTestResult[]> {
+    return this.http.get<any>(`${this.apiUrl}/placement_test_results`, {
+      headers: this.getHeaders(),
+      withCredentials: true
+    }).pipe(
+      map(response => this.extractCollection<PlacementTestResult>(response))
+    );
   }
 }
 

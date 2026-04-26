@@ -37,9 +37,14 @@ class LoginSuccessHandler implements AuthenticationSuccessHandlerInterface
             }
         }
         
+        $session = $request->getSession();
+        $session->save(); // persister tout de suite pour que la session soit disponible sur la prochaine requête (X-Session-Id)
+        $sessionId = $session->getId();
+
         return new JsonResponse([
             'success' => true,
             'message' => 'Connexion réussie',
+            'sessionId' => $sessionId,
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),

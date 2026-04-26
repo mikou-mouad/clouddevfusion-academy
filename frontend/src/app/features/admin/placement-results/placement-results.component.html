@@ -1,0 +1,56 @@
+<div class="placement-results-page">
+  <div class="page-header">
+    <h1>Résultats des tests de positionnement</h1>
+    <button class="btn btn-secondary" (click)="loadResults()" [disabled]="loading">
+      Actualiser
+    </button>
+  </div>
+
+  <div class="error-message" *ngIf="error">{{ error }}</div>
+
+  <div class="loading-state" *ngIf="loading && results.length === 0">
+    <p>Chargement des résultats...</p>
+  </div>
+
+  <div class="results-section" *ngIf="!loading || results.length > 0">
+    <div class="table-container">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Nom / Prénom</th>
+            <th>Adresse mail</th>
+            <th>Téléphone</th>
+            <th>Test</th>
+            <th>Note</th>
+            <th>Réussi</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of results; track r.id) {
+            <tr>
+              <td>{{ formatDate(r.completedAt) }}</td>
+              <td>{{ r.userName || '–' }}</td>
+              <td>{{ r.userEmail || '–' }}</td>
+              <td>{{ r.userPhone || '–' }}</td>
+              <td>{{ getTestTitle(r) }}</td>
+              <td class="score-cell">{{ getScoreDisplay(r) }}</td>
+              <td>
+                <span class="badge" [class.passed]="r.passed" [class.failed]="!r.passed">
+                  {{ r.passed ? 'Oui' : 'Non' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (!loading && results.length === 0) {
+      <div class="empty-state">
+        <p>Aucun résultat pour le moment.</p>
+        <p class="hint">Les résultats apparaîtront ici lorsque des visiteurs auront passé un test de positionnement.</p>
+      </div>
+    }
+  </div>
+</div>

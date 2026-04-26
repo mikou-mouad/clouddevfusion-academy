@@ -14,9 +14,9 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Table(name: 'placement_test_results')]
 #[ApiResource(
     operations: [
-        new GetCollection(normalizationContext: ['groups' => ['placement_result:read']]),
+        new GetCollection(normalizationContext: ['groups' => ['placement_result:read', 'placement_test:read']], security: 'is_granted("ROLE_ADMIN")'),
         new Post(denormalizationContext: ['groups' => ['placement_result:write']]),
-        new Get(normalizationContext: ['groups' => ['placement_result:read']]),
+        new Get(normalizationContext: ['groups' => ['placement_result:read', 'placement_test:read']], security: 'is_granted("ROLE_ADMIN")'),
     ]
 )]
 class PlacementTestResult
@@ -39,6 +39,10 @@ class PlacementTestResult
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['placement_result:read', 'placement_result:write'])]
     private ?string $userName = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['placement_result:read', 'placement_result:write'])]
+    private ?string $userPhone = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2)]
     #[Groups(['placement_result:read', 'placement_result:write'])]
@@ -108,6 +112,17 @@ class PlacementTestResult
     public function setUserName(?string $userName): self
     {
         $this->userName = $userName;
+        return $this;
+    }
+
+    public function getUserPhone(): ?string
+    {
+        return $this->userPhone;
+    }
+
+    public function setUserPhone(?string $userPhone): self
+    {
+        $this->userPhone = $userPhone;
         return $this;
     }
 

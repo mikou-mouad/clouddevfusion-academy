@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, BlogPost } from '../../../core/services/api.service';
 import { QuillModule } from 'ngx-quill';
+import Delta, { type Op } from 'quill-delta';
 
 @Component({
     selector: 'app-admin-blog',
@@ -34,32 +35,52 @@ export class AdminBlogComponent implements OnInit {
 
   categories = ['Azure', 'Certification tips', 'Case studies', 'Labs', 'Updates'];
 
-  // Configuration Quill Editor pour support Word
-  quillModules = {
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike'],
-      ['blockquote', 'code-block'],
-      [{ 'header': 1 }, { 'header': 2 }, { 'header': 3 }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      [{ 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'font': [] }],
-      [{ 'align': [] }],
-      ['clean'],
-      ['link', 'image', 'video']
-    ],
-    clipboard: {
-      // Support amélioré pour copier-coller depuis Word
-      matchVisual: false
-    },
-    imageResize: {
-      parchment: (window as any).Quill?.import('parchment'),
-      modules: ['Resize', 'DisplaySize']
-    }
-  };
+  // Configuration Quill Editor : préserver mise en page au collage (espaces, alignement)
+  quillModules = this.buildQuillModules();
+
+  private buildQuillModules(): Record<string, unknown> {
+    const alignMatcher = (node: Node, delta: Delta): Delta => {
+      const el = node as HTMLElement;
+      const align = (el.style?.textAlign || (el.getAttribute && el.getAttribute('align')) || '').toLowerCase();
+      if (!align || !['left', 'center', 'right', 'justify'].includes(align)) return delta;
+      const ops: Op[] = delta.ops.map((op: Op) => {
+        if (typeof op.insert === 'string' && op.insert.endsWith('\n')) {
+          return { insert: op.insert, attributes: { ...(op.attributes || {}), align } } as Op;
+        }
+        return op;
+      });
+      return new Delta(ops);
+    };
+    return {
+      toolbar: [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        [{ 'header': 1 }, { 'header': 2 }, { 'header': 3 }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'script': 'sub'}, { 'script': 'super' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'font': [] }],
+        [{ 'align': [] }],
+        ['clean'],
+        ['link', 'image', 'video']
+      ],
+      clipboard: {
+        matchers: [
+          ['P', alignMatcher],
+          ['DIV', alignMatcher],
+          ['H1', alignMatcher],
+          ['H2', alignMatcher],
+          ['H3', alignMatcher],
+          ['H4', alignMatcher],
+          ['H5', alignMatcher],
+          ['H6', alignMatcher]
+        ]
+      }
+    };
+  }
 
   get blogPostsList(): BlogPost[] {
     return Array.isArray(this.blogPosts) 
@@ -78,10 +99,7 @@ export class AdminBlogComponent implements OnInit {
     this.error = null;
     this.apiService.getBlogPosts().subscribe({
       next: (data) => {
-        // Filtrer les articles valides (non null et avec category)
-        this.blogPosts = Array.isArray(data) 
-          ? data.filter(p => p && p.category) 
-          : [];
+        this.blogPosts = Array.isArray(data) ? data.filter(p => p && p.category) : [];
         this.loading = false;
       },
       error: (err) => {
@@ -108,7 +126,7 @@ export class AdminBlogComponent implements OnInit {
       category: 'Azure',
       author: '',
       readTime: 5,
-      published: false
+      published: true
     };
     this.showModal = true;
   }
@@ -125,14 +143,14 @@ export class AdminBlogComponent implements OnInit {
 
   deletePost(index: number) {
     const post = this.blogPosts[index];
-    if (!post.id) {
+    if (!post?.id || Number(post.id) < 1) {
       alert('Impossible de supprimer cet article');
       return;
     }
 
     if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
       this.loading = true;
-      this.apiService.deleteBlogPost(post.id).subscribe({
+      this.apiService.deleteBlogPost(post.id!).subscribe({
         next: () => {
           this.blogPosts.splice(index, 1);
           this.loading = false;
@@ -203,6 +221,46 @@ export class AdminBlogComponent implements OnInit {
       .replace(/^-|-$/g, '');
   }
 
+  /**
+   * Convertit les URLs blob: du contenu HTML en base64 pour que les images
+   * collées depuis Word (ou insérées) persistent après enregistrement.
+   */
+  private async convertBlobUrlsToBase64InContent(html: string): Promise<string> {
+    if (!html || !html.includes('blob:')) {
+      return html;
+    }
+    // src="blob:..." ou src='blob:...'
+    const imgRegex = /<img[^>]+src=["'](blob:[^"']+)["'][^>]*>/gi;
+    const matches = [...html.matchAll(imgRegex)];
+    let result = html;
+    for (const match of matches) {
+      const blobUrl = match[1];
+      try {
+        const base64 = await this.fetchBlobAsBase64(blobUrl);
+        if (base64) {
+          result = result.replace(match[0], match[0].replace(blobUrl, base64));
+        }
+      } catch (e) {
+        console.warn('Impossible de convertir l\'image blob en base64:', e);
+      }
+    }
+    return result;
+  }
+
+  private fetchBlobAsBase64(blobUrl: string): Promise<string> {
+    return fetch(blobUrl)
+      .then((r) => r.blob())
+      .then(
+        (blob) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+          })
+      );
+  }
+
   async savePost() {
     // Validation
     if (!this.formData.title || this.formData.title.trim().length < 3) {
@@ -244,11 +302,14 @@ export class AdminBlogComponent implements OnInit {
         return;
       }
 
+      // Convertir les images blob: (collées depuis Word) en base64 pour qu'elles persistent
+      const contentToSave = await this.convertBlobUrlsToBase64InContent(this.formData.content.trim());
+
       const postData: BlogPost = {
         title: this.formData.title.trim(),
         slug: slug,
         excerpt: this.formData.excerpt?.trim() || undefined,
-        content: this.formData.content.trim(),
+        content: contentToSave,
         image: this.formData.image || undefined,
         category: this.formData.category,
         author: this.formData.author.trim(),
@@ -256,36 +317,53 @@ export class AdminBlogComponent implements OnInit {
         published: this.formData.published || false
       };
 
-      console.log('Sending blog post data:', JSON.stringify(postData, null, 2));
-      console.log('Editing post ID:', this.editingPost?.id);
-
       const operation = this.editingPost?.id
         ? this.apiService.updateBlogPost(this.editingPost.id, postData)
         : this.apiService.createBlogPost(postData);
 
       operation.subscribe({
         next: (saved) => {
-          if (this.editingPost?.id) {
-            const index = this.blogPosts.findIndex(p => p.id === this.editingPost?.id);
-            if (index !== -1) {
-              this.blogPosts[index] = saved;
+          if (saved && saved.id != null && Number(saved.id) > 0) {
+            if (this.editingPost?.id) {
+              const idx = this.blogPosts.findIndex(p => p.id === this.editingPost?.id);
+              if (idx !== -1) this.blogPosts[idx] = saved;
+            } else {
+              this.blogPosts.push(saved);
             }
           } else {
-            this.blogPosts.push(saved);
+            this.loadBlogPosts();
           }
           this.loading = false;
           this.successMessage = this.editingPost?.id ? 'Article modifié avec succès !' : 'Article ajouté avec succès !';
-          setTimeout(() => {
-            this.closeModal();
-            this.loadBlogPosts();
-          }, 1000);
+          setTimeout(() => this.closeModal(), 1000);
         },
         error: (err) => {
+          if (err.status === 200 && err.error) {
+            try {
+              const body = typeof err.error === 'string' ? err.error : JSON.stringify(err.error);
+              const saved = JSON.parse(body) as BlogPost;
+              if (saved?.id != null && Number(saved.id) > 0) {
+                if (this.editingPost?.id) {
+                  const idx = this.blogPosts.findIndex(p => p.id === this.editingPost?.id);
+                  if (idx !== -1) this.blogPosts[idx] = saved;
+                } else {
+                  this.blogPosts.push(saved);
+                }
+              } else {
+                this.loadBlogPosts();
+              }
+            } catch {
+              this.loadBlogPosts();
+            }
+            this.loading = false;
+            this.successMessage = 'Article enregistré.';
+            setTimeout(() => this.closeModal(), 1000);
+            return;
+          }
           console.error('Error saving blog post:', err);
           console.error('Error status:', err.status);
           console.error('Error URL:', err.url);
           console.error('Error details:', err.error);
-          
           let errorMessage = 'Erreur lors de l\'enregistrement';
           if (err.status === 404) {
             errorMessage = 'Endpoint API non trouvé. Vérifiez que le serveur backend est démarré et que l\'endpoint /api/blog_posts existe.';

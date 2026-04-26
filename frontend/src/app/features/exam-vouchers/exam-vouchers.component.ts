@@ -117,4 +117,10 @@ export class ExamVouchersComponent implements OnInit {
     const codes = new Set(this.vouchers.map(v => v.examCode));
     return Array.from(codes).sort();
   }
+
+  getContactQueryParams(voucher: ExamVoucher): { subject?: string } {
+    return {
+      subject: voucher.examCode ? `Bon d'examen ${voucher.examCode}` : undefined
+    };
+  }
 }

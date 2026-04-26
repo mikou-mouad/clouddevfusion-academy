@@ -20,6 +20,37 @@
       <div class="intro-content">
         <h1>{{ test.title }}</h1>
         <p class="test-description" *ngIf="test.description">{{ test.description }}</p>
+
+        <!-- Formulaire obligatoire avant de commencer -->
+        <div class="user-info-form" *ngIf="!userInfoValid">
+          <h3>Vos coordonnées</h3>
+          <p class="form-hint">Renseignez vos informations avant de commencer le test. Les résultats seront enregistrés avec votre score.</p>
+          <form (ngSubmit)="validateUserInfo()" class="info-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="firstName">Prénom *</label>
+                <input id="firstName" type="text" [(ngModel)]="userFirstName" name="firstName" required placeholder="Votre prénom">
+              </div>
+              <div class="form-group">
+                <label for="lastName">Nom *</label>
+                <input id="lastName" type="text" [(ngModel)]="userLastName" name="lastName" required placeholder="Votre nom">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="userEmail">Adresse mail *</label>
+              <input id="userEmail" type="email" [(ngModel)]="userEmail" name="userEmail" required placeholder="votre@email.fr">
+            </div>
+            <div class="form-group">
+              <label for="userPhone">Numéro de téléphone</label>
+              <input id="userPhone" type="tel" [(ngModel)]="userPhone" name="userPhone" placeholder="06 12 34 56 78">
+            </div>
+            <button type="submit" class="btn btn-primary btn-large" [disabled]="!userFirstName.trim() || !userLastName.trim() || !userEmail.trim()">
+              Valider et continuer
+            </button>
+          </form>
+        </div>
+
+        <div *ngIf="userInfoValid">
         
         <div class="test-info">
           <div class="info-item">
@@ -60,6 +91,7 @@
           </svg>
           Commencer le test
         </button>
+        </div>
       </div>
     </div>
   </div>
@@ -168,7 +200,7 @@
           </div>
           <h1>{{ result.passed ? 'Félicitations !' : 'Test terminé' }}</h1>
           <div class="score-display">
-            <span class="score-value">{{ result.score.toFixed(1) }}%</span>
+            <span class="score-value">{{ getResultScore() }}%</span>
             <span class="score-label">Votre score</span>
           </div>
         </div>
@@ -190,6 +222,9 @@
           </div>
         </div>
 
+        <div class="results-message" *ngIf="saveError">
+          <p class="error-message">Le résultat n'a pas été enregistré : {{ saveError }}</p>
+        </div>
         <div class="results-message">
           <p *ngIf="result.passed" class="success-message">
             Excellent travail ! Vous avez réussi le test de positionnement. 
@@ -208,6 +243,9 @@
             </svg>
             Prendre rendez-vous
           </button>
+          <a routerLink="/contact" class="btn btn-cpf btn-large">
+            S'inscrire au CPF
+          </a>
           <a routerLink="/catalog" class="btn btn-secondary btn-large">
             Retour au catalogue
           </a>
