@@ -76,10 +76,14 @@ jobs:
           sudo apt-get install -y lftp curl
 
       - name: Debug path
-        run: echo "Backend will be deployed to: ${{ secrets.BACKEND_REMOTE }}"
+        env:
+          BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
+        run: echo "Backend will be deployed to: ${BACKEND_REMOTE}"
 
       - name: Debug path
-        run: echo "Backend will be deployed to: ${{ secrets.FRONTEND_REMOTE }}"
+        env:
+          FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
+        run: echo "Frontend will be deployed to: ${FRONTEND_REMOTE}"
 
       - name: Composer install (prod, no scripts)
         working-directory: backend
