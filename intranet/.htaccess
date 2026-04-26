@@ -1,19 +1,17 @@
 RewriteEngine On
+RewriteBase /intranet/
 
-# Serve existing files/directories as-is
+# Serve existing files/directories directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Pass Authorization header to PHP
+# Pass Authorization header
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Send /intranet/api/* to Symfony intranet backend
-RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
-
-# Send /api/* to Symfony main backend
+# Send /intranet/api/* to Symfony (path now includes backend/)
 RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 
-# Frontend SPA routes -> index.html
+# SPA catch-all for intranet frontend
 RewriteRule ^ index.html [L]
