@@ -471,7 +471,6 @@ jobs:
           FTP_PORT: ${{ secrets.FTP_PORT }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASS: ${{ secrets.FTP_PASS }}
-          FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
         run: |
           lftp -c "
           set ftp:ssl-allow no
