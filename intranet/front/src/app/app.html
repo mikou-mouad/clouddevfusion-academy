@@ -588,7 +588,6 @@
             <div class="support-panel">
               <p><strong>Email:</strong> support@clouddev.local</p>
               <p><strong>Horaires:</strong> Lun-Ven 09:00-18:00</p>
-              <button class="support-btn">Creer une demande</button>
             </div>
           </section>
         }
@@ -1048,9 +1047,9 @@
                 <div class="admin-planning-block">
                   <div class="admin-planning-head">
                     <h5>Planning</h5>
-                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un slot</button>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un créneau</button>
                   </div>
-                  @for (row of planningRows(); track $index) {
+                  @for (row of sortedPlanningRows(); track $index) {
                     <div class="admin-planning-row">
                       <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow($index, 'date', $event)" [name]="'planDate' + $index" required />
                       <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'start', $event)" [name]="'planStart' + $index" required>
@@ -1196,16 +1195,6 @@
               </div>
               <div class="apprentice-selector-row">
                 <label>
-                  Rechercher
-                  <input
-                    type="text"
-                    [ngModel]="adminSessionSearch()"
-                    (ngModelChange)="adminSessionSearch.set($event)"
-                    name="adminSessionSearch"
-                    placeholder="Titre, formateur, mode, date..."
-                  />
-                </label>
-                <label>
                   Filtrer par formation
                   <select
                     [ngModel]="adminSessionFormationFilter()"
@@ -1321,7 +1310,7 @@
                   <div class="admin-planning-block">
                     <div class="admin-planning-head">
                       <h5>Planning</h5>
-                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un slot</button>
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un créneau</button>
                     </div>
                     @for (row of editPlanningRows(); track $index) {
                       <div class="admin-planning-row">

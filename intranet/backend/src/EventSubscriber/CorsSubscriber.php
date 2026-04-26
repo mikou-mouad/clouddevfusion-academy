@@ -36,12 +36,26 @@ final class CorsSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $origin = $request->headers->get('Origin', 'http://localhost:4200');
+        $origin = $request->headers->get('Origin');
+        $allowedOrigins = [
+            'http://localhost:4100',
+            'http://127.0.0.1:4100',
+            'http://localhost:4200',
+            'http://127.0.0.1:4200',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
+        ];
+
         $response = $event->getResponse();
-        $response->headers->set('Access-Control-Allow-Origin', $origin);
+        
+        if ($origin && in_array($origin, $allowedOrigins)) {
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
+        }
+        
         $response->headers->set('Vary', 'Origin');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        $response->headers->set('Access-Control-Allow-Credentials', 'true');
         $response->headers->set('Access-Control-Max-Age', '3600');
     }
 

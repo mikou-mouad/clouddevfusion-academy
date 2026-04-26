@@ -81,6 +81,7 @@ export class App implements OnDestroy {
   newTrainerPassword = signal('trainer123');
   planningRows = signal<PlanningInput[]>([{ date: '', slot: '09:00 - 12:30', topic: '' }]);
   apprenticeRows = signal<ApprenticeInput[]>([{ firstName: '', lastName: '', email: '', birthDate: '' }]);
+  sortedPlanningRows = computed(() => [...this.planningRows()].sort((a, b) => new Date(a.date || '9999-12-31').getTime() - new Date(b.date || '9999-12-31').getTime()));
   selectedAttendanceFormation = signal('');
   selectedAdminFormationId = signal('');
   adminSessionSearch = signal('');
