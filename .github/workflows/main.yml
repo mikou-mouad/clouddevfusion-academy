@@ -162,7 +162,7 @@ jobs:
           
       - name: Verify backend endpoint
         run: |
-          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/api/health" || echo "000")"
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/api/courses" || echo "000")"
           echo "HTTP_CODE=$code"
           if [ "$code" != "200" ] && [ "$code" != "401" ] && [ "$code" != "403" ]; then
             echo "Unexpected backend status: $code"

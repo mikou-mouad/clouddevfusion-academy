@@ -1,8 +1,8 @@
+Options -Indexes
 RewriteEngine On
 
 # Serve existing files/directories as-is (assets, real files)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Pass Authorization header to PHP (needed for JWT/Bearer auth)
@@ -11,7 +11,7 @@ RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
 # ===== INTRANET API ROUTING =====
 # Route /intranet/api/* to intranet Symfony backend
-RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php/api/$1 [L,QSA]
+RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
 
 # ===== MAIN API ROUTING =====
 # Route /api/* to main Symfony backend
