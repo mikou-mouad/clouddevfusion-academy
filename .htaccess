@@ -9,8 +9,22 @@ RewriteRule ^ - [L]
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Send /api/* to Symfony front controller
+# ===== INTRANET API ROUTING =====
+# Route /intranet/api/* to intranet Symfony backend
+RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php/api/$1 [L,QSA]
+
+# ===== MAIN API ROUTING =====
+# Route /api/* to main Symfony backend
 RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 
-# Frontend SPA routes -> index.html
-RewriteRule ^ index.html [L]
+# ===== SPA ROUTING =====
+# Intranet SPA fallback
+RewriteCond %{REQUEST_URI} ^/intranet/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^intranet/(.*)$ intranet/src/index.html [L]
+
+# Main app SPA fallback
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ frontend/src/index.html [L]
