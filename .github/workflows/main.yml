@@ -12,6 +12,8 @@ on:
       - ".github/workflows/main.yml"
   workflow_dispatch: {}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: deploy-main
@@ -67,7 +69,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.5.5"
           tools: composer
 
       - name: Install lftp + curl
