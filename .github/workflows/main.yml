@@ -119,8 +119,7 @@ jobs:
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           mkdir -p ${BACKEND_REMOTE}
-          cd ${BACKEND_REMOTE}
-          pwd
+          cd ${BACKEND_REMOTE}          
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
             --exclude-glob='.env.local' \
@@ -237,7 +236,6 @@ jobs:
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           mkdir -p ${INTRANET_BACKEND_REMOTE}
           cd ${INTRANET_BACKEND_REMOTE}
-          pwd
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
             --exclude-glob='.env.local' \
