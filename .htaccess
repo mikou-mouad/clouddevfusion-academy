@@ -22,9 +22,9 @@ RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 RewriteCond %{REQUEST_URI} ^/intranet/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^intranet/(.*)$ intranet/src/index.html [L]
+RewriteRule ^intranet/(.*)$ intranet/frontend/index.html [L]
 
 # Main app SPA fallback
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ frontend/src/index.html [L]
+RewriteRule ^ index.html [L]
