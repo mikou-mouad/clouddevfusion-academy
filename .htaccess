@@ -16,7 +16,11 @@ RewriteCond intranet/frontend/%1 -f
 RewriteRule ^intranet/(.+\.(js|css|ico|png|jpg|svg|woff|woff2|ttf|map))$ intranet/frontend/$1 [L]
 
 # ===== INTRANET API ROUTING =====
-RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
+RewriteCond %{REQUEST_URI} !^/intranet/backend/public/index\.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/intranet/api
+RewriteRule ^intranet/api(/.*)?$ intranet/backend/public/index.php [L,QSA]
 
 # ===== MAIN API ROUTING =====
 RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
