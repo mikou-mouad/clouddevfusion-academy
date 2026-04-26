@@ -2,13 +2,13 @@ Options -Indexes
 
 RewriteEngine On
 
-# Serve existing files/directories as-is (assets only)
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^ - [L]
-
 # Pass Authorization header to PHP
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Serve real files directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
 
 # ===== INTRANET API ROUTING =====
 RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
@@ -20,7 +20,12 @@ RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 # Redirect bare /intranet to /intranet/
 RewriteRule ^intranet$ /intranet/ [R=301,L]
 
-# Intranet SPA fallback (catches /intranet/ and all subroutes)
+# Intranet assets — map /intranet/assets/* to actual frontend folder
+RewriteCond %{REQUEST_URI} ^/intranet/assets/
+RewriteCond %{DOCUMENT_ROOT}/intranet/frontend%{REQUEST_URI} !-f
+RewriteRule ^intranet/assets/(.*)$ intranet/frontend/assets/$1 [L]
+
+# Intranet SPA fallback
 RewriteCond %{REQUEST_URI} ^/intranet/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^intranet/(.*)$ intranet/frontend/index.html [L]
