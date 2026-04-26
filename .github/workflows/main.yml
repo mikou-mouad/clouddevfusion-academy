@@ -279,7 +279,7 @@ jobs:
       - name: Clear Symfony cache
         run: |
           sleep 2
-          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/public/clear-cache-complete.php" || echo "000")"
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/clear-cache-complete.php" || echo "000")"
           echo "Cache clear HTTP code: $code"
           sleep 2
           
