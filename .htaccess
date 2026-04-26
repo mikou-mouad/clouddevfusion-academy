@@ -10,6 +10,11 @@ RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
+# ===== INTRANET STATIC FILES =====
+# Map /intranet/* to intranet/frontend/* for static files
+RewriteCond intranet/frontend/%1 -f
+RewriteRule ^intranet/(.+\.(js|css|ico|png|jpg|svg|woff|woff2|ttf|map))$ intranet/frontend/$1 [L]
+
 # ===== INTRANET API ROUTING =====
 RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
 
@@ -17,13 +22,7 @@ RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
 RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
 
 # ===== SPA ROUTING =====
-# Redirect bare /intranet to /intranet/
 RewriteRule ^intranet$ /intranet/ [R=301,L]
-
-# Intranet assets — map /intranet/assets/* to actual frontend folder
-RewriteCond %{REQUEST_URI} ^/intranet/assets/
-RewriteCond %{DOCUMENT_ROOT}/intranet/frontend%{REQUEST_URI} !-f
-RewriteRule ^intranet/assets/(.*)$ intranet/frontend/assets/$1 [L]
 
 # Intranet SPA fallback
 RewriteCond %{REQUEST_URI} ^/intranet/
