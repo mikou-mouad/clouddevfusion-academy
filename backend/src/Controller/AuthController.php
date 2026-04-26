@@ -16,12 +16,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api')]
 class AuthController extends AbstractController
 {
-    #[Route('/health', name: 'health', methods: ['GET'])]
-    public function health(): JsonResponse
-    {
-        return $this->json(['ok' => true]);
-    }
-    
+
     #[Route('/login', name: 'api_login', methods: ['POST'])]
     public function login(#[CurrentUser] ?User $user): JsonResponse
     {
