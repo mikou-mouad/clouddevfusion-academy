@@ -588,7 +588,6 @@
             <div class="support-panel">
               <p><strong>Email:</strong> support@clouddev.local</p>
               <p><strong>Horaires:</strong> Lun-Ven 09:00-18:00</p>
-              <button class="support-btn">Creer une demande</button>
             </div>
           </section>
         }
@@ -991,7 +990,7 @@
             <h3>Sessions</h3>
             <p class="sub">Cree une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
             <div class="admin-form-actions">
-              <button type="button" class="support-btn" (click)="toggleAdminFormationCreateForm()">
+              <button type="button" class="support-btn create-session-btn" (click)="toggleAdminFormationCreateForm()">
                 {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Creer une session' }}
               </button>
             </div>
@@ -1048,23 +1047,42 @@
                 <div class="admin-planning-block">
                   <div class="admin-planning-head">
                     <h5>Planning</h5>
-                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un slot</button>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un créneau</button>
                   </div>
-                  @for (row of planningRows(); track $index) {
+                  <div class="apprentice-selector-row">
+                    <label>
+                      Filtrer les créneaux par date
+                      <input
+                        type="date"
+                        [ngModel]="planningDateFilter()"
+                        (ngModelChange)="planningDateFilter.set($event)"
+                        name="planningDateFilter"
+                      />
+                    </label>
+                    @if (planningDateFilter()) {
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="planningDateFilter.set('')">Afficher tout</button>
+                    }
+                  </div>
+                  @if (planningDateFilter() && !filteredPlanningRowsForCreate().length) {
+                    <p class="sub">Aucun créneau saisi pour cette date.</p>
+                  }
+                  @for (rowItem of filteredPlanningRowsForCreate(); track rowItem.index) {
+                    @let row = rowItem.row;
+                    @let rowIndex = rowItem.index;
                     <div class="admin-planning-row">
-                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow($index, 'date', $event)" [name]="'planDate' + $index" required />
-                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'start', $event)" [name]="'planStart' + $index" required>
+                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow(rowIndex, 'date', $event)" [name]="'planDate' + rowIndex" required />
+                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'start', $event)" [name]="'planStart' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'end', $event)" [name]="'planEnd' + $index" required>
+                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'end', $event)" [name]="'planEnd' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow($index, 'topic', $event)" [name]="'planTopic' + $index" placeholder="Sujet" required />
-                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow($index)" [disabled]="planningRows().length === 1">Retirer</button>
+                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow(rowIndex, 'topic', $event)" [name]="'planTopic' + rowIndex" placeholder="Sujet" required />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow(rowIndex)" [disabled]="planningRows().length === 1">Retirer</button>
                     </div>
                   }
                 </div>
@@ -1074,12 +1092,6 @@
                   @if (!adminStudents().length) {
                     <p class="sub">Aucun apprenti disponible. Cree d'abord des apprentis dans l'onglet `Apprentis`.</p>
                   } @else {
-                    <div class="apprentice-selector-row">
-                      <label>
-                        Rechercher apprenti
-                        <input type="text" [ngModel]="studentFilterForSelector()" (ngModelChange)="studentFilterForSelector.set($event)" name="studentFilterForSelector" placeholder="Nom, prenom ou email" />
-                      </label>
-                    </div>
                     <label class="student-checkbox-field">
                       Selection apprenti
                       <details class="student-selector">
@@ -1090,18 +1102,28 @@
                             {{ selectedStudentIds().length }} apprenti(s) selectionne(s)
                           }
                         </summary>
+                        <div class="student-selector-search">
+                          <input
+                            type="text"
+                            [ngModel]="studentFilterForSelector()"
+                            (ngModelChange)="studentFilterForSelector.set($event)"
+                            name="studentFilterForSelector"
+                            placeholder="Rechercher un apprenti..."
+                          />
+                        </div>
                         <div class="admin-students-grid">
-                          @for (studentItem of adminStudents(); track studentItem.id) {
-                            @if (!studentFilterForSelector() || (`${studentItem.firstName} ${studentItem.lastName} ${studentItem.email}`).toLowerCase().includes(studentFilterForSelector().toLowerCase())) {
-                              <label class="student-check">
-                                <input
-                                  type="checkbox"
-                                  [checked]="selectedStudentIds().includes(studentItem.id)"
-                                  (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
-                                />
-                                <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
-                              </label>
-                            }
+                          @for (studentItem of availableStudentsForSelector(); track studentItem.id) {
+                            <label class="student-check">
+                              <input
+                                type="checkbox"
+                                [checked]="selectedStudentIds().includes(studentItem.id)"
+                                (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
+                              />
+                              <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
+                            </label>
+                          }
+                          @if (!availableStudentsForSelector().length) {
+                            <p class="sub student-selector-empty">Aucun apprenti trouve.</p>
                           }
                         </div>
                       </details>
@@ -1195,16 +1217,6 @@
                 <p class="sub">Cliquez sur une session pour ouvrir sa page dediee, ou archivez-la.</p>
               </div>
               <div class="apprentice-selector-row">
-                <label>
-                  Rechercher
-                  <input
-                    type="text"
-                    [ngModel]="adminSessionSearch()"
-                    (ngModelChange)="adminSessionSearch.set($event)"
-                    name="adminSessionSearch"
-                    placeholder="Titre, formateur, mode, date..."
-                  />
-                </label>
                 <label>
                   Filtrer par formation
                   <select
@@ -1321,7 +1333,7 @@
                   <div class="admin-planning-block">
                     <div class="admin-planning-head">
                       <h5>Planning</h5>
-                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un slot</button>
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un créneau</button>
                     </div>
                     @for (row of editPlanningRows(); track $index) {
                       <div class="admin-planning-row">
@@ -1468,12 +1480,6 @@
               </div>
             </form>
             <div class="planning-table-wrap">
-              <div class="apprentice-selector-row">
-                <label>
-                  Rechercher dans la liste
-                  <input type="text" [ngModel]="apprenticeSearch()" (ngModelChange)="apprenticeSearch.set($event)" name="apprenticeSearch" placeholder="Nom, prenom, email..." />
-                </label>
-              </div>
               @if (studentPasswordNotice()) {
                 <p class="success">{{ studentPasswordNotice() }}</p>
               }
@@ -1531,21 +1537,11 @@
                   Email
                   <input type="email" [ngModel]="newTrainerEmail()" (ngModelChange)="newTrainerEmail.set($event)" name="newTrainerEmail" required />
                 </label>
-                <label>
-                  Mot de passe
-                  <input type="text" [ngModel]="newTrainerPassword()" (ngModelChange)="newTrainerPassword.set($event)" name="newTrainerPassword" />
-                </label>
               </div>
 
               @if (!formations().length) {
                 <p class="sub">Aucune formation disponible. Cree d'abord une formation dans l'onglet `Formations`.</p>
               } @else {
-                <div class="apprentice-selector-row">
-                  <label>
-                    Rechercher formation
-                    <input type="text" [ngModel]="formationFilterForTrainer()" (ngModelChange)="formationFilterForTrainer.set($event)" name="formationFilterForTrainer" placeholder="Titre ou formateur" />
-                  </label>
-                </div>
                 <div class="apprentice-selector-row">
                   <label>
                     Affecter a une formation
