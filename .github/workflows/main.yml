@@ -54,22 +54,6 @@ jobs:
             intranet_htaccess:
               - 'intranet/backend/.htaccess'
 
-  investigate:
-    name: CheckValues
-    runs-on: ubuntu-latest
-    steps:
-      - name: Debug path
-        env:
-          BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
-        run: |
-          echo ${BACKEND_REMOTE} | sed 's/./& /g'
-
-      - name: Debug path
-        env:
-          FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
-        run: |
-          echo ${FRONTEND_REMOTE} | sed 's/./& /g'
-
   deploy-backend:
     name: Deploy Backend (Symfony)
     runs-on: ubuntu-latest
