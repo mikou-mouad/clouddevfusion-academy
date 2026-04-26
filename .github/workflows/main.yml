@@ -78,12 +78,14 @@ jobs:
       - name: Debug path
         env:
           BACKEND_REMOTE: ${{ secrets.BACKEND_REMOTE }}
-        run: echo "Backend will be deployed to: ${BACKEND_REMOTE}"
+        run: |
+          echo "Backend will be deployed to: ${BACKEND_REMOTE}"
 
       - name: Debug path
         env:
           FRONTEND_REMOTE: ${{ secrets.FRONTEND_REMOTE }}
-        run: echo "Frontend will be deployed to: ${FRONTEND_REMOTE}"
+        run: |
+          echo "Frontend will be deployed to: ${FRONTEND_REMOTE}"
 
       - name: Composer install (prod, no scripts)
         working-directory: backend
