@@ -11,9 +11,9 @@ RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
 # ===== INTRANET STATIC FILES =====
-# Map /intranet/* to intranet/frontend/* for static files
-RewriteCond intranet/frontend/%1 -f
-RewriteRule ^intranet/(.+\.(js|css|ico|png|jpg|svg|woff|woff2|ttf|map))$ intranet/frontend/$1 [L]
+# Map /intranet/* to intranet/* for static files
+RewriteCond intranet/%1 -f
+RewriteRule ^intranet/(.+\.(js|css|ico|png|jpg|svg|woff|woff2|ttf|map))$ intranet/$1 [L]
 
 # ===== INTRANET API ROUTING =====
 RewriteCond %{REQUEST_URI} ^/intranet/api
@@ -30,7 +30,7 @@ RewriteRule ^intranet$ /intranet/ [R=301,L]
 # Intranet SPA fallback
 RewriteCond %{REQUEST_URI} ^/intranet/
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^intranet/(.*)$ intranet/frontend/index.html [L]
+RewriteRule ^intranet/(.*)$ intranet/index.html [L]
 
 # Main app SPA fallback
 RewriteCond %{REQUEST_FILENAME} !-f
