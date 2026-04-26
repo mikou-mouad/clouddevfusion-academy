@@ -30,7 +30,6 @@ jobs:
       intranet_backend: ${{ steps.filter.outputs.intranet_backend }}
       intranet_backend_deps: ${{ steps.filter.outputs.intranet_backend_deps }}
       intranet_frontend: ${{ steps.filter.outputs.intranet_frontend }}
-      intranet_htaccess: ${{ steps.filter.outputs.intranet_htaccess }}
     steps:
       - uses: actions/checkout@v4
       - id: filter
@@ -53,8 +52,6 @@ jobs:
               - 'intranet/backend/composer.json'
             intranet_frontend:
               - 'intranet/frontend/**'
-            intranet_htaccess:
-              - 'intranet/backend/.htaccess'
 
   deploy-backend:
     name: Deploy Backend (Symfony)
@@ -336,7 +333,8 @@ jobs:
           mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
             --exclude-glob='node_modules' \
-            --exclude-glob='backend/**' \
+            --exclude-glob='backend/' \
+            --exclude-glob='intranet/' \
             --exclude-glob='.angular' \
             --exclude-glob='*.map' \
             --exclude-glob='*.htaccess' \
@@ -417,7 +415,7 @@ jobs:
           mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
             --exclude-glob='node_modules' \
-            --exclude-glob='backend/**' \
+            --exclude-glob='backend/' \
             --exclude-glob='.angular' \
             --exclude-glob='*.map' \
             --exclude-glob='*.htaccess' \
@@ -454,7 +452,7 @@ jobs:
     name: Deploy .htaccess
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.htaccess == 'true' || needs.changes.outputs.intranet_htaccess == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.htaccess == 'true' || github.event_name == 'workflow_dispatch' }}
     
     steps:
       - name: Checkout
