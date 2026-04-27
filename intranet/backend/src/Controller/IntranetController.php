@@ -12,7 +12,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api', name: 'intranet_api_')]
+#[Route('/intranet/api', name: 'intranet_api_')]
 final class IntranetController extends AbstractController
 {
     private static array $attendanceOverrides = [];

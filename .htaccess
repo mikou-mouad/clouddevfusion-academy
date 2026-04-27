@@ -1,19 +1,23 @@
 RewriteEngine On
 
-# Serve existing files/directories as-is
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# ─── INTRANET API → Symfony front controller ────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^intranet/api/(.*)$ intranet/backend/public/index.php [L,QSA]
 
 # Pass Authorization header to PHP
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Send /intranet/api/* to Symfony intranet backend
-RewriteRule ^intranet/api($|/.*)$ intranet/backend/public/index.php [L,QSA]
+# ─── GLOBAL API → Symfony front controller ──────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/(.*)$ backend/public/index.php [L,QSA]
 
-# Send /api/* to Symfony main backend
-RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
+# ─── INTRANET ANGULAR (HTML5 routing) ───────────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^intranet/(.*)$ intranet/index.html [L]
 
-# Frontend SPA routes -> index.html
+# ─── GLOBAL ANGULAR (HTML5 routing) ─────────────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
