@@ -1014,7 +1014,11 @@
                   </label>
                   <label>
                     Mode
-                    <input type="text" [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode" />
+                    <select [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode">
+                      <option value="À distance">À distance</option>
+                      <option value="Présentiel">Présentiel</option>
+                      <option value="Hybride">Hybride</option>
+                    </select>
                   </label>
                   <label>
                     Formateur
