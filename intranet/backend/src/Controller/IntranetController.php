@@ -163,7 +163,7 @@ final class IntranetController extends AbstractController
         $studentIds = array_map('intval', (array) ($payload['studentIds'] ?? []));
         $planningPayload = (array) ($payload['planning'] ?? []);
 
-        if ($catalogCourseId === '' || $trainerId <= 0 || $startDate === '' || $endDate === '') {
+        if ($catalogCourseId === '' || $startDate === '' || $endDate === '') {
             return $this->json(['message' => 'Champs requis manquants.'], 400);
         }
 
@@ -187,10 +187,7 @@ final class IntranetController extends AbstractController
             $classLabel = 'Classe '.$title;
         }
 
-        $trainer = $this->trainerById($trainerId);
-        if ($trainer === null) {
-            return $this->json(['message' => 'Formateur introuvable.'], 400);
-        }
+        $trainer = $trainerId > 0 ? $this->trainerById($trainerId) : null;
 
         $formationId = $this->slugify($title).'-'.substr(md5((string) microtime(true)), 0, 6);
         $planning = [];
@@ -213,6 +210,7 @@ final class IntranetController extends AbstractController
         }
 
         $state = $this->loadAdminState();
+       
         $state['formations'][] = [
             'id' => $formationId,
             'title' => $title,
@@ -221,7 +219,7 @@ final class IntranetController extends AbstractController
             'mode' => $mode,
             'teamsLink' => $teamsLink,
             'trainerId' => $trainerId,
-            'trainer' => $trainer['firstName'].' '.$trainer['lastName'],
+            'trainer' => $trainer !== null ? $trainer['firstName'].' '.$trainer['lastName'] : 'Non assigné',
             'startDate' => $startDate,
             'endDate' => $endDate,
             'planning' => $planning,

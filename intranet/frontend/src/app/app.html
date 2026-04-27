@@ -1023,6 +1023,7 @@
                   <label>
                     Formateur
                     <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId">
+                      <option value="0">Assigner plus tard</option>
                       @for (trainerItem of adminTrainers(); track trainerItem.id) {
                         <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                       }
