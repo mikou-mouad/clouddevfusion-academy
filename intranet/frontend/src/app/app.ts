@@ -59,7 +59,7 @@ export class App implements OnDestroy {
   creatingTrainer = signal(false);
   newFormationTitle = signal('');
   newFormationCatalogCourseId = signal('');
-  newFormationMode = signal('En ligne');
+  newFormationMode = signal('À distance');
   newFormationTrainerId = signal<number | null>(null);
   newFormationStartDate = signal('');
   newFormationEndDate = signal('');
