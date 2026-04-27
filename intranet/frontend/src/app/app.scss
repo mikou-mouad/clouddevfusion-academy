@@ -360,7 +360,7 @@ button:disabled {
   max-width: none;
   min-height: calc(100vh - 94px);
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-columns: 260px minmax(0, 1fr) 280px;
   gap: 0;
   padding: 0;
   box-sizing: border-box;
@@ -478,10 +478,11 @@ button:disabled {
 
 .main-panel {
   min-height: calc(100vh - 94px);
-  padding: 12px;
+  padding: 16px;
   background: var(--dash-canvas);
   border-left: 1px solid var(--dash-border);
   border-right: 1px solid var(--dash-border);
+  min-width: 0;
 }
 
 .topbar {
@@ -561,6 +562,7 @@ button:disabled {
 
 .content-card {
   margin-top: 16px;
+  max-width: 860px;
 }
 
 .quick-actions-block {
