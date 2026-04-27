@@ -137,6 +137,8 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   padding: 20px;
   border: 1px solid var(--dash-border);
+  box-sizing: border-box;
+  min-width: 0;  
 }
 
 h1,
@@ -320,6 +322,7 @@ input {
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 select {
@@ -328,6 +331,7 @@ select {
   padding: 10px 12px;
   font-size: 14px;
   background: #fff;
+  box-sizing: border-box;
 }
 
 button {
@@ -483,6 +487,8 @@ button:disabled {
   border-left: 1px solid var(--dash-border);
   border-right: 1px solid var(--dash-border);
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .topbar {
@@ -1153,6 +1159,7 @@ button:disabled {
 .admin-workspace {
   border: 1px solid #dbe6ff;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-sizing: border-box;
 }
 
 .admin-kpis .kpi {
@@ -1423,6 +1430,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .admin-planning-block,
