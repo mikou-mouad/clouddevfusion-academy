@@ -60,7 +60,7 @@ export class App implements OnDestroy {
   newFormationTitle = signal('');
   newFormationCatalogCourseId = signal('');
   newFormationMode = signal('À distance');
-  newFormationTrainerId = signal<number | null>(null);
+  newFormationTrainerId = signal<number>(0);
   newFormationStartDate = signal('');
   newFormationEndDate = signal('');
   newFormationTeamsLink = signal('');
@@ -1307,11 +1307,6 @@ export class App implements OnDestroy {
 
     if (!this.newFormationCatalogCourseId()) {
       this.adminCreateError.set('Selectionnez une formation du catalogue.');
-      return;
-    }
-
-    if (!this.newFormationTrainerId()) {
-      this.adminCreateError.set('Selectionnez un formateur.');
       return;
     }
 
