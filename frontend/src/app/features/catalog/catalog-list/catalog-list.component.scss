@@ -319,6 +319,9 @@
 .courses-section {
   padding: var(--spacing-xl) 0;
   background: var(--white);
+  .container {
+    max-width: 1400px;
+  }
 }
 
 .courses-grid {
@@ -506,8 +509,6 @@
   display: flex;
   align-items: baseline;
   gap: var(--spacing-xs);
-  min-width: 110px; // fits "3000€ HT" comfortably
-flex-shrink: 0;
 }
 
 .course-price {
@@ -528,7 +529,6 @@ flex-shrink: 0;
   align-items: center;
   gap: var(--spacing-xs);
   white-space: nowrap;
-  flex-shrink: 0;
   svg {
     transition: transform 0.3s ease;
   }
