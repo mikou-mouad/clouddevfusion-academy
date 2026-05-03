@@ -186,14 +186,14 @@ export class TrainingsComponent implements OnInit {
   }
 
   editCourse(index: number) {
-    this.editingCourse = this.courses[index];
+    this.editingCourse = this.paginatedCourses[index];
     this.activeTab = 'basic';
-    this.formData = JSON.parse(JSON.stringify(this.courses[index]));
+    this.formData = JSON.parse(JSON.stringify(this.paginatedCourses[index]));
     this.showModal = true;
   }
 
   deleteCourse(index: number) {
-    const course = this.courses[index];
+    const course = this.paginatedCourses[index];
     if (!course.id) {
       alert('Impossible de supprimer cette formation');
       return;
