@@ -196,7 +196,8 @@ export class PlacementTestsComponent implements OnInit {
     this.loading = true;
     const testData: any = {
       ...this.testForm,
-      course: `/api/courses/${this.testForm.course.id}`
+      course: `/api/courses/${this.testForm.course.id}`,
+      questions: this.testForm.questions?.map((q: any) => `/api/questions/${q.id}`)
     };
 
     const operation = this.editingTest
