@@ -59,8 +59,8 @@ export class App implements OnDestroy {
   creatingTrainer = signal(false);
   newFormationTitle = signal('');
   newFormationCatalogCourseId = signal('');
-  newFormationMode = signal('À distance');
-  newFormationTrainerId = signal<number>(0);
+  newFormationMode = signal('En ligne');
+  newFormationTrainerId = signal<number | null>(null);
   newFormationStartDate = signal('');
   newFormationEndDate = signal('');
   newFormationTeamsLink = signal('');
@@ -74,14 +74,45 @@ export class App implements OnDestroy {
   catalogFormations = signal<CatalogFormationOption[]>([]);
   catalogFormationsLoading = signal(false);
   catalogFormationsError = signal('');
+  certificationCatalog = signal<CertificationCatalogOption[]>([]);
+  certificationCatalogLoading = signal(false);
+  certificationCatalogError = signal('');
   formationFilterForTrainer = signal('');
   newTrainerFirstName = signal('');
   newTrainerLastName = signal('');
   newTrainerEmail = signal('');
-  newTrainerPassword = signal('');
+  newTrainerPhone = signal('');
+  newTrainerStatus = signal('salarie');
+  newTrainerCompanyName = signal('');
+  newTrainerMicrosoftTranscriptUrl = signal('');
+  newTrainerCvFile = signal<File | null>(null);
+  trainerViewId = signal<number | null>(null);
+  trainerEditId = signal<number | null>(null);
+  deletingTrainerId = signal<number | null>(null);
+  trainerEditFirstName = signal('');
+  trainerEditLastName = signal('');
+  trainerEditEmail = signal('');
+  trainerEditPhone = signal('');
+  trainerEditStatus = signal('salarie');
+  trainerEditCompanyName = signal('');
+  trainerEditMicrosoftTranscriptUrl = signal('');
+  trainerEditCvFile = signal<File | null>(null);
+  trainerEditCvUrl = signal('');
+  trainerCertifications = signal<TrainerCertificationInput[]>([{ name: '', issuer: '', expiresAt: '', proof: '' }]);
+  trainerCompletedTrainings = signal<TrainerCompletedTrainingInput[]>([
+    {
+      domain: '',
+      description: '',
+      objective: '',
+      trainingOrganization: '',
+      trainingDate: '',
+      durationHours: '',
+      attestationUrl: ''
+    }
+  ]);
   planningRows = signal<PlanningInput[]>([{ date: '', slot: '09:00 - 12:30', topic: '' }]);
+  planningDateFilter = signal('');
   apprenticeRows = signal<ApprenticeInput[]>([{ firstName: '', lastName: '', email: '', birthDate: '' }]);
-  sortedPlanningRows = computed(() => [...this.planningRows()].sort((a, b) => new Date(a.date || '9999-12-31').getTime() - new Date(b.date || '9999-12-31').getTime()));
   selectedAttendanceFormation = signal('');
   selectedAdminFormationId = signal('');
   adminSessionSearch = signal('');
@@ -115,6 +146,32 @@ export class App implements OnDestroy {
   adminGlobalResourceNotice = signal('');
   adminGlobalResourceError = signal('');
   creatingAdminGlobalResource = signal(false);
+  providers = signal<ProviderRecord[]>([]);
+  creatingProvider = signal(false);
+  providerNotice = signal('');
+  providerError = signal('');
+  providerCompanyName = signal('');
+  providerSiret = signal('');
+  providerAddress = signal('');
+  providerPhone = signal('');
+  providerActivityDeclarationNumber = signal('');
+  providerKbisFile = signal<File | null>(null);
+  providerRibFile = signal<File | null>(null);
+  providerVigilanceCertificateFile = signal<File | null>(null);
+  providerLiabilityInsuranceFile = signal<File | null>(null);
+  providerSearch = signal('');
+  providerTablePreset = signal<'compact' | 'full' | 'documents'>('compact');
+  providerPage = signal(1);
+  readonly providerPageSize = 8;
+  providerColumnVisibility = signal({
+    companyName: true,
+    siret: true,
+    address: false,
+    phone: true,
+    activityDeclarationNumber: false,
+    documents: false,
+    createdAt: true
+  });
   trainerApprenticeListSearch = signal('');
   trainerApprenticeListPage = signal(1);
   readonly trainerApprenticeListPageSize = 10;
@@ -280,7 +337,16 @@ export class App implements OnDestroy {
   selectedAdminFormationSessions = computed(() => {
     const formation = this.selectedAdminFormation();
     if (!formation) return [];
-    return this.attendanceSessions().filter((session) => session.formationTitle === formation.title);
+    return this.attendanceSessions()
+      .filter((session) => session.formationTitle === formation.title)
+      .sort((a, b) => {
+        const byDate = a.date.localeCompare(b.date);
+        if (byDate !== 0) return byDate;
+        const aStart = this.parseSlotRange(a.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        const bStart = this.parseSlotRange(b.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.slot.localeCompare(b.slot);
+      });
   });
   selectedAdminFormationAttendanceSummary = computed(() => {
     const records = this.selectedAdminFormationSessions().flatMap((session) => session.records);
@@ -380,6 +446,7 @@ export class App implements OnDestroy {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'formations', label: 'Sessions' },
     { key: 'formateurs', label: 'Formateurs' },
+    { key: 'prestataires', label: 'Prestataires' },
     { key: 'apprentis', label: 'Apprentis' },
     { key: 'ressources', label: 'Ressources' },
     { key: 'archives', label: 'Archives' },
@@ -458,6 +525,7 @@ export class App implements OnDestroy {
     this.adminClasses.set([]);
     this.adminStudents.set([]);
     this.adminTrainers.set([]);
+    this.providers.set([]);
     this.documents.set([]);
     this.password.set('');
     this.editingFormation.set(false);
@@ -495,6 +563,17 @@ export class App implements OnDestroy {
     this.adminGlobalResourceFile.set(null);
     this.adminGlobalResourceNotice.set('');
     this.adminGlobalResourceError.set('');
+    this.providerNotice.set('');
+    this.providerError.set('');
+    this.providerCompanyName.set('');
+    this.providerSiret.set('');
+    this.providerAddress.set('');
+    this.providerPhone.set('');
+    this.providerActivityDeclarationNumber.set('');
+    this.providerKbisFile.set(null);
+    this.providerRibFile.set(null);
+    this.providerVigilanceCertificateFile.set(null);
+    this.providerLiabilityInsuranceFile.set(null);
     this.localAttendanceDeadlines.clear();
   }
 
@@ -566,11 +645,7 @@ export class App implements OnDestroy {
           startDate: this.editFormationStartDate().trim(),
           endDate: this.editFormationEndDate().trim(),
           teamsLink: this.editFormationTeamsLink().trim(),
-          planning: this.editPlanningRows().map((row) => ({
-            date: row.date.trim(),
-            slot: row.slot.trim(),
-            topic: row.topic.trim()
-          }))
+          planning: this.normalizePlanningPayload(this.editPlanningRows())
         },
         { headers: this.authHeaders() }
       )
@@ -1036,6 +1111,23 @@ export class App implements OnDestroy {
     return hh * 60 + mm;
   }
 
+  private normalizePlanningPayload(rows: PlanningInput[]): PlanningInput[] {
+    return rows
+      .map((row) => ({
+        date: row.date.trim(),
+        slot: row.slot.trim(),
+        topic: row.topic.trim()
+      }))
+      .sort((a, b) => {
+        const byDate = a.date.localeCompare(b.date);
+        if (byDate !== 0) return byDate;
+        const aStart = this.parseSlotRange(a.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        const bStart = this.parseSlotRange(b.slot)?.startMinutes ?? Number.MAX_SAFE_INTEGER;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.slot.localeCompare(b.slot);
+      });
+  }
+
   private nextPlanningTime(value: string): string {
     const current = this.toMinutes(value);
     const candidate = this.planningTimeOptions.find((option) => this.toMinutes(option) > current);
@@ -1172,6 +1264,169 @@ export class App implements OnDestroy {
     this.adminGlobalResourceFile.set(file);
   }
 
+  onProviderFileSelected(
+    event: Event,
+    type: 'kbis' | 'rib' | 'vigilanceCertificate' | 'liabilityInsurance'
+  ): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    if (type === 'kbis') this.providerKbisFile.set(file);
+    if (type === 'rib') this.providerRibFile.set(file);
+    if (type === 'vigilanceCertificate') this.providerVigilanceCertificateFile.set(file);
+    if (type === 'liabilityInsurance') this.providerLiabilityInsuranceFile.set(file);
+  }
+
+  createProvider(event: Event): void {
+    event.preventDefault();
+    this.providerNotice.set('');
+    this.providerError.set('');
+
+    const companyName = this.providerCompanyName().trim();
+    const siret = this.providerSiret().trim();
+    const address = this.providerAddress().trim();
+    const phone = this.providerPhone().trim();
+    const activityDeclarationNumber = this.providerActivityDeclarationNumber().trim();
+    const kbis = this.providerKbisFile();
+    const rib = this.providerRibFile();
+    const vigilanceCertificate = this.providerVigilanceCertificateFile();
+    const liabilityInsurance = this.providerLiabilityInsuranceFile();
+
+    if (!companyName || !siret || !address || !phone || !activityDeclarationNumber) {
+      this.providerError.set('Tous les champs prestataire sont obligatoires.');
+      return;
+    }
+
+    if (!kbis || !rib || !vigilanceCertificate || !liabilityInsurance) {
+      this.providerError.set('Tous les documents obligatoires doivent etre fournis.');
+      return;
+    }
+
+    this.creatingProvider.set(true);
+    const formData = new FormData();
+    formData.append('companyName', companyName);
+    formData.append('siret', siret);
+    formData.append('address', address);
+    formData.append('phone', phone);
+    formData.append('activityDeclarationNumber', activityDeclarationNumber);
+    formData.append('kbis', kbis);
+    formData.append('rib', rib);
+    formData.append('vigilanceCertificate', vigilanceCertificate);
+    formData.append('liabilityInsurance', liabilityInsurance);
+
+    this.http
+      .post<{ message: string }>(
+        `${this.apiBaseUrl}/admin/providers`,
+        formData,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.creatingProvider.set(false);
+          this.providerNotice.set(response.message);
+          this.providerCompanyName.set('');
+          this.providerSiret.set('');
+          this.providerAddress.set('');
+          this.providerPhone.set('');
+          this.providerActivityDeclarationNumber.set('');
+          this.providerKbisFile.set(null);
+          this.providerRibFile.set(null);
+          this.providerVigilanceCertificateFile.set(null);
+          this.providerLiabilityInsuranceFile.set(null);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.creatingProvider.set(false);
+          this.providerError.set(err?.error?.message ?? 'Creation prestataire impossible.');
+        }
+      });
+  }
+
+  toggleProviderColumn(
+    column: 'companyName' | 'siret' | 'address' | 'phone' | 'activityDeclarationNumber' | 'documents' | 'createdAt',
+    checked: boolean
+  ): void {
+    this.providerColumnVisibility.set({
+      ...this.providerColumnVisibility(),
+      [column]: checked
+    });
+  }
+
+  isProviderColumnVisible(
+    column: 'companyName' | 'siret' | 'address' | 'phone' | 'activityDeclarationNumber' | 'documents' | 'createdAt'
+  ): boolean {
+    return this.providerColumnVisibility()[column];
+  }
+
+  applyProviderTablePreset(preset: 'compact' | 'full' | 'documents'): void {
+    this.providerTablePreset.set(preset);
+    if (preset === 'compact') {
+      this.providerColumnVisibility.set({
+        companyName: true,
+        siret: true,
+        address: false,
+        phone: true,
+        activityDeclarationNumber: false,
+        documents: false,
+        createdAt: true
+      });
+      return;
+    }
+    if (preset === 'documents') {
+      this.providerColumnVisibility.set({
+        companyName: true,
+        siret: true,
+        address: false,
+        phone: false,
+        activityDeclarationNumber: false,
+        documents: true,
+        createdAt: true
+      });
+      return;
+    }
+
+    this.providerColumnVisibility.set({
+      companyName: true,
+      siret: true,
+      address: true,
+      phone: true,
+      activityDeclarationNumber: true,
+      documents: true,
+      createdAt: true
+    });
+  }
+
+  filteredProviders = computed(() => {
+    const query = this.providerSearch().trim().toLowerCase();
+    if (!query) return this.providers();
+    return this.providers().filter((provider) =>
+      `${provider.companyName} ${provider.siret} ${provider.address} ${provider.phone} ${provider.activityDeclarationNumber}`
+        .toLowerCase()
+        .includes(query)
+    );
+  });
+  providerTotalPages = computed(() => {
+    const total = this.filteredProviders().length;
+    return Math.max(1, Math.ceil(total / this.providerPageSize));
+  });
+  paginatedProviders = computed(() => {
+    const page = Math.min(this.providerPage(), this.providerTotalPages());
+    const start = (page - 1) * this.providerPageSize;
+    return this.filteredProviders().slice(start, start + this.providerPageSize);
+  });
+
+  updateProviderSearch(value: string): void {
+    this.providerSearch.set(value);
+    this.providerPage.set(1);
+  }
+
+  previousProviderPage(): void {
+    this.providerPage.set(Math.max(1, this.providerPage() - 1));
+  }
+
+  nextProviderPage(): void {
+    this.providerPage.set(Math.min(this.providerTotalPages(), this.providerPage() + 1));
+  }
+
   resolveDocumentUrl(url?: string): string {
     const raw = (url ?? '').trim();
     if (!raw) return '#';
@@ -1198,6 +1453,16 @@ export class App implements OnDestroy {
         return `${student.firstName} ${student.lastName} ${student.email}`.toLowerCase().includes(q);
       })
   );
+  filteredPlanningRowsForCreate = computed(() => {
+    const selectedDate = this.planningDateFilter().trim();
+    const rows = this.planningRows();
+    if (!selectedDate) {
+      return rows.map((row, index) => ({ row, index }));
+    }
+    return rows
+      .map((row, index) => ({ row, index }))
+      .filter((item) => item.row.date === selectedDate);
+  });
 
   getStudentNameById(studentId: number): string {
     const student = this.adminStudents().find((item) => item.id === studentId);
@@ -1310,6 +1575,11 @@ export class App implements OnDestroy {
       return;
     }
 
+    if (!this.newFormationTrainerId()) {
+      this.adminCreateError.set('Selectionnez un formateur.');
+      return;
+    }
+
     const selectedCatalogFormation = this.catalogFormations().find(
       (item) => item.id === this.newFormationCatalogCourseId()
     );
@@ -1334,11 +1604,7 @@ export class App implements OnDestroy {
           classLabel: this.newFormationClassLabel().trim() || `Classe ${selectedCatalogFormation.title}`,
           capacity: this.newFormationCapacity(),
           studentIds: this.selectedStudentIds(),
-          planning: this.planningRows().map((row) => ({
-            date: row.date.trim(),
-            slot: row.slot.trim(),
-            topic: row.topic.trim()
-          }))
+          planning: this.normalizePlanningPayload(this.planningRows())
         },
         { headers: this.authHeaders() }
       )
@@ -1379,6 +1645,28 @@ export class App implements OnDestroy {
           this.catalogFormations.set([]);
           this.catalogFormationsError.set('Impossible de charger le catalogue des formations.');
           this.catalogFormationsLoading.set(false);
+        }
+      });
+  }
+
+  private loadCertificationCatalog(): void {
+    if (!this.isAdmin()) return;
+    this.certificationCatalogLoading.set(true);
+    this.certificationCatalogError.set('');
+    this.http
+      .get<{ certifications: CertificationCatalogOption[] }>(
+        `${this.apiBaseUrl}/admin/catalog-certifications`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.certificationCatalog.set(Array.isArray(response.certifications) ? response.certifications : []);
+          this.certificationCatalogLoading.set(false);
+        },
+        error: () => {
+          this.certificationCatalog.set([]);
+          this.certificationCatalogError.set('Impossible de charger le catalogue des certifications.');
+          this.certificationCatalogLoading.set(false);
         }
       });
   }
@@ -1475,6 +1763,11 @@ export class App implements OnDestroy {
     if (this.selectedFormationIdsForTrainer().includes(formationId)) return;
     this.selectedFormationIdsForTrainer.set([...this.selectedFormationIdsForTrainer(), formationId]);
     this.selectedFormationToAddForTrainer.set('');
+    this.newTrainerPhone.set('');
+    this.newTrainerStatus.set('salarie');
+    this.newTrainerCompanyName.set('');
+    this.newTrainerMicrosoftTranscriptUrl.set('');
+    this.newTrainerCvFile.set(null);
   }
 
   removeSelectedFormationForTrainer(formationId: string): void {
@@ -1538,17 +1831,37 @@ export class App implements OnDestroy {
     event.preventDefault();
     this.trainerCreateNotice.set('');
     this.trainerCreateError.set('');
+    const newStatus = this.newTrainerStatus().trim();
+    const needsTrainerCompany = newStatus === 'freelance' || newStatus === 'partenaire';
+    if (
+      !this.newTrainerFirstName().trim()
+      || !this.newTrainerLastName().trim()
+      || !this.newTrainerEmail().trim()
+      || !this.newTrainerPhone().trim()
+      || (needsTrainerCompany && !this.newTrainerCompanyName().trim())
+      || !this.newTrainerMicrosoftTranscriptUrl().trim()
+      || !this.newTrainerCvFile()
+    ) {
+      this.trainerCreateError.set('Tous les champs obligatoires du formateur doivent etre renseignes.');
+      return;
+    }
     this.creatingTrainer.set(true);
+    const formData = new FormData();
+    formData.append('firstName', this.newTrainerFirstName().trim());
+    formData.append('lastName', this.newTrainerLastName().trim());
+    formData.append('email', this.newTrainerEmail().trim());
+    formData.append('phone', this.newTrainerPhone().trim());
+    formData.append('status', this.newTrainerStatus().trim());
+    formData.append('companyName', needsTrainerCompany ? this.newTrainerCompanyName().trim() : '');
+    formData.append('microsoftTranscriptUrl', this.newTrainerMicrosoftTranscriptUrl().trim());
+    formData.append('cvFile', this.newTrainerCvFile()!);
+    for (const formationId of this.selectedFormationIdsForTrainer()) {
+      formData.append('formationIds[]', formationId);
+    }
     this.http
       .post<{ message: string }>(
         `${this.apiBaseUrl}/admin/trainers`,
-        {
-          firstName: this.newTrainerFirstName().trim(),
-          lastName: this.newTrainerLastName().trim(),
-          email: this.newTrainerEmail().trim(),
-          password: this.newTrainerPassword().trim(),
-          formationIds: this.selectedFormationIdsForTrainer()
-        },
+        formData,
         { headers: this.authHeaders() }
       )
       .subscribe({
@@ -1558,7 +1871,11 @@ export class App implements OnDestroy {
           this.newTrainerFirstName.set('');
           this.newTrainerLastName.set('');
           this.newTrainerEmail.set('');
-          this.newTrainerPassword.set('trainer123');
+          this.newTrainerPhone.set('');
+          this.newTrainerStatus.set('salarie');
+          this.newTrainerCompanyName.set('');
+          this.newTrainerMicrosoftTranscriptUrl.set('');
+          this.newTrainerCvFile.set(null);
           this.selectedFormationIdsForTrainer.set([]);
           this.selectedFormationToAddForTrainer.set('');
           this.loadDashboard();
@@ -1568,6 +1885,350 @@ export class App implements OnDestroy {
           this.trainerCreateError.set(err?.error?.message ?? 'Creation formateur impossible.');
         }
       });
+  }
+
+  onTrainerStatusChange(value: string): void {
+    this.newTrainerStatus.set(value);
+    if (value === 'salarie') {
+      this.newTrainerCompanyName.set('');
+      return;
+    }
+    const provider = this.providers()[0];
+    if (!this.newTrainerCompanyName().trim() && provider) {
+      this.newTrainerCompanyName.set(provider.companyName);
+    }
+  }
+
+  onTrainerEditStatusChange(value: string): void {
+    this.trainerEditStatus.set(value);
+    if (value === 'salarie') {
+      this.trainerEditCompanyName.set('');
+      return;
+    }
+    const provider = this.providers()[0];
+    if (!this.trainerEditCompanyName().trim() && provider) {
+      this.trainerEditCompanyName.set(provider.companyName);
+    }
+  }
+
+  providerCompanyOptions = computed(() =>
+    this.providers()
+      .map((provider) => provider.companyName.trim())
+      .filter((name, index, arr) => !!name && arr.indexOf(name) === index)
+      .sort((a, b) => a.localeCompare(b))
+  );
+  certificationNameOptions = computed(() => {
+    const namesFromCertCatalog = this.certificationCatalog()
+      .map((item) => (item.name ?? '').trim())
+      .filter((name) => name !== '');
+
+    const namesFromFormationCatalog = this.catalogFormations()
+      .map((item) => (item.title ?? '').trim())
+      .filter((name) => name !== '');
+
+    const merged = [...namesFromCertCatalog, ...namesFromFormationCatalog];
+    const unique = Array.from(new Set(merged.map((name) => name.toLowerCase())));
+
+    return unique
+      .map((lowerName) => merged.find((name) => name.toLowerCase() === lowerName) ?? lowerName)
+      .sort((a, b) => a.localeCompare(b));
+  });
+
+  selectedTrainer = computed(() => {
+    const id = this.trainerViewId();
+    if (id === null) return null;
+    return this.adminTrainers().find((trainer) => trainer.id === id) ?? null;
+  });
+
+  selectTrainerForView(trainerId: number): void {
+    this.trainerViewId.set(trainerId);
+    this.trainerEditId.set(null);
+  }
+
+  startEditTrainer(trainerId: number): void {
+    const trainer = this.adminTrainers().find((item) => item.id === trainerId);
+    if (!trainer) return;
+    this.trainerCreateError.set('');
+    this.trainerEditId.set(trainerId);
+    this.trainerViewId.set(null);
+    this.trainerEditFirstName.set(trainer.firstName || '');
+    this.trainerEditLastName.set(trainer.lastName || '');
+    this.trainerEditEmail.set(trainer.email || '');
+    this.trainerEditPhone.set(trainer.phone || '');
+    const editStatus = trainer.status || 'salarie';
+    this.trainerEditStatus.set(editStatus);
+    this.trainerEditCompanyName.set(editStatus === 'salarie' ? '' : trainer.companyName || '');
+    this.trainerEditMicrosoftTranscriptUrl.set(trainer.microsoftTranscriptUrl || '');
+    this.trainerEditCvUrl.set(trainer.cvUrl || '');
+    const certs = (trainer.certifications ?? []).map((cert) => ({
+      name: cert.name || '',
+      issuer: cert.issuer || '',
+      expiresAt: cert.expiresAt || '',
+      proof: cert.proof || '',
+      existingProof: cert.proof || ''
+    }));
+    this.trainerCertifications.set(certs.length ? certs : [{ name: '', issuer: '', expiresAt: '', proof: '' }]);
+    const completedTrainings = (trainer.completedTrainings ?? []).map((training) => ({
+      domain: training.domain || '',
+      description: training.description || '',
+      objective: training.objective || '',
+      trainingOrganization: training.trainingOrganization || '',
+      trainingDate: training.trainingDate || '',
+      durationHours: training.durationHours || '',
+      attestationUrl: training.attestationUrl || '',
+      existingAttestationUrl: training.attestationUrl || ''
+    }));
+    this.trainerCompletedTrainings.set(
+      completedTrainings.length
+        ? completedTrainings
+        : [{ domain: '', description: '', objective: '', trainingOrganization: '', trainingDate: '', durationHours: '', attestationUrl: '' }]
+    );
+  }
+
+  cancelEditTrainer(): void {
+    this.trainerCreateError.set('');
+    this.trainerEditId.set(null);
+  }
+
+  closeTrainerView(): void {
+    this.trainerViewId.set(null);
+  }
+
+  updateTrainerCertification(index: number, field: keyof TrainerCertificationInput, value: string): void {
+    const rows = [...this.trainerCertifications()];
+    if (!rows[index]) return;
+    rows[index] = { ...rows[index], [field]: value };
+    this.trainerCertifications.set(rows);
+  }
+
+  addTrainerCertificationRow(): void {
+    this.trainerCertifications.set([...this.trainerCertifications(), { name: '', issuer: '', expiresAt: '', proof: '' }]);
+  }
+
+  removeTrainerCertificationRow(index: number): void {
+    const rows = this.trainerCertifications();
+    if (rows.length <= 1) return;
+    this.trainerCertifications.set(rows.filter((_, i) => i !== index));
+  }
+
+  onTrainerEditCvFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.trainerEditCvFile.set(file);
+  }
+
+  onTrainerCertificationProofSelected(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    const rows = [...this.trainerCertifications()];
+    if (!rows[index]) return;
+    rows[index] = { ...rows[index], proofFile: file };
+    this.trainerCertifications.set(rows);
+  }
+
+  updateTrainerCompletedTraining(index: number, field: keyof TrainerCompletedTrainingInput, value: string): void {
+    const rows = [...this.trainerCompletedTrainings()];
+    if (!rows[index]) return;
+    rows[index] = { ...rows[index], [field]: value };
+    this.trainerCompletedTrainings.set(rows);
+  }
+
+  addTrainerCompletedTrainingRow(): void {
+    this.trainerCompletedTrainings.set([
+      ...this.trainerCompletedTrainings(),
+      { domain: '', description: '', objective: '', trainingOrganization: '', trainingDate: '', durationHours: '', attestationUrl: '' }
+    ]);
+  }
+
+  removeTrainerCompletedTrainingRow(index: number): void {
+    const rows = this.trainerCompletedTrainings();
+    if (rows.length <= 1) return;
+    this.trainerCompletedTrainings.set(rows.filter((_, i) => i !== index));
+  }
+
+  onTrainerCompletedTrainingAttestationSelected(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    const rows = [...this.trainerCompletedTrainings()];
+    if (!rows[index]) return;
+    rows[index] = { ...rows[index], attestationFile: file };
+    this.trainerCompletedTrainings.set(rows);
+  }
+
+  trainerHasExpiringCertification(trainer: AdminPerson): boolean {
+    return this.trainerExpiringCertificationNames(trainer).length > 0;
+  }
+
+  trainerExpiringCertificationNames(trainer: AdminPerson): string[] {
+    const certifications = trainer.certifications ?? [];
+    const now = new Date();
+    const threshold = new Date();
+    threshold.setDate(now.getDate() + 30);
+
+    return certifications
+      .filter((cert) => {
+        const expires = this.parseLooseDate(cert.expiresAt);
+        if (!expires) return false;
+        return expires >= now && expires <= threshold;
+      })
+      .map((cert) => cert.name || 'Certification')
+      .filter((name, index, arr) => arr.indexOf(name) === index);
+  }
+
+  certificationExpiresSoon(expiresAt?: string): boolean {
+    const expires = this.parseLooseDate(expiresAt || '');
+    if (!expires) return false;
+    const now = new Date();
+    const threshold = new Date();
+    threshold.setDate(now.getDate() + 30);
+    return expires >= now && expires <= threshold;
+  }
+
+  private parseLooseDate(value: string): Date | null {
+    const raw = (value ?? '').trim();
+    if (!raw) return null;
+
+    const direct = new Date(raw);
+    if (!Number.isNaN(direct.getTime())) return direct;
+
+    const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+      const normalized = `${match[3]}-${match[2]}-${match[1]}`;
+      const parsed = new Date(normalized);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+
+    return null;
+  }
+
+  saveTrainerEdit(event: Event): void {
+    event.preventDefault();
+    const trainerId = this.trainerEditId();
+    if (!trainerId) return;
+
+    this.trainerCreateNotice.set('');
+    this.trainerCreateError.set('');
+    const editStatus = this.trainerEditStatus().trim();
+    const editNeedsCompany = editStatus === 'freelance' || editStatus === 'partenaire';
+    if (editNeedsCompany && !this.trainerEditCompanyName().trim()) {
+      this.trainerCreateError.set('Choisissez une societe dans la liste Prestataires.');
+      return;
+    }
+
+    this.creatingTrainer.set(true);
+
+    const formData = new FormData();
+    formData.append('firstName', this.trainerEditFirstName().trim());
+    formData.append('lastName', this.trainerEditLastName().trim());
+    formData.append('email', this.trainerEditEmail().trim());
+    formData.append('phone', this.trainerEditPhone().trim());
+    formData.append('status', editStatus);
+    formData.append('companyName', editNeedsCompany ? this.trainerEditCompanyName().trim() : '');
+    formData.append('microsoftTranscriptUrl', this.trainerEditMicrosoftTranscriptUrl().trim());
+    if (this.trainerEditCvFile()) {
+      formData.append('cvFile', this.trainerEditCvFile()!);
+    }
+    formData.append(
+      'certifications',
+      JSON.stringify(
+        this.trainerCertifications()
+          .map((cert) => ({
+            name: cert.name.trim(),
+            issuer: cert.issuer.trim(),
+            expiresAt: cert.expiresAt.trim(),
+            proof: cert.proof.trim(),
+            existingProof: cert.existingProof?.trim() || ''
+          }))
+          .filter((cert) => cert.name || cert.issuer || cert.expiresAt || cert.proof)
+      )
+    );
+    this.trainerCertifications().forEach((cert, index) => {
+      if (cert.proofFile) {
+        formData.append(`certificationProofFile_${index}`, cert.proofFile);
+      }
+    });
+    formData.append(
+      'completedTrainings',
+      JSON.stringify(
+        this.trainerCompletedTrainings()
+          .map((training) => ({
+            domain: training.domain.trim(),
+            description: training.description.trim(),
+            objective: training.objective.trim(),
+            trainingOrganization: training.trainingOrganization.trim(),
+            trainingDate: training.trainingDate.trim(),
+            durationHours: String(training.durationHours ?? '').trim(),
+            attestationUrl: training.attestationUrl?.trim() || '',
+            existingAttestationUrl: training.existingAttestationUrl?.trim() || ''
+          }))
+          .filter(
+            (training) =>
+              training.domain
+              || training.description
+              || training.objective
+              || training.trainingOrganization
+              || training.trainingDate
+              || training.durationHours
+              || training.attestationUrl
+          )
+      )
+    );
+    this.trainerCompletedTrainings().forEach((training, index) => {
+      if (training.attestationFile) {
+        formData.append(`completedTrainingAttestationFile_${index}`, training.attestationFile);
+      }
+    });
+
+    this.http
+      .put<{ message: string }>(
+        `${this.apiBaseUrl}/admin/trainers/${trainerId}`,
+        formData,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.creatingTrainer.set(false);
+          this.trainerCreateError.set('');
+          this.trainerCreateNotice.set(response.message);
+          this.trainerEditId.set(null);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.creatingTrainer.set(false);
+          this.trainerCreateError.set(err?.error?.message ?? 'Modification formateur impossible.');
+        }
+      });
+  }
+
+  deleteTrainer(trainerId: number): void {
+    this.trainerCreateNotice.set('');
+    this.trainerCreateError.set('');
+    this.deletingTrainerId.set(trainerId);
+
+    this.http
+      .delete<{ message: string }>(
+        `${this.apiBaseUrl}/admin/trainers/${trainerId}`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.deletingTrainerId.set(null);
+          this.trainerCreateNotice.set(response.message);
+          if (this.trainerViewId() === trainerId) this.trainerViewId.set(null);
+          if (this.trainerEditId() === trainerId) this.trainerEditId.set(null);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.deletingTrainerId.set(null);
+          this.trainerCreateError.set(err?.error?.message ?? 'Suppression formateur impossible.');
+        }
+      });
+  }
+
+  onTrainerCvFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.newTrainerCvFile.set(file);
   }
 
   onLogoError(event: Event): void {
@@ -1775,13 +2436,18 @@ export class App implements OnDestroy {
         this.adminClasses.set(response.classes ?? []);
         this.adminStudents.set(response.students ?? []);
         this.adminTrainers.set(response.trainers ?? []);
+        this.providers.set(response.providers ?? []);
         this.documents.set(response.documents ?? []);
         if (response.role === 'admin') {
           this.loadCatalogFormations();
+          this.loadCertificationCatalog();
         } else {
           this.catalogFormations.set([]);
           this.catalogFormationsError.set('');
           this.catalogFormationsLoading.set(false);
+          this.certificationCatalog.set([]);
+          this.certificationCatalogError.set('');
+          this.certificationCatalogLoading.set(false);
         }
         this.syncLocalAttendanceDeadlines(response.attendanceSessions ?? []);
         const formationIds = new Set(sortedFormations.map((formation) => formation.id));
@@ -1922,6 +2588,7 @@ export class App implements OnDestroy {
     this.newFormationTeamsLink.set('');
     this.newFormationClassLabel.set('');
     this.newFormationCapacity.set(20);
+    this.planningDateFilter.set('');
     this.selectedStudentIds.set([]);
     this.selectedStudentToAdd.set(null);
     this.planningRows.set([{ date: '', slot: '09:00 - 12:30', topic: '' }]);
@@ -1953,6 +2620,7 @@ interface DashboardResponse {
   classes?: AdminClass[];
   students?: AdminPerson[];
   trainers?: AdminPerson[];
+  providers?: ProviderRecord[];
 }
 
 interface ResourceDocument {
@@ -2013,7 +2681,7 @@ interface AttendanceRecord {
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'pending';
 type UserRole = 'student' | 'trainer' | 'admin';
-type SectionKey = 'dashboard' | 'parcours' | 'planning' | 'mes-apprentis' | 'emargement' | 'ressources' | 'evaluations' | 'sessions' | 'sessions-detail' | 'sessions-student' | 'sessions-student-detail' | 'support' | 'formations' | 'formation-detail-admin' | 'formateurs' | 'apprentis' | 'planning-admin' | 'archives';
+type SectionKey = 'dashboard' | 'parcours' | 'planning' | 'mes-apprentis' | 'emargement' | 'ressources' | 'evaluations' | 'sessions' | 'sessions-detail' | 'sessions-student' | 'sessions-student-detail' | 'support' | 'formations' | 'formation-detail-admin' | 'formateurs' | 'prestataires' | 'apprentis' | 'planning-admin' | 'archives';
 
 interface AdminPerson {
   id: number;
@@ -2021,6 +2689,13 @@ interface AdminPerson {
   lastName: string;
   email: string;
   birthDate?: string | null;
+  phone?: string;
+  status?: string;
+  companyName?: string;
+  microsoftTranscriptUrl?: string;
+  cvUrl?: string;
+  certifications?: TrainerCertificationInput[];
+  completedTrainings?: TrainerCompletedTrainingInput[];
 }
 
 interface AdminClass {
@@ -2055,6 +2730,10 @@ interface CatalogFormationOption {
   label?: string;
 }
 
+interface CertificationCatalogOption {
+  name: string;
+}
+
 interface AdminPlanningWeekEvent {
   formationTitle: string;
   trainer: string;
@@ -2064,4 +2743,41 @@ interface AdminPlanningWeekEvent {
   topic: string;
   topPercent: number;
   heightPercent: number;
+}
+
+interface TrainerCertificationInput {
+  name: string;
+  issuer: string;
+  expiresAt: string;
+  proof: string;
+  existingProof?: string;
+  proofFile?: File | null;
+}
+
+interface TrainerCompletedTrainingInput {
+  domain: string;
+  description: string;
+  objective: string;
+  trainingOrganization: string;
+  trainingDate: string;
+  durationHours: string;
+  attestationUrl: string;
+  existingAttestationUrl?: string;
+  attestationFile?: File | null;
+}
+
+interface ProviderRecord {
+  id: string;
+  companyName: string;
+  siret: string;
+  address: string;
+  phone: string;
+  activityDeclarationNumber: string;
+  createdAt: string;
+  documents?: {
+    kbis?: { url?: string };
+    rib?: { url?: string };
+    vigilanceCertificate?: { url?: string };
+    liabilityInsurance?: { url?: string };
+  };
 }

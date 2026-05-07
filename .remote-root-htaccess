@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Serve existing files/directories as-is (assets, real files)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Pass Authorization header to PHP (needed for JWT/Bearer auth)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Send /api/* to Symfony front controller
+RewriteRule ^api($|/.*)$ backend/public/index.php [L,QSA]
+
+# Frontend SPA routes -> index.html
+RewriteRule ^ index.html [L]

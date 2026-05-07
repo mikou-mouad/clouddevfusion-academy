@@ -15,7 +15,7 @@
 
         <form (submit)="onSubmitLogin($event)" class="login-form">
           <label class="login-field">
-            Email
+            <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
             <input
               type="email"
               class="login-input"
@@ -26,7 +26,7 @@
             />
           </label>
           <label class="login-field">
-            Mot de passe
+            <span class="label-field-line">Mot de passe <abbr class="required-mark" title="Obligatoire">*</abbr></span>
             <input
               type="password"
               class="login-input"
@@ -768,7 +768,7 @@
                   <form class="admin-create-form session-resource-form" (submit)="createTrainerResource($event)">
                     <div class="admin-form-grid">
                       <label>
-                        Session
+                        <span class="label-field-line">Session <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                         <select [ngModel]="selectedTrainerResourceSessionId()" (ngModelChange)="setSelectedTrainerResourceSessionId($event)" name="selectedTrainerResourceSessionId" required>
                           @for (option of trainerSessionResourceOptions(); track option.id) {
                             <option [value]="option.id">{{ option.label }}</option>
@@ -787,7 +787,7 @@
                         </select>
                       </label>
                       <label>
-                        Titre
+                        <span class="label-field-line">Titre <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                         <input type="text" [ngModel]="trainerResourceTitle()" (ngModelChange)="trainerResourceTitle.set($event)" name="trainerResourceTitle" placeholder="Support session" required />
                       </label>
                       <label>
@@ -990,7 +990,7 @@
             <h3>Sessions</h3>
             <p class="sub">Cree une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
             <div class="admin-form-actions">
-              <button type="button" class="support-btn" (click)="toggleAdminFormationCreateForm()">
+              <button type="button" class="support-btn create-session-btn" (click)="toggleAdminFormationCreateForm()">
                 {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Creer une session' }}
               </button>
             </div>
@@ -999,7 +999,7 @@
                 <h4>Creer une session</h4>
                 <div class="admin-form-grid">
                   <label>
-                    Formation catalogue
+                    <span class="label-field-line">Formation catalogue <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <select
                       [ngModel]="newFormationCatalogCourseId()"
                       (ngModelChange)="newFormationCatalogCourseId.set($event)"
@@ -1014,27 +1014,22 @@
                   </label>
                   <label>
                     Mode
-                    <select [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode">
-                      <option value="À distance">À distance</option>
-                      <option value="Présentiel">Présentiel</option>
-                      <option value="Hybride">Hybride</option>
-                    </select>
+                    <input type="text" [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode" />
                   </label>
                   <label>
-                    Formateur
-                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId">
-                      <option value="0">Assigner plus tard</option>
+                    <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId" required>
                       @for (trainerItem of adminTrainers(); track trainerItem.id) {
                         <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                       }
                     </select>
                   </label>
                   <label>
-                    Date debut
+                    <span class="label-field-line">Date debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <input type="date" [ngModel]="newFormationStartDate()" (ngModelChange)="newFormationStartDate.set($event)" name="newFormationStartDate" required />
                   </label>
                   <label>
-                    Date fin
+                    <span class="label-field-line">Date fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <input type="date" [ngModel]="newFormationEndDate()" (ngModelChange)="newFormationEndDate.set($event)" name="newFormationEndDate" required />
                   </label>
                   <label>
@@ -1054,21 +1049,49 @@
                     <h5>Planning</h5>
                     <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un créneau</button>
                   </div>
-                  @for (row of sortedPlanningRows(); track $index) {
+                  <div class="apprentice-selector-row">
+                    <label>
+                      Filtrer les créneaux par date
+                      <input
+                        type="date"
+                        [ngModel]="planningDateFilter()"
+                        (ngModelChange)="planningDateFilter.set($event)"
+                        name="planningDateFilter"
+                      />
+                    </label>
+                    @if (planningDateFilter()) {
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="planningDateFilter.set('')">Afficher tout</button>
+                    }
+                  </div>
+                  @if (planningDateFilter() && !filteredPlanningRowsForCreate().length) {
+                    <p class="sub">Aucun créneau saisi pour cette date.</p>
+                  }
+                  @if (filteredPlanningRowsForCreate().length) {
+                    <div class="admin-planning-row admin-planning-row--head" aria-hidden="true">
+                      <span>Date <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Sujet <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span></span>
+                    </div>
+                  }
+                  @for (rowItem of filteredPlanningRowsForCreate(); track rowItem.index) {
+                    @let row = rowItem.row;
+                    @let rowIndex = rowItem.index;
                     <div class="admin-planning-row">
-                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow($index, 'date', $event)" [name]="'planDate' + $index" required />
-                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'start', $event)" [name]="'planStart' + $index" required>
+                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow(rowIndex, 'date', $event)" [name]="'planDate' + rowIndex" required />
+                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'start', $event)" [name]="'planStart' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'end', $event)" [name]="'planEnd' + $index" required>
+                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'end', $event)" [name]="'planEnd' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow($index, 'topic', $event)" [name]="'planTopic' + $index" placeholder="Sujet" required />
-                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow($index)" [disabled]="planningRows().length === 1">Retirer</button>
+                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow(rowIndex, 'topic', $event)" [name]="'planTopic' + rowIndex" placeholder="Sujet" required />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow(rowIndex)" [disabled]="planningRows().length === 1">Retirer</button>
                     </div>
                   }
                 </div>
@@ -1078,12 +1101,6 @@
                   @if (!adminStudents().length) {
                     <p class="sub">Aucun apprenti disponible. Cree d'abord des apprentis dans l'onglet `Apprentis`.</p>
                   } @else {
-                    <div class="apprentice-selector-row">
-                      <label>
-                        Rechercher apprenti
-                        <input type="text" [ngModel]="studentFilterForSelector()" (ngModelChange)="studentFilterForSelector.set($event)" name="studentFilterForSelector" placeholder="Nom, prenom ou email" />
-                      </label>
-                    </div>
                     <label class="student-checkbox-field">
                       Selection apprenti
                       <details class="student-selector">
@@ -1094,18 +1111,28 @@
                             {{ selectedStudentIds().length }} apprenti(s) selectionne(s)
                           }
                         </summary>
+                        <div class="student-selector-search">
+                          <input
+                            type="text"
+                            [ngModel]="studentFilterForSelector()"
+                            (ngModelChange)="studentFilterForSelector.set($event)"
+                            name="studentFilterForSelector"
+                            placeholder="Rechercher un apprenti..."
+                          />
+                        </div>
                         <div class="admin-students-grid">
-                          @for (studentItem of adminStudents(); track studentItem.id) {
-                            @if (!studentFilterForSelector() || (`${studentItem.firstName} ${studentItem.lastName} ${studentItem.email}`).toLowerCase().includes(studentFilterForSelector().toLowerCase())) {
-                              <label class="student-check">
-                                <input
-                                  type="checkbox"
-                                  [checked]="selectedStudentIds().includes(studentItem.id)"
-                                  (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
-                                />
-                                <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
-                              </label>
-                            }
+                          @for (studentItem of availableStudentsForSelector(); track studentItem.id) {
+                            <label class="student-check">
+                              <input
+                                type="checkbox"
+                                [checked]="selectedStudentIds().includes(studentItem.id)"
+                                (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
+                              />
+                              <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
+                            </label>
+                          }
+                          @if (!availableStudentsForSelector().length) {
+                            <p class="sub student-selector-empty">Aucun apprenti trouve.</p>
                           }
                         </div>
                       </details>
@@ -1283,7 +1310,7 @@
                   <h4>Modifier la session</h4>
                   <div class="admin-form-grid">
                     <label>
-                      Titre session
+                      <span class="label-field-line">Titre session <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="text" [ngModel]="editFormationTitle()" (ngModelChange)="editFormationTitle.set($event)" name="editFormationTitle" required />
                     </label>
                     <label>
@@ -1291,7 +1318,7 @@
                       <input type="text" [ngModel]="editFormationMode()" (ngModelChange)="editFormationMode.set($event)" name="editFormationMode" />
                     </label>
                     <label>
-                      Formateur
+                      <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <select [ngModel]="editFormationTrainerId()" (ngModelChange)="editFormationTrainerId.set(+$event)" name="editFormationTrainerId" required>
                         @for (trainerItem of adminTrainers(); track trainerItem.id) {
                           <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
@@ -1299,11 +1326,11 @@
                       </select>
                     </label>
                     <label>
-                      Date debut
+                      <span class="label-field-line">Date debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="date" [ngModel]="editFormationStartDate()" (ngModelChange)="editFormationStartDate.set($event)" name="editFormationStartDate" required />
                     </label>
                     <label>
-                      Date fin
+                      <span class="label-field-line">Date fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="date" [ngModel]="editFormationEndDate()" (ngModelChange)="editFormationEndDate.set($event)" name="editFormationEndDate" required />
                     </label>
                     <label>
@@ -1317,6 +1344,15 @@
                       <h5>Planning</h5>
                       <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un créneau</button>
                     </div>
+                    @if (editPlanningRows().length) {
+                      <div class="admin-planning-row admin-planning-row--head" aria-hidden="true">
+                        <span>Date <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Sujet <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span></span>
+                      </div>
+                    }
                     @for (row of editPlanningRows(); track $index) {
                       <div class="admin-planning-row">
                         <input type="date" [ngModel]="row.date" (ngModelChange)="updateEditPlanningRow($index, 'date', $event)" [name]="'editPlanDate' + $index" required />
@@ -1440,6 +1476,13 @@
                 <h4>Creer des apprentis</h4>
                 <button type="button" class="ghost-btn dark-ghost-btn" (click)="addApprenticeRow()">Ajouter un apprenti</button>
               </div>
+              <div class="apprentice-row apprentice-row--head" aria-hidden="true">
+                <span>Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Date naissance</span>
+                <span>Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span></span>
+              </div>
               @for (row of apprenticeRows(); track $index) {
                 <div class="apprentice-row">
                   <input type="text" [ngModel]="row.firstName" (ngModelChange)="updateApprenticeRow($index, 'firstName', $event)" [name]="'apprenticeFirstName' + $index" placeholder="Prenom" required />
@@ -1461,20 +1504,14 @@
                 </button>
               </div>
             </form>
-            <div class="planning-table-wrap">
-              <div class="apprentice-selector-row">
-                <label>
-                  Rechercher dans la liste
-                  <input type="text" [ngModel]="apprenticeSearch()" (ngModelChange)="apprenticeSearch.set($event)" name="apprenticeSearch" placeholder="Nom, prenom, email..." />
-                </label>
-              </div>
+            <div class="planning-table-wrap providers-table-wrap">
               @if (studentPasswordNotice()) {
                 <p class="success">{{ studentPasswordNotice() }}</p>
               }
               @if (studentPasswordError()) {
                 <p class="error">{{ studentPasswordError() }}</p>
               }
-              <table class="planning-table doc-table admin-table">
+              <table class="planning-table doc-table admin-table providers-table">
                 <thead>
                   <tr>
                     <th>Apprenti</th>
@@ -1510,36 +1547,69 @@
         @if (activeSection() === 'formateurs' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Formateurs</h3>
-            <p class="sub">Ajoute un formateur puis affecte-le a une ou plusieurs formations.</p>
+            <p class="sub">Creation, consultation, edition et suppression des formateurs.</p>
             <form class="admin-create-form" (submit)="createTrainer($event)">
               <div class="admin-form-grid">
                 <label>
-                  Prenom
+                  <span class="label-field-line">Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="newTrainerFirstName()" (ngModelChange)="newTrainerFirstName.set($event)" name="newTrainerFirstName" required />
                 </label>
                 <label>
-                  Nom
+                  <span class="label-field-line">Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="newTrainerLastName()" (ngModelChange)="newTrainerLastName.set($event)" name="newTrainerLastName" required />
                 </label>
                 <label>
-                  Email
+                  <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="email" [ngModel]="newTrainerEmail()" (ngModelChange)="newTrainerEmail.set($event)" name="newTrainerEmail" required />
                 </label>
                 <label>
-                  Mot de passe
-                  <input type="text" [ngModel]="newTrainerPassword()" (ngModelChange)="newTrainerPassword.set($event)" name="newTrainerPassword" />
+                  <span class="label-field-line">Telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="newTrainerPhone()" (ngModelChange)="newTrainerPhone.set($event)" name="newTrainerPhone" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Statut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <select [ngModel]="newTrainerStatus()" (ngModelChange)="onTrainerStatusChange($event)" name="newTrainerStatus" required>
+                    <option value="salarie">Salarie</option>
+                    <option value="freelance">Freelance</option>
+                    <option value="partenaire">Partenaire</option>
+                  </select>
+                </label>
+                @if (newTrainerStatus() === 'freelance' || newTrainerStatus() === 'partenaire') {
+                  <label>
+                    <span class="label-field-line">Societe (depuis Prestataires) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="newTrainerCompanyName()" (ngModelChange)="newTrainerCompanyName.set($event)" name="newTrainerCompanyName" required>
+                      <option value="">Choisir une societe</option>
+                      @for (providerName of providerCompanyOptions(); track providerName) {
+                        <option [value]="providerName">{{ providerName }}</option>
+                      }
+                    </select>
+                  </label>
+                } @else {
+                  <label>
+                    Societe
+                    <input
+                      type="text"
+                      [ngModel]="newTrainerCompanyName()"
+                      (ngModelChange)="newTrainerCompanyName.set($event)"
+                      name="newTrainerCompanyName"
+                      disabled
+                      placeholder="Non applicable (salarie)"
+                    />
+                  </label>
+                }
+                <label>
+                  <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" required />
+                </label>
+                <label>
+                  <span class="label-field-line">CV (document) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onTrainerCvFileSelected($event)" name="newTrainerCvFile" required />
                 </label>
               </div>
 
               @if (!formations().length) {
                 <p class="sub">Aucune formation disponible. Cree d'abord une formation dans l'onglet `Formations`.</p>
               } @else {
-                <div class="apprentice-selector-row">
-                  <label>
-                    Rechercher formation
-                    <input type="text" [ngModel]="formationFilterForTrainer()" (ngModelChange)="formationFilterForTrainer.set($event)" name="formationFilterForTrainer" placeholder="Titre ou formateur" />
-                  </label>
-                </div>
                 <div class="apprentice-selector-row">
                   <label>
                     Affecter a une formation
@@ -1586,18 +1656,519 @@
                 <thead>
                   <tr>
                     <th>Formateur</th>
-                    <th>Email</th>
+                    <th>Statut</th>
+                    <th>Societe</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                    <tr>
+                    <tr [class.trainer-row-expiring]="trainerHasExpiringCertification(trainerItem)">
                       <td>{{ trainerItem.firstName }} {{ trainerItem.lastName }}</td>
-                      <td>{{ trainerItem.email }}</td>
+                      <td>
+                        {{ trainerItem.status || '-' }}
+                        @if (trainerHasExpiringCertification(trainerItem)) {
+                          <div class="trainer-expiring-note">Expire bientot: {{ trainerExpiringCertificationNames(trainerItem).join(', ') }}</div>
+                        }
+                      </td>
+                      <td>{{ trainerItem.companyName || '-' }}</td>
+                      <td class="trainer-table-actions-cell">
+                        <div class="attendance-actions trainer-table-actions">
+                          <button
+                            type="button"
+                            class="ghost-btn dark-ghost-btn trainer-icon-action"
+                            (click)="selectTrainerForView(trainerItem.id)"
+                            aria-label="Voir le formateur"
+                            title="Voir"
+                          >
+                            <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-linecap="round" stroke-linejoin="round" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="ghost-btn dark-ghost-btn trainer-icon-action"
+                            (click)="startEditTrainer(trainerItem.id)"
+                            aria-label="Editer le formateur"
+                            title="Editer"
+                          >
+                            <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-linecap="round" stroke-linejoin="round" />
+                              <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="archive-btn trainer-icon-action trainer-icon-action--danger"
+                            (click)="deleteTrainer(trainerItem.id)"
+                            [disabled]="deletingTrainerId() === trainerItem.id"
+                            [attr.aria-label]="deletingTrainerId() === trainerItem.id ? 'Suppression en cours' : 'Supprimer le formateur'"
+                            [attr.title]="deletingTrainerId() === trainerItem.id ? 'Suppression...' : 'Supprimer'"
+                          >
+                            @if (deletingTrainerId() === trainerItem.id) {
+                              <span class="trainer-icon-spinner" aria-hidden="true"></span>
+                            } @else {
+                              <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" />
+                                <line x1="10" y1="11" x2="10" y2="17" stroke-linecap="round" />
+                                <line x1="14" y1="11" x2="14" y2="17" stroke-linecap="round" />
+                              </svg>
+                            }
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   }
                 </tbody>
               </table>
+            </div>
+
+          </section>
+        }
+
+        @if (selectedTrainer()) {
+          <div class="trainer-modal-overlay" (click)="closeTrainerView()">
+            <section class="trainer-modal card content-card" (click)="$event.stopPropagation()">
+              <div class="trainer-modal-head">
+                <div>
+                  <p class="trainer-modal-kicker">Profil formateur</p>
+                  <h3>Fiche formateur</h3>
+                </div>
+                <button type="button" class="ghost-btn dark-ghost-btn" (click)="closeTrainerView()">Fermer</button>
+              </div>
+              <div class="trainer-modal-identity">
+                <p class="trainer-modal-name">{{ selectedTrainer()!.firstName }} {{ selectedTrainer()!.lastName }}</p>
+                <span class="trainer-modal-badge">{{ selectedTrainer()!.status || 'Statut non renseigne' }}</span>
+              </div>
+
+              <div class="trainer-info-grid">
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Email</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.email || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Telephone</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.phone || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Societe</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.companyName || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Transcription Microsoft</p>
+                  <p class="trainer-info-value">
+                    @if (selectedTrainer()!.microsoftTranscriptUrl) {
+                      <a class="teams-link admin-teams-link" [href]="selectedTrainer()!.microsoftTranscriptUrl!" target="_blank" rel="noopener noreferrer">Ouvrir le lien</a>
+                    } @else {
+                      -
+                    }
+                  </p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">CV</p>
+                  <p class="trainer-info-value">
+                    @if (selectedTrainer()!.cvUrl) {
+                      <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(selectedTrainer()!.cvUrl)" target="_blank" rel="noopener noreferrer">Ouvrir CV</a>
+                    } @else {
+                      -
+                    }
+                  </p>
+                </article>
+              </div>
+
+              <div class="trainer-certifications-block">
+                <div class="sessions-block-head">
+                  <h5>Certifications</h5>
+                  <p class="sub">{{ selectedTrainer()!.certifications?.length || 0 }} certification(s)</p>
+                </div>
+              <div class="planning-table-wrap">
+                <table class="planning-table doc-table admin-table">
+                  <thead>
+                    <tr>
+                      <th>Certification</th>
+                      <th>Certificateur</th>
+                      <th>Expiration</th>
+                      <th>Preuve</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if (!selectedTrainer()!.certifications?.length) {
+                      <tr><td colspan="4">Aucune certification.</td></tr>
+                    } @else {
+                      @for (cert of selectedTrainer()!.certifications!; track cert.name + cert.expiresAt) {
+                        <tr [class.trainer-row-expiring]="certificationExpiresSoon(cert.expiresAt)">
+                          <td>{{ cert.name || '-' }}</td>
+                          <td>{{ cert.issuer || '-' }}</td>
+                          <td [class.trainer-expiring-date]="certificationExpiresSoon(cert.expiresAt)">{{ cert.expiresAt || '-' }}</td>
+                          <td>
+                            @if (cert.proof) {
+                              <a class="teams-link admin-teams-link" [href]="cert.proof" target="_blank" rel="noopener noreferrer">Voir preuve</a>
+                            } @else {
+                              -
+                            }
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+              </div>
+
+              <div class="trainer-certifications-block">
+                <div class="sessions-block-head">
+                  <h5>Formations deja passees</h5>
+                  <p class="sub">{{ selectedTrainer()!.completedTrainings?.length || 0 }} formation(s)</p>
+                </div>
+                <div class="planning-table-wrap">
+                  <table class="planning-table doc-table admin-table">
+                    <thead>
+                      <tr>
+                        <th>Domaine</th>
+                        <th>Description</th>
+                        <th>Objectif</th>
+                        <th>Organisme</th>
+                        <th>Date</th>
+                        <th>Duree (h)</th>
+                        <th>Attestation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (!selectedTrainer()!.completedTrainings?.length) {
+                        <tr><td colspan="7">Aucune formation enregistree.</td></tr>
+                      } @else {
+                        @for (training of selectedTrainer()!.completedTrainings!; track training.trainingDate + training.description) {
+                          <tr>
+                            <td>{{ training.domain || '-' }}</td>
+                            <td>{{ training.description || '-' }}</td>
+                            <td>{{ training.objective || '-' }}</td>
+                            <td>{{ training.trainingOrganization || '-' }}</td>
+                            <td>{{ training.trainingDate || '-' }}</td>
+                            <td>{{ training.durationHours || '-' }}</td>
+                            <td>
+                              @if (training.attestationUrl) {
+                                <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(training.attestationUrl)" target="_blank" rel="noopener noreferrer">Voir attestation</a>
+                              } @else {
+                                -
+                              }
+                            </td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        }
+
+        @if (trainerEditId()) {
+          <div class="trainer-modal-overlay" (click)="cancelEditTrainer()">
+            <section class="trainer-modal card content-card" (click)="$event.stopPropagation()">
+              <form class="admin-create-form" (submit)="saveTrainerEdit($event)">
+                <div class="trainer-modal-head">
+                  <div>
+                    <p class="trainer-modal-kicker">Edition formateur</p>
+                    <h3>Editer formateur</h3>
+                  </div>
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="cancelEditTrainer()">Fermer</button>
+                </div>
+                <div class="admin-form-grid">
+                  <label>
+                    <span class="label-field-line">Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditFirstName()" (ngModelChange)="trainerEditFirstName.set($event)" name="trainerEditFirstName" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditLastName()" (ngModelChange)="trainerEditLastName.set($event)" name="trainerEditLastName" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="email" [ngModel]="trainerEditEmail()" (ngModelChange)="trainerEditEmail.set($event)" name="trainerEditEmail" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditPhone()" (ngModelChange)="trainerEditPhone.set($event)" name="trainerEditPhone" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Statut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="trainerEditStatus()" (ngModelChange)="onTrainerEditStatusChange($event)" name="trainerEditStatus" required>
+                      <option value="salarie">Salarie</option>
+                      <option value="freelance">Freelance</option>
+                      <option value="partenaire">Partenaire</option>
+                    </select>
+                  </label>
+                  @if (trainerEditStatus() === 'freelance' || trainerEditStatus() === 'partenaire') {
+                    <label>
+                      <span class="label-field-line">Societe (depuis Prestataires) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <select [ngModel]="trainerEditCompanyName()" (ngModelChange)="trainerEditCompanyName.set($event)" name="trainerEditCompanyName" required>
+                        <option value="">Choisir une societe</option>
+                        @for (providerName of providerCompanyOptions(); track providerName) {
+                          <option [value]="providerName">{{ providerName }}</option>
+                        }
+                      </select>
+                    </label>
+                  } @else {
+                    <label>
+                      Societe
+                      <input
+                        type="text"
+                        [ngModel]="trainerEditCompanyName()"
+                        (ngModelChange)="trainerEditCompanyName.set($event)"
+                        name="trainerEditCompanyNameSalarie"
+                        disabled
+                        placeholder="Non applicable (salarie)"
+                      />
+                    </label>
+                  }
+                  <label>
+                    <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" required />
+                  </label>
+                  <label>
+                    CV (remplacer)
+                    <input type="file" (change)="onTrainerEditCvFileSelected($event)" name="trainerEditCvFile" />
+                    @if (trainerEditCvUrl()) {
+                      <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(trainerEditCvUrl())" target="_blank" rel="noopener noreferrer">CV actuel</a>
+                    }
+                  </label>
+                </div>
+
+                <div class="admin-planning-block">
+                  <div class="admin-planning-head">
+                    <h5>Certifications</h5>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addTrainerCertificationRow()">Ajouter</button>
+                  </div>
+                  @if (certificationCatalogLoading()) {
+                    <p class="sub">Chargement du catalogue certifications...</p>
+                  }
+                  @if (certificationCatalogError()) {
+                    <p class="error">{{ certificationCatalogError() }}</p>
+                  }
+                  @for (cert of trainerCertifications(); track $index) {
+                    <div class="admin-planning-row">
+                      <select [ngModel]="cert.name" (ngModelChange)="updateTrainerCertification($index, 'name', $event)" [name]="'certName' + $index">
+                        <option value="">Nom certif (catalogue)</option>
+                        @for (catalogName of certificationNameOptions(); track catalogName) {
+                          <option [value]="catalogName">{{ catalogName }}</option>
+                        }
+                      </select>
+                      <input type="text" [ngModel]="cert.issuer" (ngModelChange)="updateTrainerCertification($index, 'issuer', $event)" [name]="'certIssuer' + $index" placeholder="Certificateur" />
+                      <input type="date" [ngModel]="cert.expiresAt" (ngModelChange)="updateTrainerCertification($index, 'expiresAt', $event)" [name]="'certExpiry' + $index" />
+                      <input type="url" [ngModel]="cert.proof" (ngModelChange)="updateTrainerCertification($index, 'proof', $event)" [name]="'certProof' + $index" placeholder="Lien preuve (optionnel)" />
+                      <input type="file" (change)="onTrainerCertificationProofSelected($index, $event)" [name]="'certProofFile' + $index" />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removeTrainerCertificationRow($index)" [disabled]="trainerCertifications().length === 1">Retirer</button>
+                    </div>
+                  }
+                </div>
+
+                <div class="admin-planning-block">
+                  <div class="admin-planning-head">
+                    <h5>Formations deja passees</h5>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addTrainerCompletedTrainingRow()">Ajouter</button>
+                  </div>
+                  @for (training of trainerCompletedTrainings(); track $index) {
+                    <div class="admin-planning-row">
+                      <select [ngModel]="training.domain" (ngModelChange)="updateTrainerCompletedTraining($index, 'domain', $event)" [name]="'trainingDomain' + $index">
+                        <option value="">Domaine</option>
+                        <option value="expertise technique">Expertise technique</option>
+                        <option value="experience pedagogique">Experience pedagogique</option>
+                        <option value="inclusion et accessibilite">Inclusion et accessibilite</option>
+                        <option value="reglementation et qualite">Reglementation et qualite</option>
+                        <option value="soft skills et communication">Soft skills et communication</option>
+                      </select>
+                      <input type="text" [ngModel]="training.description" (ngModelChange)="updateTrainerCompletedTraining($index, 'description', $event)" [name]="'trainingDescription' + $index" placeholder="Description" />
+                      <input type="text" [ngModel]="training.objective" (ngModelChange)="updateTrainerCompletedTraining($index, 'objective', $event)" [name]="'trainingObjective' + $index" placeholder="Objectif" />
+                      <input type="text" [ngModel]="training.trainingOrganization" (ngModelChange)="updateTrainerCompletedTraining($index, 'trainingOrganization', $event)" [name]="'trainingOrg' + $index" placeholder="Organisme de formation" />
+                      <input type="date" [ngModel]="training.trainingDate" (ngModelChange)="updateTrainerCompletedTraining($index, 'trainingDate', $event)" [name]="'trainingDate' + $index" />
+                      <input type="number" min="0" step="0.5" [ngModel]="training.durationHours" (ngModelChange)="updateTrainerCompletedTraining($index, 'durationHours', $event)" [name]="'trainingDuration' + $index" placeholder="Duree (h)" />
+                      <input type="url" [ngModel]="training.attestationUrl" (ngModelChange)="updateTrainerCompletedTraining($index, 'attestationUrl', $event)" [name]="'trainingAttestationUrl' + $index" placeholder="Lien attestation (optionnel)" />
+                      <input type="file" (change)="onTrainerCompletedTrainingAttestationSelected($index, $event)" [name]="'trainingAttestationFile' + $index" />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removeTrainerCompletedTrainingRow($index)" [disabled]="trainerCompletedTrainings().length === 1">Retirer</button>
+                    </div>
+                  }
+                </div>
+
+                @if (trainerCreateError()) {
+                  <p class="error">{{ trainerCreateError() }}</p>
+                }
+
+                <div class="admin-form-actions">
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="cancelEditTrainer()">Annuler</button>
+                  <button type="submit" class="support-btn" [disabled]="creatingTrainer()">{{ creatingTrainer() ? 'Enregistrement...' : 'Enregistrer' }}</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        }
+
+        @if (activeSection() === 'prestataires' && isAdmin()) {
+          <section class="card content-card admin-workspace">
+            <h3>Prestataires</h3>
+            <p class="sub">Creation de prestataires avec champs et documents obligatoires.</p>
+
+            <form class="admin-create-form" (submit)="createProvider($event)">
+              <div class="admin-form-grid">
+                <label>
+                  <span class="label-field-line">Nom de l'entreprise <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerCompanyName()" (ngModelChange)="providerCompanyName.set($event)" name="providerCompanyName" required />
+                </label>
+                <label>
+                  <span class="label-field-line">SIRET <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerSiret()" (ngModelChange)="providerSiret.set($event)" name="providerSiret" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Adresse <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerAddress()" (ngModelChange)="providerAddress.set($event)" name="providerAddress" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Numero de telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerPhone()" (ngModelChange)="providerPhone.set($event)" name="providerPhone" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Numero declaration d'activite <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerActivityDeclarationNumber()" (ngModelChange)="providerActivityDeclarationNumber.set($event)" name="providerActivityDeclarationNumber" required />
+                </label>
+                <label>
+                  <span class="label-field-line">KBIS <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'kbis')" name="providerKbisFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">RIB <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'rib')" name="providerRibFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Attestation de vigilance <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'vigilanceCertificate')" name="providerVigilanceCertificateFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Attestation responsabilite civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'liabilityInsurance')" name="providerLiabilityInsuranceFile" required />
+                </label>
+              </div>
+
+              @if (providerNotice()) {
+                <p class="success">{{ providerNotice() }}</p>
+              }
+              @if (providerError()) {
+                <p class="error">{{ providerError() }}</p>
+              }
+
+              <div class="admin-form-actions">
+                <button type="submit" class="support-btn" [disabled]="creatingProvider()">
+                  {{ creatingProvider() ? 'Creation en cours...' : 'Creer le prestataire' }}
+                </button>
+              </div>
+            </form>
+
+            <div class="planning-table-wrap">
+              <div class="sessions-toolbar providers-toolbar">
+                <label class="sessions-search">
+                  Rechercher un prestataire
+                  <input
+                    type="text"
+                    [ngModel]="providerSearch()"
+                    (ngModelChange)="updateProviderSearch($event)"
+                    name="providerSearch"
+                    placeholder="Entreprise, SIRET, tel, adresse..."
+                  />
+                </label>
+                <label>
+                  Vue du tableau
+                  <select
+                    [ngModel]="providerTablePreset()"
+                    (ngModelChange)="applyProviderTablePreset($event)"
+                    name="providerTablePreset"
+                  >
+                    <option value="compact">Compacte</option>
+                    <option value="full">Complete</option>
+                    <option value="documents">Documents</option>
+                  </select>
+                </label>
+              </div>
+
+              <table class="planning-table doc-table admin-table">
+                <thead>
+                  <tr>
+                    @if (isProviderColumnVisible('companyName')) {
+                      <th>Entreprise</th>
+                    }
+                    @if (isProviderColumnVisible('siret')) {
+                      <th>SIRET</th>
+                    }
+                    @if (isProviderColumnVisible('phone')) {
+                      <th>Telephone</th>
+                    }
+                    @if (isProviderColumnVisible('createdAt')) {
+                      <th>Date creation</th>
+                    }
+                    @if (isProviderColumnVisible('address')) {
+                      <th>Adresse</th>
+                    }
+                    @if (isProviderColumnVisible('activityDeclarationNumber')) {
+                      <th>Declaration activite</th>
+                    }
+                    @if (isProviderColumnVisible('documents')) {
+                      <th>Documents</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (provider of paginatedProviders(); track provider.id) {
+                    <tr>
+                      @if (isProviderColumnVisible('companyName')) {
+                        <td>{{ provider.companyName }}</td>
+                      }
+                      @if (isProviderColumnVisible('siret')) {
+                        <td>{{ provider.siret }}</td>
+                      }
+                      @if (isProviderColumnVisible('phone')) {
+                        <td>{{ provider.phone }}</td>
+                      }
+                      @if (isProviderColumnVisible('createdAt')) {
+                        <td>{{ provider.createdAt }}</td>
+                      }
+                      @if (isProviderColumnVisible('address')) {
+                        <td>{{ provider.address }}</td>
+                      }
+                      @if (isProviderColumnVisible('activityDeclarationNumber')) {
+                        <td>{{ provider.activityDeclarationNumber }}</td>
+                      }
+                      @if (isProviderColumnVisible('documents')) {
+                        <td class="provider-docs-cell">
+                          @if (provider.documents?.kbis?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.kbis?.url)" target="_blank" rel="noopener noreferrer">KBIS</a>
+                          }
+                          @if (provider.documents?.rib?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.rib?.url)" target="_blank" rel="noopener noreferrer">RIB</a>
+                          }
+                          @if (provider.documents?.vigilanceCertificate?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.vigilanceCertificate?.url)" target="_blank" rel="noopener noreferrer">Vigilance</a>
+                          }
+                          @if (provider.documents?.liabilityInsurance?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.liabilityInsurance?.url)" target="_blank" rel="noopener noreferrer">Responsabilite civile</a>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                  @if (!filteredProviders().length) {
+                    <tr>
+                      <td colspan="7">Aucun prestataire trouve.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <div class="table-pagination providers-pagination">
+                <p class="sub">Page {{ providerPage() }} / {{ providerTotalPages() }}</p>
+                <div class="table-pagination-actions">
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousProviderPage()" [disabled]="providerPage() <= 1">Precedent</button>
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextProviderPage()" [disabled]="providerPage() >= providerTotalPages()">Suivant</button>
+                </div>
+              </div>
             </div>
           </section>
         }
@@ -1621,7 +2192,7 @@
                   </select>
                 </label>
                 <label>
-                  Titre
+                  <span class="label-field-line">Titre <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="adminGlobalResourceTitle()" (ngModelChange)="adminGlobalResourceTitle.set($event)" name="adminGlobalResourceTitle" placeholder="Guide, annonce, support..." required />
                 </label>
                 <label>
