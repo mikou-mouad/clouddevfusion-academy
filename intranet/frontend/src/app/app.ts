@@ -1,6 +1,15 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  computed,
+  inject,
+  signal,
+  viewChild
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../environments/environment';
 
@@ -21,7 +30,7 @@ export class App implements OnDestroy {
   loginError = signal('');
   loading = signal(false);
   dashboardLoading = signal(false);
-  student = signal<{ firstName: string; lastName: string; email: string } | null>(null);
+  student = signal<{ id: number; firstName: string; lastName: string; email: string } | null>(null);
   trainer = signal<{ firstName: string; lastName: string; email: string } | null>(null);
   admin = signal<{ firstName: string; lastName: string; email: string } | null>(null);
   formations = signal<FormationDashboard[]>([]);
@@ -117,6 +126,8 @@ export class App implements OnDestroy {
   selectedAdminFormationId = signal('');
   adminSessionSearch = signal('');
   adminSessionFormationFilter = signal('all');
+  adminSessionComplianceModalFormationId = signal<string | null>(null);
+  adminSessionComplianceModalCategoryFilter = signal<'all' | AdminWorkflowCategory>('all');
   selectedArchivedFormationId = signal('');
   selectedStudentSessionFormationId = signal('');
   selectedPlanningFormationId = signal('');
@@ -130,6 +141,9 @@ export class App implements OnDestroy {
   readonly trainerSessionPlanningPageSize = 5;
   trainerSessionResourcePage = signal(1);
   readonly trainerSessionResourcePageSize = 5;
+  trainerFollowupSearch = signal('');
+  trainerFollowupDocFilter = signal<'all' | 'missing' | 'available'>('all');
+  trainerFollowupPositionFilter = signal<'all' | 'scored' | 'not_scored'>('all');
   selectedTrainerResourceFormationId = signal('');
   selectedTrainerResourceSessionId = signal('');
   trainerResourceTitle = signal('');
@@ -159,6 +173,87 @@ export class App implements OnDestroy {
   providerRibFile = signal<File | null>(null);
   providerVigilanceCertificateFile = signal<File | null>(null);
   providerLiabilityInsuranceFile = signal<File | null>(null);
+  adminSessionDocuments = signal<AdminSessionDocumentState>({ genericDocuments: [], studentDocuments: [] });
+  adminSessionValidationResults = signal<AdminSessionValidationResult[]>([]);
+  adminValidationTests = signal<AdminValidationTestSummary[]>([]);
+  adminValidationTestDetail = signal<AdminValidationTestDetail | null>(null);
+  adminValidationTestDetailId = signal<number | null>(null);
+  adminValidationTestCreateTitle = signal('Test de validation');
+  adminValidationTestCreateSessionId = signal('');
+  adminValidationTestCreatePassThreshold = signal(70);
+  adminValidationTestCreateQuestions = signal<AdminValidationQuestionDraft[]>([
+    {
+      prompt: '',
+      points: 1,
+      options: [
+        { label: '', isCorrect: true },
+        { label: '', isCorrect: false }
+      ]
+    }
+  ]);
+  adminValidationHistoryQuery = signal('');
+  adminValidationHistoryStudentId = signal<number | null>(null);
+  studentActiveValidationTest = signal<StudentValidationTestTake | null>(null);
+  studentValidationAnswers = signal<Record<number, number[]>>({});
+  studentValidationSubmitNotice = signal('');
+  studentValidationSubmitError = signal('');
+  submittingStudentValidationTest = signal(false);
+  adminGenericDocCategory = signal<AdminWorkflowCategory>('inscription');
+  adminGenericDocType = signal('reglement_interieur');
+  adminGenericDocTitle = signal('');
+  adminGenericDocUrl = signal('');
+  adminGenericDocFile = signal<File | null>(null);
+  adminGenericDocSessionId = signal('');
+  adminGenericDocMandatory = signal(true);
+  /** Un apprenti precis, ou "all" pour appliquer a toute la formation. */
+  adminStudentDocStudentId = signal<number | 'all' | null>(null);
+  adminStudentDocStudentComboOpen = signal(false);
+  adminStudentDocStudentComboQuery = signal('');
+  readonly adminStudentDocSelectRoot = viewChild<ElementRef<HTMLElement>>('adminStudentDocSelectRoot');
+  adminStudentDocCategory = signal<AdminWorkflowCategory>('inscription');
+  adminStudentDocType = signal('contrat');
+  adminStudentDocTitle = signal('');
+  adminStudentDocUrl = signal('');
+  adminStudentDocFile = signal<File | null>(null);
+  adminStudentDocSessionId = signal('');
+  /** Formulaire unique d'envoi (Suivi + Documents) : type de document fixe + un seul fichier/URL. */
+  adminUnifiedDocSlotKey = signal<string>('reglement');
+  adminUnifiedDocSessionId = signal('');
+  adminUnifiedDocTitle = signal('');
+  adminUnifiedDocUrl = signal('');
+  adminUnifiedDocFile = signal<File | null>(null);
+  adminDocUploadModalOpen = signal(false);
+  /** Satisfaction uniquement : lien commun apprentis vs lien formateur (titre genere automatiquement). */
+  adminSatisfactionAudience = signal<'apprentices' | 'trainer'>('apprentices');
+  adminValidationStudentId = signal<number | null>(null);
+  adminValidationSessionId = signal('');
+  adminValidationTitle = signal('Test de validation');
+  adminValidationLink = signal('');
+  adminValidationScore = signal<number | null>(null);
+  adminValidationMaxScore = signal(100);
+  adminValidationNotes = signal('');
+  adminWorkflowNotice = signal('');
+  adminWorkflowError = signal('');
+  /** Onglets detail session admin (formation-detail-admin). */
+  adminFormationDetailTab = signal<
+    'resume' | 'emargement' | 'planning' | 'suivi' | 'validation'
+  >('resume');
+  creatingAdminWorkflowItem = signal(false);
+  adminMatrixPendingFiles = signal<Record<string, File | null>>({});
+  adminMatrixUploadingKey = signal<string | null>(null);
+  /** Filtres matrice suivi documents (detail session admin). */
+  adminDocMatrixQuery = signal('');
+  /** Recherche matrice emargement (detail session admin). */
+  adminEmargementMatrixQuery = signal('');
+  adminDocMatrixRowFilter = signal<'all' | 'trainer' | 'apprentice'>('all');
+  adminDocMatrixColumnCategory = signal<'all' | AdminWorkflowCategory>('all');
+  studentDocumentNotice = signal('');
+  studentDocumentError = signal('');
+  uploadingStudentDocumentId = signal<number | null>(null);
+  studentSignedUploadFiles = signal<Record<number, File | null>>({});
+  studentDocumentCategoryFilter = signal('all');
+  studentSessionDetailTab = signal<'emargement' | 'administratif' | 'cours' | 'tests'>('cours');
+  signingAttendanceSessionId = signal<string | null>(null);
   providerSearch = signal('');
   providerTablePreset = signal<'compact' | 'full' | 'documents'>('compact');
   providerPage = signal(1);
@@ -334,6 +429,29 @@ export class App implements OnDestroy {
     }
     return rows;
   });
+  filteredAdminStudentDocApprentices = computed(() => {
+    const q = this.adminStudentDocStudentComboQuery().trim().toLowerCase();
+    const rows = [...this.selectedAdminFormationApprentices()].sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
+    if (!q) return rows;
+    return rows.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        s.classLabel.toLowerCase().includes(q)
+    );
+  });
+  adminStudentDocStudentTriggerLabel = computed(() => {
+    const id = this.adminStudentDocStudentId();
+    if (!id) return 'Choisir un etudiant';
+    if (id === 'all') {
+      const n = this.selectedAdminFormationApprentices().length;
+      return n > 0 ? `Tous les etudiants (${n})` : 'Tous les etudiants';
+    }
+    const student = this.selectedAdminFormationApprentices().find((s) => s.id === id);
+    return student ? student.name : `Etudiant #${id}`;
+  });
   selectedAdminFormationSessions = computed(() => {
     const formation = this.selectedAdminFormation();
     if (!formation) return [];
@@ -348,6 +466,157 @@ export class App implements OnDestroy {
         return a.slot.localeCompare(b.slot);
       });
   });
+  selectedAdminFormationDocuments = computed(() => {
+    const formation = this.selectedAdminFormation();
+    if (!formation) {
+      return { genericDocuments: [], studentDocuments: [] };
+    }
+    const docs = this.adminSessionDocuments();
+    return {
+      genericDocuments: docs.genericDocuments.filter((item) => item.formationId === formation.id),
+      studentDocuments: docs.studentDocuments.filter((item) => item.formationId === formation.id)
+    };
+  });
+  selectedAdminFormationValidationResults = computed(() => {
+    const formation = this.selectedAdminFormation();
+    if (!formation) return [];
+    return this.adminSessionValidationResults().filter((item) => item.formationId === formation.id);
+  });
+  selectedAdminFormationValidationTests = computed(() => {
+    const formation = this.selectedAdminFormation();
+    if (!formation) return [];
+    return this.adminValidationTests().filter((t) => t.formationId === formation.id);
+  });
+  filteredAdminValidationTestApprentices = computed(() => {
+    const detail = this.adminValidationTestDetail();
+    if (!detail) return [];
+    const q = this.adminValidationHistoryQuery().trim().toLowerCase();
+    const normalize = (s: string): string =>
+      (s ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    const nq = normalize(q);
+    if (!nq) return detail.apprentices;
+    return detail.apprentices.filter((a) => normalize(`${a.studentName} ${a.email}`).includes(nq));
+  });
+  selectedAdminValidationHistoryStudent = computed(() => {
+    const studentId = this.adminValidationHistoryStudentId();
+    const detail = this.adminValidationTestDetail();
+    if (!studentId || !detail) return null;
+    return detail.apprentices.find((a) => a.studentId === studentId) ?? null;
+  });
+  selectedAdminValidationHistoryAttempt = computed(() => {
+    const student = this.selectedAdminValidationHistoryStudent();
+    if (!student) return null;
+    return student.attempts[0] ?? null;
+  });
+  studentIntranetValidationTests = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    const studentId = this.student()?.id ?? 0;
+    if (!formation || !studentId) return [];
+    return this.adminValidationTests().filter(
+      (t) => t.formationId === formation.id && t.sourceType === 'intranet' && t.questionCount > 0
+    );
+  });
+  studentValidationTestsWithStatus = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    const periodOpen = this.isFormationValidationPeriodOpen(formation);
+    const results = this.studentValidationResultsForSelectedFormation();
+    const intranet = this.studentIntranetValidationTests().map((test) => {
+      const result = results.find((r) => r.testId === test.id);
+      const status = (result?.status ?? 'pending') as 'pending' | 'passed' | 'failed';
+      return {
+        testId: test.id,
+        title: test.title,
+        maxScore: test.maxScore,
+        score: result?.score ?? 0,
+        status,
+        isIntranet: true,
+        testLink: result?.testLink ?? '',
+        periodOpen,
+        canTake: periodOpen && status === 'pending',
+        canOpenLink: periodOpen && (result?.testLink ?? '').trim().length > 0
+      };
+    });
+    const externalOnly = results
+      .filter((r) => !intranet.some((t) => t.testId === r.testId))
+      .map((r) => ({
+        testId: r.testId,
+        title: r.testTitle,
+        maxScore: r.maxScore,
+        score: r.score,
+        status: r.status,
+        isIntranet: r.sourceType === 'intranet',
+        testLink: r.testLink,
+        periodOpen,
+        canTake: false,
+        canOpenLink: periodOpen && (r.testLink ?? '').trim().length > 0
+      }));
+    return [...intranet, ...externalOnly];
+  });
+  selectedAdminFormationStudentDocumentRows = computed(() => {
+    const rows = new Map<number, {
+      studentId: number;
+      studentName: string;
+      pending: number;
+      signed: number;
+      failed: number;
+      total: number;
+    }>();
+    for (const student of this.selectedAdminFormationApprentices()) {
+      rows.set(student.id, {
+        studentId: student.id,
+        studentName: student.name,
+        pending: 0,
+        signed: 0,
+        failed: 0,
+        total: 0
+      });
+    }
+    for (const doc of this.selectedAdminFormationDocuments().studentDocuments) {
+      const row = rows.get(doc.studentId);
+      if (!row) continue;
+      row.total += 1;
+      if (doc.signatureStatus === 'signed') row.signed += 1;
+      else if (doc.signatureStatus === 'rejected') row.failed += 1;
+      else row.pending += 1;
+    }
+    return Array.from(rows.values());
+  });
+  selectedAdminFormationValidationRows = computed(() => {
+    const rows = new Map<number, {
+      studentId: number;
+      studentName: string;
+      averageScore: number | null;
+      maxScore: number;
+      sessions: number;
+      passed: number;
+      failed: number;
+    }>();
+    for (const student of this.selectedAdminFormationApprentices()) {
+      rows.set(student.id, {
+        studentId: student.id,
+        studentName: student.name,
+        averageScore: null,
+        maxScore: 0,
+        sessions: 0,
+        passed: 0,
+        failed: 0
+      });
+    }
+    for (const result of this.selectedAdminFormationValidationResults()) {
+      const row = rows.get(result.studentId);
+      if (!row) continue;
+      const previousTotal = (row.averageScore ?? 0) * row.sessions;
+      row.sessions += 1;
+      row.maxScore = Math.max(row.maxScore, result.maxScore || 0);
+      row.averageScore = (previousTotal + result.score) / row.sessions;
+      if (result.status === 'passed') row.passed += 1;
+      if (result.status === 'failed') row.failed += 1;
+    }
+    return Array.from(rows.values());
+  });
   selectedAdminFormationAttendanceSummary = computed(() => {
     const records = this.selectedAdminFormationSessions().flatMap((session) => session.records);
     return {
@@ -356,6 +625,414 @@ export class App implements OnDestroy {
       emargements: records.filter((record) => record.status !== 'pending').length
     };
   });
+
+  /** Matrice emargement admin : une ligne par apprenti, une colonne par seance. */
+  selectedAdminFormationEmargementMatrix = computed(() => {
+    const sessions = this.selectedAdminFormationSessions();
+    const students = [...this.selectedAdminFormationApprentices()].sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
+    const rows = students.map((student) => ({
+      studentId: student.id,
+      studentName: student.name,
+      studentEmail: student.email,
+      classLabel: student.classLabel,
+      cells: sessions.map((session) => {
+        const record = session.records.find((r) => r.studentId === student.id);
+        const status = record?.status ?? ('missing' as const);
+        return { sessionId: session.id, status };
+      })
+    }));
+    return { sessions, rows };
+  });
+
+  /** Matrice emargement filtree par recherche (nom, email, classe). */
+  selectedAdminFormationEmargementMatrixView = computed(() => {
+    const base = this.selectedAdminFormationEmargementMatrix();
+    const q = this.adminEmargementMatrixQuery().trim();
+    const normalize = (s: string): string =>
+      (s ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    const nq = normalize(q);
+    if (!nq) return base;
+    const rows = base.rows.filter((r) =>
+      normalize(`${r.studentName} ${r.classLabel} ${r.studentEmail}`).includes(nq)
+    );
+    return { ...base, rows };
+  });
+
+  private readonly adminFormationDocMatrixColumnDefs: ReadonlyArray<AdminFormationDocMatrixColumn> = [
+    { key: 'reglement', label: 'Reglement interieur', shortLabel: 'Regl.', category: 'inscription', documentType: 'reglement_interieur', scope: 'generic', keywords: ['reglement', 'interieur'], mandatoryGeneric: true },
+    { key: 'cgv', label: 'CGV', shortLabel: 'CGV', category: 'inscription', documentType: 'cgv', scope: 'generic', keywords: ['cgv'], mandatoryGeneric: true },
+    { key: 'test_positionnement', label: 'Test positionnement', shortLabel: 'Posit.', category: 'pre-inscription', documentType: 'test_positionnement', scope: 'student', keywords: ['positionnement'] },
+    { key: 'contrat', label: 'Contrat', shortLabel: 'Contrat', category: 'inscription', documentType: 'contrat', scope: 'student', keywords: ['contrat'] },
+    { key: 'convocation', label: 'Convocation', shortLabel: 'Convoc.', category: 'inscription', documentType: 'convocation', scope: 'student', keywords: ['convocation'] },
+    { key: 'fiche', label: 'Fiche renseignement', shortLabel: 'Fiche', category: 'inscription', documentType: 'fiche_renseignement', scope: 'student', keywords: ['fiche', 'renseignement'] },
+    { key: 'supports', label: 'Supports de cours', shortLabel: 'Support', category: 'en-formation', documentType: 'supports_cours', scope: 'generic', keywords: ['support', 'cours'] },
+    { key: 'recordings', label: 'Recordings seances', shortLabel: 'Replay', category: 'en-formation', documentType: 'recording_seance', scope: 'generic', keywords: ['recording', 'video', 'seance'] },
+    { key: 'attestation', label: 'Attestation reussite', shortLabel: 'Attest.', category: 'cloture', documentType: 'attestation_reussite', scope: 'student', keywords: ['attestation', 'reussite'] },
+    { key: 'satisfaction', label: 'Satisfaction', shortLabel: 'Satisf.', category: 'cloture', documentType: 'formulaire_satisfaction', scope: 'student', keywords: ['satisfaction'] },
+    { key: 'enrollement', label: 'Enrollement', shortLabel: 'Enrol.', category: 'cloture', documentType: 'enrollement', scope: 'student', keywords: ['enrol', 'enroll'] },
+    { key: 'test_validation', label: 'Test validation', shortLabel: 'Valid.', category: 'cloture', documentType: 'test_validation', scope: 'student', keywords: ['test', 'validation'] }
+  ];
+
+  adminFormationDocumentMatrix = computed(() => {
+    const formation = this.selectedAdminFormation();
+    if (!formation) return null;
+    return this.buildFormationDocumentMatrix(formation.id);
+  });
+
+  adminSessionComplianceModalMatrix = computed(() => {
+    const formationId = this.adminSessionComplianceModalFormationId();
+    if (!formationId) return null;
+    return this.buildFormationDocumentMatrix(formationId);
+  });
+
+  private buildFormationDocumentMatrix(formationId: string): AdminFormationDocumentMatrix | null {
+    const formation = this.formations().find((item) => item.id === formationId);
+    if (!formation) return null;
+
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const docs = this.adminSessionDocuments();
+    const genericDocuments = docs.genericDocuments.filter((doc) => doc.formationId === formationId);
+    const studentDocuments = docs.studentDocuments.filter((doc) => doc.formationId === formationId);
+    const apprentices = this.getApprenticesForFormationId(formationId);
+
+    const pickLatestDocument = <T extends { id: number; sessionId: string }>(matches: T[]): T | null => {
+      if (!matches.length) return null;
+      const full = matches.filter((d) => !d.sessionId);
+      const pool = full.length ? full : matches;
+      return pool.sort((a, b) => b.id - a.id)[0] ?? null;
+    };
+
+    const findGeneric = (col: AdminFormationDocMatrixColumn): AdminSessionDocumentGeneric | null => {
+      const matches = genericDocuments.filter(
+        (doc) => this.sessionDocumentMatchesColumn(doc, col) && this.isSessionDocumentSent(doc)
+      );
+      return pickLatestDocument(matches);
+    };
+
+    const findStudent = (
+      studentId: number,
+      col: AdminFormationDocMatrixColumn
+    ): AdminSessionDocumentStudent | null => {
+      const matches = studentDocuments.filter(
+        (doc) =>
+          doc.studentId === studentId &&
+          this.sessionDocumentMatchesColumn(doc, col) &&
+          this.isSessionDocumentSent(doc)
+      );
+      return pickLatestDocument(matches);
+    };
+
+    const findApprenticeSharedSatisfaction = (): AdminSessionDocumentGeneric | AdminSessionDocumentStudent | null => {
+      const sat = normalize('satisfaction');
+      const form = normalize('formateur');
+      const gMatches = genericDocuments.filter((doc) => {
+        if (!this.isSessionDocumentSent(doc)) return false;
+        const haystack = this.sessionDocumentHaystack(doc);
+        return haystack.includes(sat) && !haystack.includes(form);
+      });
+      const generic = pickLatestDocument(gMatches);
+      if (generic) return generic;
+      const sMatches = studentDocuments.filter((doc) => {
+        if (!this.isSessionDocumentSent(doc)) return false;
+        const haystack = this.sessionDocumentHaystack(doc);
+        return haystack.includes(sat) && !haystack.includes(form);
+      });
+      return pickLatestDocument(sMatches);
+    };
+
+    const findTrainerSatisfactionDocument = (): AdminSessionDocumentGeneric | AdminSessionDocumentStudent | null => {
+      const matches = [...genericDocuments, ...studentDocuments].filter((doc) => {
+        if (!this.isSessionDocumentSent(doc)) return false;
+        const haystack = this.sessionDocumentHaystack(doc);
+        return (
+          haystack.includes(normalize('satisfaction')) && haystack.includes(normalize('formateur'))
+        );
+      });
+      return pickLatestDocument(matches);
+    };
+
+    const buildCell = (
+      kind: 'apprentice' | 'trainer',
+      studentId: number | null,
+      col: AdminFormationDocMatrixColumn
+    ): AdminFormationDocMatrixCell => {
+      if (col.scope === 'generic') {
+        const doc = findGeneric(col);
+        return {
+          status: doc ? 'Envoyé' : 'Non envoyé',
+          statusVariant: doc ? 'ok' : 'neutral',
+          url: doc?.url ?? null,
+          docId: null,
+          signatureStatus: null,
+          canUpload: kind === 'trainer',
+          isNa: false
+        };
+      }
+
+      if (col.key === 'satisfaction') {
+        if (kind === 'trainer') {
+          const tdoc = findTrainerSatisfactionDocument();
+          if (!tdoc) {
+            return {
+              status: 'Non envoyé',
+              statusVariant: 'neutral',
+              url: null,
+              docId: null,
+              signatureStatus: null,
+              canUpload: true,
+              isNa: false
+            };
+          }
+          if ('signatureStatus' in tdoc) {
+            let statusLabel = 'En attente de signature';
+            let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
+            if (tdoc.signatureStatus === 'signed') {
+              statusLabel = 'Signé';
+              statusVariant = 'ok';
+            } else if (tdoc.signatureStatus === 'rejected') {
+              statusLabel = 'Refusé';
+              statusVariant = 'danger';
+            }
+            return {
+              status: statusLabel,
+              statusVariant,
+              url: tdoc.url,
+              docId: tdoc.id,
+              signatureStatus: tdoc.signatureStatus,
+              canUpload: true,
+              isNa: false
+            };
+          }
+          return {
+            status: 'Envoyé',
+            statusVariant: 'ok',
+            url: tdoc.url,
+            docId: null,
+            signatureStatus: null,
+            canUpload: true,
+            isNa: false
+          };
+        }
+        const sdoc = findApprenticeSharedSatisfaction();
+        if (!sdoc) {
+          return {
+            status: 'Non envoyé',
+            statusVariant: 'neutral',
+            url: null,
+            docId: null,
+            signatureStatus: null,
+            canUpload: false,
+            isNa: false
+          };
+        }
+        if ('signatureStatus' in sdoc) {
+          let statusLabel = 'En attente de signature';
+          let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
+          if (sdoc.signatureStatus === 'signed') {
+            statusLabel = 'Signé';
+            statusVariant = 'ok';
+          } else if (sdoc.signatureStatus === 'rejected') {
+            statusLabel = 'Refusé';
+            statusVariant = 'danger';
+          }
+          return {
+            status: statusLabel,
+            statusVariant,
+            url: sdoc.url,
+            docId: sdoc.id,
+            signatureStatus: sdoc.signatureStatus,
+            canUpload: false,
+            isNa: false
+          };
+        }
+        return {
+          status: 'Envoyé',
+          statusVariant: 'ok',
+          url: sdoc.url,
+          docId: null,
+          signatureStatus: null,
+          canUpload: false,
+          isNa: false
+        };
+      }
+
+      if (kind === 'trainer') {
+        return {
+          status: '—',
+          statusVariant: 'na',
+          url: null,
+          docId: null,
+          signatureStatus: null,
+          canUpload: false,
+          isNa: true
+        };
+      }
+      const doc = studentId !== null ? findStudent(studentId, col) : null;
+      if (!doc) {
+        return {
+          status: 'Non envoyé',
+          statusVariant: 'neutral',
+          url: null,
+          docId: null,
+          signatureStatus: null,
+          canUpload: true,
+          isNa: false
+        };
+      }
+      let statusLabel = 'En attente de signature';
+      let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
+      if (doc.signatureStatus === 'signed') {
+        statusLabel = 'Signé';
+        statusVariant = 'ok';
+      } else if (doc.signatureStatus === 'rejected') {
+        statusLabel = 'Refusé';
+        statusVariant = 'danger';
+      }
+      return {
+        status: statusLabel,
+        statusVariant,
+        url: doc.url,
+        docId: doc.id,
+        signatureStatus: doc.signatureStatus,
+        canUpload: true,
+        isNa: false
+      };
+    };
+
+    const trainerEmail =
+      this.adminTrainers().find((t) => t.id === formation.trainerId)?.email?.trim() ?? '';
+
+    const apprenticeRows = [...apprentices].map((app) => {
+        const cells: Record<string, AdminFormationDocMatrixCell> = {};
+        for (const col of this.adminFormationDocMatrixColumnDefs) {
+          cells[col.key] = buildCell('apprentice', app.id, col);
+        }
+        return {
+          rowKey: `s-${app.id}`,
+          kind: 'apprentice' as const,
+          studentId: app.id,
+          name: app.name,
+          detail: app.email,
+          cells
+        };
+      });
+
+    const trainerCells: Record<string, AdminFormationDocMatrixCell> = {};
+    for (const col of this.adminFormationDocMatrixColumnDefs) {
+      trainerCells[col.key] = buildCell('trainer', null, col);
+    }
+    const trainerRow = {
+      rowKey: 'trainer',
+      kind: 'trainer' as const,
+      studentId: null as number | null,
+      name: formation.trainer,
+      detail: trainerEmail || 'Formateur',
+      cells: trainerCells
+    };
+
+    return {
+      columns: this.adminFormationDocMatrixColumnDefs,
+      rows: [...apprenticeRows, trainerRow]
+    };
+  }
+
+  /** Matrice suivi documents filtree (recherche, role ligne, categorie colonne). */
+  adminFormationDocumentMatrixView = computed(() => {
+    const base = this.adminFormationDocumentMatrix();
+    if (!base) return null;
+
+    const q = this.adminDocMatrixQuery().trim();
+    const normalize = (s: string): string =>
+      (s ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    const nq = normalize(q);
+
+    const rowFilter = this.adminDocMatrixRowFilter();
+    const catFilter = this.adminDocMatrixColumnCategory();
+
+    const columns =
+      catFilter === 'all' ? [...base.columns] : base.columns.filter((col) => col.category === catFilter);
+
+    const rows = base.rows.filter((row) => {
+      if (rowFilter === 'trainer' && row.kind !== 'trainer') return false;
+      if (rowFilter === 'apprentice' && row.kind === 'trainer') return false;
+      if (!nq) return true;
+      return normalize(`${row.name} ${row.detail}`).includes(nq);
+    });
+
+    return { columns, rows };
+  });
+
+  adminFormationDocComplianceById = computed(() => {
+    const map: Record<string, AdminFormationDocComplianceSummary> = {};
+    for (const formation of this.activeAdminFormations()) {
+      map[formation.id] = this.computeFormationDocCompliance(formation.id);
+    }
+    return map;
+  });
+
+  adminSessionComplianceModalSummary = computed(() => {
+    const formationId = this.adminSessionComplianceModalFormationId();
+    if (!formationId) return null;
+    return this.adminFormationDocComplianceById()[formationId] ?? null;
+  });
+
+  adminSessionComplianceModalFilteredIssues = computed(() => {
+    const summary = this.adminSessionComplianceModalSummary();
+    if (!summary) return [];
+    const filter = this.adminSessionComplianceModalCategoryFilter();
+    if (filter === 'all') return summary.issues;
+    return summary.issues.filter((issue) => issue.category === filter);
+  });
+
+  adminDocUploadSlotOptions = computed(() =>
+    this.adminFormationDocMatrixColumnDefs.map((c) => ({
+      key: c.key,
+      label: c.label,
+      scope: c.scope
+    }))
+  );
+
+  adminUnifiedDocSlotColumn = computed(() => {
+    const key = this.adminUnifiedDocSlotKey();
+    return (
+      this.adminFormationDocMatrixColumnDefs.find((c) => c.key === key) ??
+      this.adminFormationDocMatrixColumnDefs[0]
+    );
+  });
+
+  /** Texte toujours visible sous le type de document (le libelle dans le menu deroulant seul ne suffit pas). */
+  adminUnifiedDocSlotSummary = computed(() => {
+    const col = this.adminUnifiedDocSlotColumn();
+    if (col.key === 'satisfaction') {
+      return 'Satisfaction : choisissez le destinataire du lien (boutons ci-dessous), puis fichier ou URL — le titre est genere tout seul.';
+    }
+    if (col.scope === 'generic') {
+      return 'Portee : une seule version pour toute la formation (tous les apprentis et le formateur).';
+    }
+    return "Portee : un document par apprenti — selectionnez l'etudiant concerne.";
+  });
+
+  adminSatisfactionAutoTitle = computed(() => {
+    const formation = this.selectedAdminFormation();
+    const label = formation?.title?.trim() || 'Formation';
+    return this.adminSatisfactionAudience() === 'trainer'
+      ? `Satisfaction formateur — ${label}`
+      : `Satisfaction apprentis — ${label}`;
+  });
+
   adminSessionFormationFilterOptions = computed(() => {
     const counts = new Map<string, number>();
     for (const formation of this.activeAdminFormations()) {
@@ -390,6 +1067,385 @@ export class App implements OnDestroy {
     const formation = this.selectedStudentSessionFormation();
     if (!formation) return [];
     return this.attendanceSessions().filter((session) => session.formationTitle === formation.title);
+  });
+  studentPlanningRowsWithAttendance = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    const studentId = this.student()?.id ?? 0;
+    if (!formation) {
+      return [] as {
+        key: string;
+        day: string;
+        date: string;
+        slot: string;
+        topic: string;
+        session: AttendanceSession | null;
+        recordStatus: AttendanceStatus;
+        canSelfSign: boolean;
+      }[];
+    }
+
+    const sessionsByKey = new Map<string, AttendanceSession>();
+    for (const session of this.studentSessionsForSelectedFormation()) {
+      sessionsByKey.set(this.planningAttendanceKey(session.date, session.slot), session);
+    }
+
+    return formation.planning.map((slot, index) => {
+      const session = sessionsByKey.get(this.planningAttendanceKey(slot.date, slot.slot)) ?? null;
+      const record = session?.records.find((item) => item.studentId === studentId) ?? null;
+      const recordStatus = record?.status ?? 'pending';
+      const canSelfSign = !!session?.canSelfSign;
+      return {
+        key: `${slot.day}-${slot.date}-${slot.slot}-${index}`,
+        day: slot.day,
+        date: slot.date,
+        slot: slot.slot,
+        topic: slot.topic,
+        session,
+        recordStatus,
+        canSelfSign
+      };
+    });
+  });
+  studentUsefulLinksForSelectedFormation = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    if (!formation) return [] as { key: string; title: string; url: string }[];
+
+    const rows: { key: string; title: string; url: string }[] = [];
+    if (formation.teamsLink) {
+      rows.push({ key: 'teams', title: 'Rejoindre Teams', url: formation.teamsLink });
+    }
+
+    for (const doc of this.studentImportantLinksForSelectedFormation()) {
+      if (!doc.url) continue;
+      rows.push({ key: `doc-${doc.id}`, title: doc.title, url: doc.url });
+    }
+
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const isUsefulLink = (value: string): boolean => {
+      const text = normalize(value);
+      return text.includes('lien') || text.includes('link') || text.includes('util') || text.includes('ressource');
+    };
+    const sameFormation = (value: string): boolean => {
+      const left = normalize(value);
+      const right = normalize(formation.title);
+      return left === right || left.includes(right) || right.includes(left);
+    };
+
+    for (const doc of this.documents()) {
+      if (!doc.url || (doc.formationTitle && !sameFormation(doc.formationTitle))) continue;
+      if (doc.type?.toUpperCase() === 'URL' || isUsefulLink(`${doc.type} ${doc.title}`)) {
+        rows.push({
+          key: `res-link-${doc.title}-${doc.url}`,
+          title: doc.title,
+          url: doc.url
+        });
+      }
+    }
+
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+      const sig = `${row.title}|${row.url}`;
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+  });
+  studentWorkflowDocumentsForSelectedFormation = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    const studentId = this.student()?.id ?? 0;
+    if (!formation || !studentId) return { genericDocuments: [], studentDocuments: [] };
+    const all = this.adminSessionDocuments();
+    return {
+      genericDocuments: all.genericDocuments.filter((doc) => doc.formationId === formation.id),
+      studentDocuments: all.studentDocuments.filter((doc) => doc.formationId === formation.id && doc.studentId === studentId)
+    };
+  });
+  studentValidationResultsForSelectedFormation = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    const studentId = this.student()?.id ?? 0;
+    if (!formation || !studentId) return [];
+    return this.adminSessionValidationResults().filter((row) => row.formationId === formation.id && row.studentId === studentId);
+  });
+  studentValidationAverageForSelectedFormation = computed(() => {
+    const rows = this.studentValidationResultsForSelectedFormation();
+    if (!rows.length) return null;
+    const total = rows.reduce((sum, row) => sum + (row.score || 0), 0);
+    return total / rows.length;
+  });
+  studentImportantLinksForSelectedFormation = computed(() => {
+    const docs = this.studentWorkflowDocumentsForSelectedFormation();
+    const allDocs = [...docs.genericDocuments, ...docs.studentDocuments];
+    return allDocs.filter((doc) => {
+      const text = `${doc.documentType} ${doc.title}`.toLowerCase();
+      return text.includes('enrol') || text.includes('enroll') || text.includes('satisfaction') || text.includes('formateur');
+    });
+  });
+  studentAttestationDocumentsForSelectedFormation = computed(() => {
+    const docs = this.studentWorkflowDocumentsForSelectedFormation();
+    const allDocs = [...docs.genericDocuments, ...docs.studentDocuments];
+    return allDocs.filter((doc) => `${doc.documentType} ${doc.title}`.toLowerCase().includes('attestation'));
+  });
+  studentCourseSupportRowsForSelectedFormation = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    if (!formation) return [] as { key: string; title: string; type: string; url: string }[];
+
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const isSupport = (value: string): boolean => {
+      const text = normalize(value);
+      return text.includes('support') || text.includes('cours');
+    };
+    const sameFormation = (value: string): boolean => {
+      const left = normalize(value);
+      const right = normalize(formation.title);
+      return left === right || left.includes(right) || right.includes(left);
+    };
+
+    const workflow = this.studentWorkflowDocumentsForSelectedFormation();
+    const workflowRows = [...workflow.genericDocuments, ...workflow.studentDocuments]
+      .filter((doc) =>
+        !!doc.url
+        && (doc.category === 'en-formation' || isSupport(`${doc.documentType} ${doc.title}`))
+      )
+      .map((doc) => ({
+        key: `wf-${doc.id}`,
+        title: doc.title,
+        type: doc.documentType || 'Support',
+        url: doc.url
+      }));
+
+    const resourceRows = this.documents()
+      .filter((doc) =>
+        !!doc.url
+        && (doc.formationTitle ? sameFormation(doc.formationTitle) : true)
+        && (isSupport(`${doc.type} ${doc.title}`) || !!doc.sessionId)
+      )
+      .map((doc) => ({
+        key: `res-${doc.title}-${doc.url}`,
+        title: doc.title,
+        type: doc.type || 'Support',
+        url: doc.url
+      }));
+
+    const fallbackResourceRows = this.documents()
+      .filter((doc) =>
+        !!doc.url
+        && (doc.formationTitle ? sameFormation(doc.formationTitle) : true)
+      )
+      .map((doc) => ({
+        key: `fallback-${doc.title}-${doc.url}`,
+        title: doc.title,
+        type: doc.type || 'Support',
+        url: doc.url
+      }));
+
+    const mergedRows = [...workflowRows, ...resourceRows];
+    const candidateRows = mergedRows.length ? mergedRows : fallbackResourceRows;
+    const seen = new Set<string>();
+    return candidateRows.filter((row) => {
+      const sig = `${row.title}|${row.url}`;
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+  });
+  studentCourseRecordingRowsForSelectedFormation = computed(() => {
+    const formation = this.selectedStudentSessionFormation();
+    if (!formation) return [] as { key: string; title: string; type: string; url: string }[];
+
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const isRecording = (value: string): boolean => {
+      const text = normalize(value);
+      return text.includes('record') || text.includes('video') || text.includes('seance') || text.includes('session');
+    };
+    const sameFormation = (value: string): boolean => {
+      const left = normalize(value);
+      const right = normalize(formation.title);
+      return left === right || left.includes(right) || right.includes(left);
+    };
+
+    const workflow = this.studentWorkflowDocumentsForSelectedFormation();
+    const workflowRows = [...workflow.genericDocuments, ...workflow.studentDocuments]
+      .filter((doc) =>
+        !!doc.url
+        && (isRecording(`${doc.documentType} ${doc.title}`) || (doc.category === 'en-formation' && isRecording(doc.title)))
+      )
+      .map((doc) => ({
+        key: `wf-rec-${doc.id}`,
+        title: doc.title,
+        type: doc.documentType || 'Recording',
+        url: doc.url
+      }));
+
+    const resourceRows = this.documents()
+      .filter((doc) =>
+        !!doc.url
+        && (doc.formationTitle ? sameFormation(doc.formationTitle) : true)
+        && isRecording(`${doc.type} ${doc.title}`)
+      )
+      .map((doc) => ({
+        key: `res-rec-${doc.title}-${doc.url}`,
+        title: doc.title,
+        type: doc.type || 'Recording',
+        url: doc.url
+      }));
+
+    const seen = new Set<string>();
+    return [...workflowRows, ...resourceRows].filter((row) => {
+      const sig = `${row.title}|${row.url}`;
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+  });
+  studentRequiredDocumentRowsForSelectedFormation = computed(() => {
+    const docs = this.studentWorkflowDocumentsForSelectedFormation();
+    const mergedDocs = [...docs.genericDocuments, ...docs.studentDocuments];
+    const resources = this.documents().filter((doc) => {
+      const formation = this.selectedStudentSessionFormation();
+      if (!formation) return false;
+      return (doc.formationTitle ?? '').trim().toLowerCase() === formation.title.trim().toLowerCase();
+    });
+
+    const catalog: {
+      key: string;
+      label: string;
+      keywords: string[];
+      category: string;
+      signable?: boolean;
+      linkOnly?: boolean;
+      excludeTrainerSatisfaction?: boolean;
+    }[] = [
+      { key: 'reglement_interieur', label: 'Reglement interieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
+      { key: 'cgv', label: 'CGV', keywords: ['cgv'], category: 'inscription' },
+      { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription' },
+      { key: 'contrat', label: 'Contrat', keywords: ['contrat'], category: 'inscription', signable: true },
+      { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription' },
+      { key: 'fiche_renseignement', label: 'Fiche de renseignement', keywords: ['fiche', 'renseignement'], category: 'inscription', signable: true },
+      { key: 'attestation_reussite', label: 'Attestation de reussite', keywords: ['attestation', 'reussite'], category: 'cloture' },
+      {
+        key: 'formulaire_satisfaction',
+        label: 'Formulaire de satisfaction',
+        keywords: ['satisfaction'],
+        category: 'cloture',
+        linkOnly: true,
+        excludeTrainerSatisfaction: true
+      },
+      { key: 'enrollement_link', label: 'Lien enrollement', keywords: ['enrol', 'enroll'], category: 'cloture', linkOnly: true },
+      {
+        key: 'test_validation',
+        label: 'Test de validation',
+        keywords: ['test', 'validation'],
+        category: 'cloture',
+        linkOnly: true
+      }
+    ];
+
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const findWorkflowDoc = (
+      keywords: string[],
+      options?: { excludeTrainerSatisfaction?: boolean }
+    ): AdminSessionDocumentGeneric | AdminSessionDocumentStudent | null => {
+      const matches = mergedDocs.filter((doc) => {
+        const haystack = normalize(`${doc.documentType} ${doc.title}`);
+        if (options?.excludeTrainerSatisfaction) {
+          if (haystack.includes(normalize('satisfaction')) && haystack.includes(normalize('formateur'))) {
+            return false;
+          }
+        }
+        return keywords.every((kw) => haystack.includes(normalize(kw)));
+      });
+      if (!matches.length) return null;
+      const withUrl = matches.filter((doc) => (doc.url ?? '').trim().length > 0);
+      const pool = withUrl.length ? withUrl : matches;
+      return pool.sort((a, b) => b.id - a.id)[0] ?? null;
+    };
+    const findResourceDoc = (keywords: string[]): ResourceDocument | null => {
+      return resources.find((doc) => {
+        const haystack = normalize(`${doc.type} ${doc.title}`);
+        return keywords.every((kw) => haystack.includes(normalize(kw)));
+      }) ?? null;
+    };
+
+    const validationResults = this.studentValidationResultsForSelectedFormation();
+    const validationPeriodOpen = this.isFormationValidationPeriodOpen(this.selectedStudentSessionFormation());
+
+    return catalog.map((entry) => {
+      const workflowDoc = findWorkflowDoc(entry.keywords, {
+        excludeTrainerSatisfaction: entry.excludeTrainerSatisfaction
+      });
+      const resourceDoc = workflowDoc ? null : findResourceDoc(entry.keywords);
+      let url = (workflowDoc?.url ?? resourceDoc?.url ?? '').trim();
+      let intranetValidationTestId: number | null = null;
+      if (entry.key === 'test_validation') {
+        if (!url) {
+          const externalValidation = validationResults.find((row) => (row.testLink ?? '').trim().length > 0);
+          url = (externalValidation?.testLink ?? '').trim();
+        }
+        const intranetTests = this.studentIntranetValidationTests();
+        const pendingIntranet = intranetTests.find((test) => {
+          const result = validationResults.find((row) => row.testId === test.id);
+          return (result?.status ?? 'pending') === 'pending';
+        });
+        intranetValidationTestId =
+          validationPeriodOpen ? (pendingIntranet?.id ?? intranetTests[0]?.id ?? null) : null;
+      }
+      const hasIntranetValidation =
+        entry.key === 'test_validation' && this.studentIntranetValidationTests().length > 0;
+      const available =
+        entry.key === 'test_validation'
+          ? validationPeriodOpen && (url.length > 0 || hasIntranetValidation)
+          : url.length > 0;
+      const status =
+        workflowDoc && 'signatureStatus' in workflowDoc
+          ? workflowDoc.signatureStatus
+          : (available ? 'envoye' : 'inactif');
+      return {
+        key: entry.key,
+        label: entry.label,
+        category: entry.category,
+        signable: !!entry.signable && !entry.linkOnly,
+        linkOnly: !!entry.linkOnly,
+        available,
+        status,
+        url,
+        intranetValidationTestId,
+        validationPeriodOpen: entry.key === 'test_validation' ? validationPeriodOpen : true,
+        sourceDocumentId: workflowDoc && 'id' in workflowDoc ? workflowDoc.id : null
+      };
+    });
+  });
+  studentDocumentCategoryOptions = computed(() => {
+    const counts = new Map<string, number>();
+    for (const row of this.studentRequiredDocumentRowsForSelectedFormation()) {
+      const key = row.category;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([key, count]) => ({ key, label: this.studentCategoryLabel(key), count }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  });
+  filteredStudentRequiredDocumentRowsForSelectedFormation = computed(() => {
+    const selected = this.studentDocumentCategoryFilter();
+    const rows = this.studentRequiredDocumentRowsForSelectedFormation();
+    if (selected === 'all') return rows;
+    return rows.filter((row) => row.category === selected);
   });
   adminAttendanceFormationOptions = computed(() => {
     const uniqueTitles = Array.from(new Set(this.attendanceSessions().map((session) => session.formationTitle)));
@@ -429,12 +1485,7 @@ export class App implements OnDestroy {
     { label: 'Contacter le support', type: 'support' }
   ] as const;
   readonly studentMenuItems: { key: SectionKey; label: string }[] = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'sessions-student', label: 'Sessions' },
-    { key: 'ressources', label: 'Docs' },
-    { key: 'evaluations', label: 'Tests' },
-    { key: 'archives', label: 'Archives' },
-    { key: 'support', label: 'Aide' }
+    { key: 'sessions-student', label: 'Sessions' }
   ];
   readonly trainerMenuItems: { key: SectionKey; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard' },
@@ -502,7 +1553,11 @@ export class App implements OnDestroy {
           this.student.set(response.role === 'student' ? response.profile : null);
           this.trainer.set(response.role === 'trainer' ? response.profile : null);
           this.admin.set(response.role === 'admin' ? response.profile : null);
-          this.activeSection.set('dashboard');
+          if (response.role === 'student') {
+            this.activeSection.set('sessions-student');
+          } else {
+            this.activeSection.set('dashboard');
+          }
           this.loadDashboard();
           this.loading.set(false);
         },
@@ -527,6 +1582,8 @@ export class App implements OnDestroy {
     this.adminTrainers.set([]);
     this.providers.set([]);
     this.documents.set([]);
+    this.adminSessionDocuments.set({ genericDocuments: [], studentDocuments: [] });
+    this.adminSessionValidationResults.set([]);
     this.password.set('');
     this.editingFormation.set(false);
     this.deletingFormationId.set('');
@@ -574,6 +1631,27 @@ export class App implements OnDestroy {
     this.providerRibFile.set(null);
     this.providerVigilanceCertificateFile.set(null);
     this.providerLiabilityInsuranceFile.set(null);
+    this.adminWorkflowNotice.set('');
+    this.adminWorkflowError.set('');
+    this.adminGenericDocTitle.set('');
+    this.adminGenericDocUrl.set('');
+    this.adminGenericDocFile.set(null);
+    this.adminStudentDocTitle.set('');
+    this.adminStudentDocUrl.set('');
+    this.adminStudentDocFile.set(null);
+    this.adminUnifiedDocSlotKey.set('reglement');
+    this.adminUnifiedDocSessionId.set('');
+    this.adminUnifiedDocTitle.set('');
+    this.adminUnifiedDocUrl.set('');
+    this.adminUnifiedDocFile.set(null);
+    this.adminEmargementMatrixQuery.set('');
+    this.adminSatisfactionAudience.set('apprentices');
+    this.adminValidationScore.set(null);
+    this.adminValidationNotes.set('');
+    this.studentDocumentNotice.set('');
+    this.studentDocumentError.set('');
+    this.uploadingStudentDocumentId.set(null);
+    this.studentSignedUploadFiles.set({});
     this.localAttendanceDeadlines.clear();
   }
 
@@ -585,12 +1663,893 @@ export class App implements OnDestroy {
     this.showAdminFormationCreateForm.set(!this.showAdminFormationCreateForm());
   }
 
+  adminEmargementStatusLabel(status: AttendanceStatus | 'missing'): string {
+    switch (status) {
+      case 'present':
+        return 'Present';
+      case 'absent':
+        return 'Absent';
+      case 'late':
+        return 'Retard';
+      case 'pending':
+        return 'En attente';
+      default:
+        return '—';
+    }
+  }
+
+  openAdminSessionComplianceModal(
+    formationId: string,
+    category: 'all' | AdminWorkflowCategory,
+    event: MouseEvent
+  ): void {
+    event.stopPropagation();
+    this.adminSessionComplianceModalFormationId.set(formationId);
+    this.adminSessionComplianceModalCategoryFilter.set(category);
+  }
+
+  closeAdminSessionComplianceModal(): void {
+    this.adminSessionComplianceModalFormationId.set(null);
+    this.adminSessionComplianceModalCategoryFilter.set('all');
+  }
+
+  goToFormationSuiviFromComplianceModal(): void {
+    const formationId = this.adminSessionComplianceModalFormationId();
+    if (!formationId) return;
+    this.closeAdminSessionComplianceModal();
+    this.selectAdminFormation(formationId);
+    this.adminFormationDetailTab.set('suivi');
+  }
+
+  adminFormationTitleById(formationId: string): string {
+    return (
+      this.activeAdminFormations().find((formation) => formation.id === formationId)?.title ??
+      'Session'
+    );
+  }
+
   selectAdminFormation(formationId: string): void {
     this.editingFormation.set(false);
     this.formationActionNotice.set('');
     this.formationActionError.set('');
+    this.adminFormationDetailTab.set('resume');
     this.selectedAdminFormationId.set(formationId);
+    this.adminGenericDocSessionId.set('');
+    this.adminStudentDocSessionId.set('');
+    this.adminValidationSessionId.set('');
+    this.adminStudentDocStudentId.set(null);
+    this.adminStudentDocStudentComboQuery.set('');
+    this.adminStudentDocStudentComboOpen.set(false);
+    this.adminWorkflowNotice.set('');
+    this.adminWorkflowError.set('');
+    this.adminDocMatrixQuery.set('');
+    this.adminEmargementMatrixQuery.set('');
+    this.adminDocMatrixRowFilter.set('all');
+    this.adminDocMatrixColumnCategory.set('all');
+    this.adminUnifiedDocSlotKey.set('reglement');
+    this.resetAdminUnifiedDocDefaults();
     this.activeSection.set('formation-detail-admin');
+  }
+
+  setAdminDocMatrixRowFilter(value: string): void {
+    if (value === 'all' || value === 'trainer' || value === 'apprentice') {
+      this.adminDocMatrixRowFilter.set(value);
+    }
+  }
+
+  setAdminDocMatrixColumnCategory(value: string): void {
+    const allowed: Array<'all' | AdminWorkflowCategory> = [
+      'all',
+      'pre-inscription',
+      'inscription',
+      'en-formation',
+      'cloture'
+    ];
+    if (allowed.includes(value as 'all' | AdminWorkflowCategory)) {
+      this.adminDocMatrixColumnCategory.set(value as 'all' | AdminWorkflowCategory);
+    }
+  }
+
+  docMatrixStatusShort(status: string): string {
+    switch (status) {
+      case 'Envoyé':
+      case 'Envoye':
+        return 'Envoyé';
+      case 'Non envoyé':
+      case 'Non envoye':
+        return 'Non envoyé';
+      case 'En attente de signature':
+      case 'En attente signature':
+        return 'En attente';
+      case 'Signé':
+      case 'Signe':
+        return 'Signé';
+      case 'Refusé':
+      case 'Refuse':
+        return 'Refusé';
+      case 'Non applicable':
+      case '—':
+        return '—';
+      default:
+        return status;
+    }
+  }
+
+  clearAdminUnifiedUploadForm(): void {
+    this.adminUnifiedDocSessionId.set('');
+    this.adminUnifiedDocTitle.set('');
+    this.adminUnifiedDocUrl.set('');
+    this.adminUnifiedDocFile.set(null);
+  }
+
+  resetAdminUnifiedDocDefaults(): void {
+    this.clearAdminUnifiedUploadForm();
+    this.adminSatisfactionAudience.set('apprentices');
+    this.adminUnifiedDocTitle.set(this.adminUnifiedDocSlotColumn().label);
+  }
+
+  setAdminSatisfactionAudience(value: 'apprentices' | 'trainer'): void {
+    this.adminSatisfactionAudience.set(value);
+  }
+
+  onAdminUnifiedDocSlotChange(key: string): void {
+    const prevKey = this.adminUnifiedDocSlotKey();
+    this.adminUnifiedDocSlotKey.set(key);
+    const col =
+      this.adminFormationDocMatrixColumnDefs.find((c) => c.key === key) ??
+      this.adminFormationDocMatrixColumnDefs[0];
+    if (col.key === 'satisfaction') {
+      this.adminSatisfactionAudience.set('apprentices');
+    }
+    if (col.scope === 'generic') {
+      this.adminStudentDocStudentId.set(null);
+      this.adminStudentDocStudentComboOpen.set(false);
+      this.adminStudentDocStudentComboQuery.set('');
+    }
+    const prevCol = this.adminFormationDocMatrixColumnDefs.find((c) => c.key === prevKey);
+    const prevTitle = this.adminUnifiedDocTitle().trim();
+    if (!prevTitle || (prevCol && prevTitle === prevCol.label)) {
+      this.adminUnifiedDocTitle.set(col.label);
+    }
+  }
+
+  onAdminUnifiedDocFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.adminUnifiedDocFile.set(file);
+  }
+
+  submitAdminUnifiedDocument(event: Event): void {
+    event.preventDefault();
+    const formation = this.selectedAdminFormation();
+    if (!formation) return;
+    this.adminWorkflowError.set('');
+    const col = this.adminUnifiedDocSlotColumn();
+    if (!this.adminUnifiedDocUrl().trim() && !this.adminUnifiedDocFile()) {
+      this.adminWorkflowError.set('Ajoutez un lien ou un fichier.');
+      return;
+    }
+    if (col.scope === 'student' && col.key === 'satisfaction') {
+      const autoTitle =
+        this.adminSatisfactionAudience() === 'trainer'
+          ? `Satisfaction formateur — ${formation.title.trim()}`
+          : `Satisfaction apprentis — ${formation.title.trim()}`;
+      this.adminGenericDocCategory.set(col.category);
+      this.adminGenericDocType.set(col.documentType);
+      this.adminGenericDocSessionId.set(this.adminUnifiedDocSessionId());
+      this.adminGenericDocTitle.set(autoTitle);
+      this.adminGenericDocUrl.set(this.adminUnifiedDocUrl());
+      this.adminGenericDocFile.set(this.adminUnifiedDocFile());
+      this.createAdminGenericDocument(event, { isMandatory: false });
+      return;
+    }
+    if (!this.adminUnifiedDocTitle().trim()) {
+      this.adminWorkflowError.set('Le titre du document est obligatoire.');
+      return;
+    }
+    if (col.scope === 'student') {
+      const sid = this.adminStudentDocStudentId();
+      if (sid === null || sid === 'all') {
+        this.adminWorkflowError.set('Selectionnez un apprenti pour ce document individuel.');
+        return;
+      }
+      this.adminStudentDocCategory.set(col.category);
+      this.adminStudentDocType.set(col.documentType);
+      this.adminStudentDocSessionId.set(this.adminUnifiedDocSessionId());
+      this.adminStudentDocTitle.set(this.adminUnifiedDocTitle());
+      this.adminStudentDocUrl.set(this.adminUnifiedDocUrl());
+      this.adminStudentDocFile.set(this.adminUnifiedDocFile());
+      this.createAdminStudentDocument(event);
+      return;
+    }
+    this.adminGenericDocCategory.set(col.category);
+    this.adminGenericDocType.set(col.documentType);
+    this.adminGenericDocSessionId.set(this.adminUnifiedDocSessionId());
+    this.adminGenericDocTitle.set(this.adminUnifiedDocTitle());
+    this.adminGenericDocUrl.set(this.adminUnifiedDocUrl());
+    this.adminGenericDocFile.set(this.adminUnifiedDocFile());
+    this.createAdminGenericDocument(event);
+  }
+
+  toggleAdminStudentDocStudentDropdown(event: MouseEvent): void {
+    event.stopPropagation();
+    const opening = !this.adminStudentDocStudentComboOpen();
+    this.adminStudentDocStudentComboOpen.set(opening);
+    if (opening) {
+      this.adminStudentDocStudentComboQuery.set('');
+    }
+  }
+
+  onAdminStudentDocDropdownSearchInput(value: string): void {
+    this.adminStudentDocStudentComboQuery.set(value);
+  }
+
+  selectAdminStudentDocApprentice(student: { id: number; name: string; email: string }): void {
+    this.adminStudentDocStudentId.set(student.id);
+    this.adminStudentDocStudentComboQuery.set('');
+    this.adminStudentDocStudentComboOpen.set(false);
+  }
+
+  selectAdminStudentDocAllStudents(): void {
+    this.adminStudentDocStudentId.set('all');
+    this.adminStudentDocStudentComboQuery.set('');
+    this.adminStudentDocStudentComboOpen.set(false);
+  }
+
+  clearAdminStudentDocStudentSelection(event?: Event): void {
+    event?.stopPropagation();
+    this.adminStudentDocStudentId.set(null);
+    this.adminStudentDocStudentComboQuery.set('');
+    this.adminStudentDocStudentComboOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onAdminStudentDocSelectDocumentClick(event: MouseEvent): void {
+    if (!this.adminStudentDocStudentComboOpen()) return;
+    const root = this.adminStudentDocSelectRoot()?.nativeElement;
+    if (root && !root.contains(event.target as Node)) {
+      this.adminStudentDocStudentComboOpen.set(false);
+      this.adminStudentDocStudentComboQuery.set('');
+    }
+  }
+
+  createAdminGenericDocument(event: Event, options?: { isMandatory?: boolean }): void {
+    event.preventDefault();
+    const formation = this.selectedAdminFormation();
+    if (!formation) return;
+    if (!this.adminGenericDocTitle().trim()) {
+      this.adminWorkflowError.set('Le titre du document generique est obligatoire.');
+      return;
+    }
+    if (!this.adminGenericDocUrl().trim() && !this.adminGenericDocFile()) {
+      this.adminWorkflowError.set('Ajoutez un lien ou un fichier pour le document generique.');
+      return;
+    }
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    const isMandatory = options?.isMandatory ?? this.adminGenericDocMandatory();
+    const formData = new FormData();
+    formData.append('formationId', formation.id);
+    formData.append('sessionId', this.adminGenericDocSessionId().trim());
+    formData.append('category', this.adminGenericDocCategory());
+    formData.append('documentType', this.adminGenericDocType().trim());
+    formData.append('title', this.adminGenericDocTitle().trim());
+    formData.append('url', this.adminGenericDocUrl().trim());
+    formData.append('isMandatory', isMandatory ? 'true' : 'false');
+    if (this.adminGenericDocFile()) {
+      formData.append('file', this.adminGenericDocFile()!);
+    }
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/admin/session-documents/generic`,
+      formData,
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowNotice.set(response.message);
+        this.adminGenericDocTitle.set('');
+        this.adminGenericDocUrl.set('');
+        this.adminGenericDocFile.set(null);
+        this.resetAdminUnifiedDocDefaults();
+        this.closeAdminDocUploadModal();
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowError.set(err?.error?.message ?? 'Ajout document generique impossible.');
+      }
+    });
+  }
+
+  createAdminStudentDocument(event: Event): void {
+    event.preventDefault();
+    const formation = this.selectedAdminFormation();
+    const studentTarget = this.adminStudentDocStudentId();
+    if (!formation || studentTarget === null) {
+      this.adminWorkflowError.set('Selectionnez une session et un etudiant.');
+      return;
+    }
+    if (!this.adminStudentDocTitle().trim()) {
+      this.adminWorkflowError.set('Le titre du document etudiant est obligatoire.');
+      return;
+    }
+    if (!this.adminStudentDocUrl().trim() && !this.adminStudentDocFile()) {
+      this.adminWorkflowError.set('Ajoutez un lien ou un fichier pour le document etudiant.');
+      return;
+    }
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    const formData = new FormData();
+    formData.append('studentId', studentTarget === 'all' ? 'all' : String(studentTarget));
+    formData.append('formationId', formation.id);
+    formData.append('sessionId', this.adminStudentDocSessionId().trim());
+    formData.append('category', this.adminStudentDocCategory());
+    formData.append('documentType', this.adminStudentDocType().trim());
+    formData.append('title', this.adminStudentDocTitle().trim());
+    formData.append('url', this.adminStudentDocUrl().trim());
+    if (this.adminStudentDocFile()) {
+      formData.append('file', this.adminStudentDocFile()!);
+    }
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/admin/session-documents/student`,
+      formData,
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowNotice.set(response.message);
+        this.adminStudentDocTitle.set('');
+        this.adminStudentDocUrl.set('');
+        this.adminStudentDocFile.set(null);
+        this.adminStudentDocStudentId.set(null);
+        this.adminStudentDocStudentComboQuery.set('');
+        this.adminStudentDocStudentComboOpen.set(false);
+        this.resetAdminUnifiedDocDefaults();
+        this.closeAdminDocUploadModal();
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowError.set(err?.error?.message ?? 'Ajout document etudiant impossible.');
+      }
+    });
+  }
+
+  adminMatrixPendingKey(rowKey: string, colKey: string): string {
+    return `${rowKey}::${colKey}`;
+  }
+
+  onAdminMatrixFileSelected(rowKey: string, colKey: string, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    const key = this.adminMatrixPendingKey(rowKey, colKey);
+    this.adminMatrixPendingFiles.set({
+      ...this.adminMatrixPendingFiles(),
+      [key]: file
+    });
+  }
+
+  submitAdminMatrixUpload(
+    row: { rowKey: string; kind: 'apprentice' | 'trainer'; studentId: number | null; name: string },
+    colKey: string
+  ): void {
+    const formation = this.selectedAdminFormation();
+    const col = this.adminFormationDocMatrixColumnDefs.find((c) => c.key === colKey);
+    if (!formation || !col) return;
+
+    if (col.scope === 'generic' && row.kind !== 'trainer') {
+      this.adminWorkflowError.set(
+        'Document generique : une seule version pour toute la formation (tous les apprentis + formateur). Envoyez depuis le formulaire en haut ou la ligne Formateur.'
+      );
+      return;
+    }
+    if (col.scope === 'student' && row.kind !== 'apprentice') {
+      return;
+    }
+    if (col.scope === 'student' && row.studentId === null) {
+      return;
+    }
+
+    const pkey = this.adminMatrixPendingKey(row.rowKey, colKey);
+    const file = this.adminMatrixPendingFiles()[pkey];
+    if (!file) {
+      this.adminWorkflowError.set('Choisissez un fichier a envoyer.');
+      return;
+    }
+
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminMatrixUploadingKey.set(pkey);
+
+    const title =
+      col.scope === 'generic' ? `${col.label} — ${formation.title}` : `${col.label} — ${row.name}`;
+    const formData = new FormData();
+    formData.append('formationId', formation.id);
+    formData.append('sessionId', '');
+    formData.append('category', col.category);
+    formData.append('documentType', col.documentType);
+    formData.append('title', title);
+    formData.append('url', '');
+    formData.append('file', file);
+
+    const clearBusy = (): void => {
+      this.creatingAdminWorkflowItem.set(false);
+      this.adminMatrixUploadingKey.set(null);
+    };
+
+    if (col.scope === 'generic') {
+      formData.append('isMandatory', col.mandatoryGeneric ? 'true' : 'false');
+      this.http
+        .post<{ message: string }>(`${this.apiBaseUrl}/admin/session-documents/generic`, formData, { headers: this.authHeaders() })
+        .subscribe({
+          next: (response) => {
+            clearBusy();
+            this.adminWorkflowNotice.set(response.message);
+            this.adminMatrixPendingFiles.set({ ...this.adminMatrixPendingFiles(), [pkey]: null });
+            this.loadDashboard();
+          },
+          error: (err) => {
+            clearBusy();
+            this.adminWorkflowError.set(err?.error?.message ?? 'Envoi document generique impossible.');
+          }
+        });
+      return;
+    }
+
+    formData.append('studentId', String(row.studentId));
+    this.http
+      .post<{ message: string }>(`${this.apiBaseUrl}/admin/session-documents/student`, formData, { headers: this.authHeaders() })
+      .subscribe({
+        next: (response) => {
+          clearBusy();
+          this.adminWorkflowNotice.set(response.message);
+          this.adminMatrixPendingFiles.set({ ...this.adminMatrixPendingFiles(), [pkey]: null });
+          this.loadDashboard();
+        },
+        error: (err) => {
+          clearBusy();
+          this.adminWorkflowError.set(err?.error?.message ?? 'Envoi document etudiant impossible.');
+        }
+      });
+  }
+
+  markStudentDocumentSigned(documentId: number): void {
+    if (!documentId) return;
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/admin/session-documents/student/${documentId}/sign`,
+      {},
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowNotice.set(response.message);
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowError.set(err?.error?.message ?? 'Signature document impossible.');
+      }
+    });
+  }
+
+  saveAdminValidationResult(event: Event): void {
+    event.preventDefault();
+    const formation = this.selectedAdminFormation();
+    const studentId = this.adminValidationStudentId();
+    if (!formation || !studentId) {
+      this.adminWorkflowError.set('Selectionnez une session et un etudiant pour le score.');
+      return;
+    }
+    const score = this.adminValidationScore();
+    if (score === null || Number.isNaN(score)) {
+      this.adminWorkflowError.set('Le score est obligatoire.');
+      return;
+    }
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/admin/session-validations/result`,
+      {
+        studentId,
+        formationId: formation.id,
+        sessionId: this.adminValidationSessionId().trim(),
+        testTitle: this.adminValidationTitle().trim(),
+        testLink: this.adminValidationLink().trim(),
+        score,
+        maxScore: this.adminValidationMaxScore(),
+        notes: this.adminValidationNotes().trim()
+      },
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowNotice.set(response.message);
+        this.adminValidationScore.set(null);
+        this.adminValidationNotes.set('');
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowError.set(err?.error?.message ?? 'Enregistrement score impossible.');
+      }
+    });
+  }
+
+  validationStatusLabel(status: string): string {
+    switch (status) {
+      case 'passed':
+        return 'Valide';
+      case 'failed':
+        return 'Echec';
+      case 'pending':
+        return 'En attente';
+      default:
+        return status;
+    }
+  }
+
+  studentDocumentStatusLabel(status: string, available = true, signable = false): string {
+    if (!available) return 'Non disponible';
+    if (signable && status === 'pending') return 'A signer';
+    switch (status) {
+      case 'signed':
+        return 'Signe';
+      case 'rejected':
+        return 'Refuse';
+      case 'pending':
+        return 'En attente';
+      case 'envoye':
+        return 'Envoye';
+      case 'inactif':
+        return 'Non disponible';
+      default:
+        return status;
+    }
+  }
+
+  studentDocumentStatusVariant(status: string, available = true, signable = false): string {
+    if (!available) return 'na';
+    if (signable && status === 'pending') return 'warn';
+    switch (status) {
+      case 'signed':
+      case 'envoye':
+        return 'ok';
+      case 'pending':
+        return 'warn';
+      case 'rejected':
+        return 'danger';
+      case 'inactif':
+        return 'na';
+      default:
+        return 'neutral';
+    }
+  }
+
+  studentDocumentNeedsSignature(row: { signable: boolean; available: boolean; status: string; sourceDocumentId: number | null }): boolean {
+    return !!row.signable && row.available && row.status === 'pending' && row.sourceDocumentId !== null;
+  }
+
+  setAdminFormationDetailTab(
+    tab: 'resume' | 'emargement' | 'planning' | 'suivi' | 'validation'
+  ): void {
+    this.adminFormationDetailTab.set(tab);
+    if (tab !== 'validation') {
+      this.adminValidationTestDetailId.set(null);
+      this.adminValidationTestDetail.set(null);
+    }
+    if (tab !== 'suivi') {
+      this.closeAdminDocUploadModal();
+    }
+  }
+
+  openAdminDocUploadModal(): void {
+    this.adminWorkflowError.set('');
+    this.resetAdminUnifiedDocDefaults();
+    this.adminDocUploadModalOpen.set(true);
+  }
+
+  closeAdminDocUploadModal(): void {
+    this.adminDocUploadModalOpen.set(false);
+    this.adminStudentDocStudentComboOpen.set(false);
+    this.adminStudentDocStudentComboQuery.set('');
+  }
+
+  addAdminValidationQuestion(): void {
+    this.adminValidationTestCreateQuestions.set([
+      ...this.adminValidationTestCreateQuestions(),
+      {
+        prompt: '',
+        points: 1,
+        options: [
+          { label: '', isCorrect: true },
+          { label: '', isCorrect: false }
+        ]
+      }
+    ]);
+  }
+
+  removeAdminValidationQuestion(index: number): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    if (next.length <= 1) return;
+    next.splice(index, 1);
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  updateAdminValidationQuestionPrompt(index: number, value: string): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    if (!next[index]) return;
+    next[index] = { ...next[index], prompt: value };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  updateAdminValidationQuestionPoints(index: number, value: string): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    if (!next[index]) return;
+    const points = value === '' ? 1 : Math.max(0, +value);
+    next[index] = { ...next[index], points: Number.isNaN(points) ? 1 : points };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  addAdminValidationQuestionOption(qIndex: number): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    const q = next[qIndex];
+    if (!q) return;
+    next[qIndex] = { ...q, options: [...q.options, { label: '', isCorrect: false }] };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  removeAdminValidationQuestionOption(qIndex: number, oIndex: number): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    const q = next[qIndex];
+    if (!q || q.options.length <= 2) return;
+    const options = [...q.options];
+    options.splice(oIndex, 1);
+    next[qIndex] = { ...q, options };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  updateAdminValidationOptionLabel(qIndex: number, oIndex: number, value: string): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    const q = next[qIndex];
+    if (!q || !q.options[oIndex]) return;
+    const options = [...q.options];
+    options[oIndex] = { ...options[oIndex], label: value };
+    next[qIndex] = { ...q, options };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  setAdminValidationOptionCorrect(qIndex: number, oIndex: number): void {
+    const next = [...this.adminValidationTestCreateQuestions()];
+    const q = next[qIndex];
+    if (!q) return;
+    const options = q.options.map((opt, idx) => ({ ...opt, isCorrect: idx === oIndex }));
+    next[qIndex] = { ...q, options };
+    this.adminValidationTestCreateQuestions.set(next);
+  }
+
+  createAdminValidationQuizTest(event: Event): void {
+    event.preventDefault();
+    const formation = this.selectedAdminFormation();
+    if (!formation) return;
+    const title = this.adminValidationTestCreateTitle().trim();
+    if (!title) {
+      this.adminWorkflowError.set('Le titre du test est obligatoire.');
+      return;
+    }
+    const questions = this.adminValidationTestCreateQuestions();
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.prompt.trim()) {
+        this.adminWorkflowError.set(`Question ${i + 1} : texte obligatoire.`);
+        return;
+      }
+      const validOpts = q.options.filter((o) => o.label.trim());
+      if (validOpts.length < 2) {
+        this.adminWorkflowError.set(`Question ${i + 1} : au moins 2 reponses.`);
+        return;
+      }
+      if (!validOpts.some((o) => o.isCorrect)) {
+        this.adminWorkflowError.set(`Question ${i + 1} : cochez la bonne reponse.`);
+        return;
+      }
+    }
+    const passThreshold = Math.min(100, Math.max(1, this.adminValidationTestCreatePassThreshold())) / 100;
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    this.http
+      .post<{ message: string; testId: number }>(
+        `${this.apiBaseUrl}/admin/session-validations/tests`,
+        {
+          formationId: formation.id,
+          sessionId: this.adminValidationTestCreateSessionId().trim(),
+          title,
+          passThreshold,
+          questions: questions.map((q) => ({
+            prompt: q.prompt.trim(),
+            points: q.points,
+            options: q.options
+              .filter((o) => o.label.trim())
+              .map((o) => ({ label: o.label.trim(), isCorrect: o.isCorrect }))
+          }))
+        },
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.creatingAdminWorkflowItem.set(false);
+          this.adminWorkflowNotice.set(response.message);
+          this.loadDashboard();
+          if (response.testId) {
+            this.loadAdminValidationTestDetail(response.testId);
+          }
+        },
+        error: (err) => {
+          this.creatingAdminWorkflowItem.set(false);
+          this.adminWorkflowError.set(err?.error?.message ?? 'Creation du test impossible.');
+        }
+      });
+  }
+
+  loadAdminValidationTestDetail(testId: number): void {
+    if (!testId) return;
+    this.adminValidationTestDetailId.set(testId);
+    this.http
+      .get<AdminValidationTestDetail>(`${this.apiBaseUrl}/admin/session-validations/tests/${testId}`, {
+        headers: this.authHeaders()
+      })
+      .subscribe({
+        next: (detail) => {
+          this.adminValidationTestDetail.set(detail);
+          this.adminValidationHistoryQuery.set('');
+          this.adminValidationHistoryStudentId.set(null);
+        },
+        error: () => {
+          this.adminValidationTestDetail.set(null);
+          this.adminWorkflowError.set('Impossible de charger le detail du test.');
+        }
+      });
+  }
+
+  closeAdminValidationTestDetail(): void {
+    this.adminValidationTestDetailId.set(null);
+    this.adminValidationTestDetail.set(null);
+    this.adminValidationHistoryQuery.set('');
+    this.adminValidationHistoryStudentId.set(null);
+  }
+
+  selectAdminValidationHistoryStudent(studentId: number): void {
+    const detail = this.adminValidationTestDetail();
+    if (!detail) return;
+    const apprentice = detail.apprentices.find((a) => a.studentId === studentId);
+    if (!apprentice) return;
+    this.adminValidationHistoryStudentId.set(studentId);
+  }
+
+  closeAdminValidationHistoryModal(): void {
+    this.adminValidationHistoryStudentId.set(null);
+  }
+
+  startStudentValidationTest(testId: number): void {
+    this.studentValidationSubmitNotice.set('');
+    this.studentValidationSubmitError.set('');
+    this.studentValidationAnswers.set({});
+    this.http
+      .get<{ test: StudentValidationTestTake }>(`${this.apiBaseUrl}/student/validation-tests/${testId}`, {
+        headers: this.authHeaders()
+      })
+      .subscribe({
+        next: (res) => {
+          this.studentActiveValidationTest.set(res.test);
+        },
+        error: (err) => {
+          this.studentValidationSubmitError.set(err?.error?.message ?? 'Impossible de charger le test.');
+          this.studentActiveValidationTest.set(null);
+        }
+      });
+  }
+
+  cancelStudentValidationTest(): void {
+    this.studentActiveValidationTest.set(null);
+    this.studentValidationAnswers.set({});
+  }
+
+  toggleStudentValidationAnswer(questionId: number, optionId: number): void {
+    const current = { ...this.studentValidationAnswers() };
+    current[questionId] = [optionId];
+    this.studentValidationAnswers.set(current);
+  }
+
+  submitStudentValidationTest(event: Event): void {
+    event.preventDefault();
+    const test = this.studentActiveValidationTest();
+    if (!test) return;
+    for (const q of test.questions) {
+      if (!this.studentValidationAnswers()[q.id]?.length) {
+        this.studentValidationSubmitError.set('Repondez a toutes les questions avant d envoyer.');
+        return;
+      }
+    }
+    this.submittingStudentValidationTest.set(true);
+    this.studentValidationSubmitError.set('');
+    this.studentValidationSubmitNotice.set('');
+    const answers: Record<string, number[]> = {};
+    for (const [qid, opts] of Object.entries(this.studentValidationAnswers())) {
+      answers[String(qid)] = opts;
+    }
+    this.http
+      .post<{ message: string; result: { score: number; maxScore: number; status: string } }>(
+        `${this.apiBaseUrl}/student/validation-tests/${test.id}/submit`,
+        { answers },
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (res) => {
+          this.submittingStudentValidationTest.set(false);
+          this.studentValidationSubmitNotice.set(
+            `${res.message} Score : ${res.result.score} / ${res.result.maxScore} — ${this.validationStatusLabel(res.result.status)}`
+          );
+          this.studentActiveValidationTest.set(null);
+          this.studentValidationAnswers.set({});
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.submittingStudentValidationTest.set(false);
+          this.studentValidationSubmitError.set(err?.error?.message ?? 'Envoi du test impossible.');
+        }
+      });
+  }
+
+  syncValidationScoresByEmail(): void {
+    const formation = this.selectedAdminFormation();
+    if (!formation) return;
+    if (!this.adminValidationLink().trim()) {
+      this.adminWorkflowError.set("Ajoute d'abord le lien du site de test.");
+      return;
+    }
+    this.creatingAdminWorkflowItem.set(true);
+    this.adminWorkflowError.set('');
+    this.adminWorkflowNotice.set('');
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/admin/session-validations/sync-by-email`,
+      {
+        formationId: formation.id,
+        sessionId: this.adminValidationSessionId().trim(),
+        testTitle: this.adminValidationTitle().trim() || 'Test de positionnement',
+        testLink: this.adminValidationLink().trim(),
+        maxScore: this.adminValidationMaxScore()
+      },
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowNotice.set(response.message);
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.creatingAdminWorkflowItem.set(false);
+        this.adminWorkflowError.set(err?.error?.message ?? 'Sync des notes impossible.');
+      }
+    });
+  }
+
+  onAdminGenericDocFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.adminGenericDocFile.set(file);
+  }
+
+  onAdminStudentDocFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.adminStudentDocFile.set(file);
   }
 
   startEditSelectedFormation(): void {
@@ -615,6 +2574,7 @@ export class App implements OnDestroy {
     if (!this.editPlanningRows().length) {
       this.editPlanningRows.set([{ date: '', slot: '09:00 - 12:30', topic: '' }]);
     }
+    this.adminFormationDetailTab.set('resume');
     this.editingFormation.set(true);
   }
 
@@ -723,11 +2683,265 @@ export class App implements OnDestroy {
 
   selectStudentSessionFormation(formationId: string): void {
     this.selectedStudentSessionFormationId.set(formationId);
+    this.studentSessionDetailTab.set('cours');
     this.activeSection.set('sessions-student-detail');
   }
 
   backToStudentSessions(): void {
+    this.studentSessionDetailTab.set('cours');
     this.activeSection.set('sessions-student');
+  }
+
+  setStudentSessionDetailTab(tab: 'emargement' | 'administratif' | 'cours' | 'tests'): void {
+    this.studentSessionDetailTab.set(tab);
+  }
+
+  openStudentValidationInTestsTab(intranetTestId: number | null): void {
+    this.studentSessionDetailTab.set('tests');
+    this.studentValidationSubmitNotice.set('');
+    this.studentValidationSubmitError.set('');
+    if (intranetTestId === null) return;
+    const test = this.studentValidationTestsWithStatus().find((row) => row.testId === intranetTestId);
+    if (test?.canTake) {
+      this.startStudentValidationTest(intranetTestId);
+    }
+  }
+
+  isFormationValidationPeriodOpen(formation: { endDate?: string } | null | undefined): boolean {
+    const raw = (formation?.endDate ?? '').trim();
+    if (!raw) return true;
+    const end = this.parseIsoDate(raw);
+    if (!end) return true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return today.getTime() <= end.getTime();
+  }
+
+  onStudentSignedDocumentSelected(documentId: number, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.studentSignedUploadFiles.set({
+      ...this.studentSignedUploadFiles(),
+      [documentId]: file
+    });
+  }
+
+  submitStudentSignedDocument(documentId: number): void {
+    const file = this.studentSignedUploadFiles()[documentId];
+    if (!file) {
+      this.studentDocumentError.set('Selectionnez un fichier signe avant upload.');
+      return;
+    }
+    this.studentDocumentNotice.set('');
+    this.studentDocumentError.set('');
+    this.uploadingStudentDocumentId.set(documentId);
+    const formData = new FormData();
+    formData.append('file', file);
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/student/session-documents/${documentId}/sign-upload`,
+      formData,
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.uploadingStudentDocumentId.set(null);
+        this.studentDocumentNotice.set(response.message);
+        this.studentSignedUploadFiles.set({
+          ...this.studentSignedUploadFiles(),
+          [documentId]: null
+        });
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.uploadingStudentDocumentId.set(null);
+        this.studentDocumentError.set(err?.error?.message ?? 'Upload document signe impossible.');
+      }
+    });
+  }
+
+  private studentCategoryLabel(category: string): string {
+    return this.adminWorkflowCategoryLabel(category as AdminWorkflowCategory);
+  }
+
+  private adminWorkflowCategoryLabel(category: AdminWorkflowCategory | string): string {
+    const labels: Record<string, string> = {
+      'pre-inscription': 'Pre-inscription',
+      inscription: 'Inscription',
+      'en-formation': 'En formation',
+      cloture: 'Cloture',
+    };
+    return labels[category] ?? category;
+  }
+
+  private getApprenticesForFormationId(formationId: string): { id: number; name: string; email: string }[] {
+    const seen = new Set<number>();
+    const rows: { id: number; name: string; email: string }[] = [];
+    for (const classItem of this.adminClasses()) {
+      if (classItem.formationId !== formationId) continue;
+      for (const student of classItem.students) {
+        if (seen.has(student.id)) continue;
+        seen.add(student.id);
+        rows.push({
+          id: student.id,
+          name: `${student.firstName} ${student.lastName}`,
+          email: student.email
+        });
+      }
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+  }
+
+  private sessionDocumentHaystack(doc: { documentType: string; title: string }): string {
+    return `${doc.documentType ?? ''} ${doc.title ?? ''}`
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private sessionDocumentMatchesColumn(
+    doc: { documentType: string; title: string },
+    col: AdminFormationDocMatrixColumn
+  ): boolean {
+    const haystack = this.sessionDocumentHaystack(doc);
+    const typeNorm = col.documentType
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (typeNorm && haystack.includes(typeNorm)) {
+      return true;
+    }
+    return col.keywords.every((kw) =>
+      haystack.includes(
+        kw
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+      )
+    );
+  }
+
+  private isSessionDocumentSent(doc: { url?: string } | null | undefined): boolean {
+    return !!doc && (doc.url ?? '').trim().length > 0;
+  }
+
+  private pushComplianceIssueFromMatrixCell(
+    col: AdminFormationDocMatrixColumn,
+    rowName: string,
+    rowKind: 'apprentice' | 'trainer',
+    cell: AdminFormationDocMatrixCell,
+    issues: AdminFormationDocComplianceIssue[]
+  ): void {
+    if (cell.isNa) return;
+    const scope: AdminFormationDocComplianceIssue['scope'] =
+      rowKind === 'trainer' ? 'trainer' : col.scope === 'generic' ? 'generic' : 'student';
+    const studentName = rowKind === 'apprentice' && scope === 'student' ? rowName : undefined;
+    const base = {
+      documentLabel: col.label,
+      category: col.category,
+      categoryLabel: this.adminWorkflowCategoryLabel(col.category),
+      scope,
+      studentName,
+      isMandatory: !!col.mandatoryGeneric && scope === 'generic'
+    };
+    if (cell.status === 'Non envoyé') {
+      issues.push({ ...base, status: 'missing', statusLabel: 'Non envoye' });
+      return;
+    }
+    if (cell.status === 'En attente de signature') {
+      issues.push({ ...base, status: 'pending_signature', statusLabel: 'En attente de signature' });
+      return;
+    }
+    if (cell.status === 'Refusé') {
+      issues.push({ ...base, status: 'rejected', statusLabel: 'Refuse' });
+    }
+  }
+
+  private computeFormationDocCompliance(formationId: string): AdminFormationDocComplianceSummary {
+    const matrix = this.buildFormationDocumentMatrix(formationId);
+    const issues: AdminFormationDocComplianceIssue[] = [];
+    if (!matrix) {
+      return {
+        formationId,
+        isUpToDate: true,
+        missingCount: 0,
+        pendingSignatureCount: 0,
+        rejectedCount: 0,
+        mandatoryMissingCount: 0,
+        totalIssueCount: 0,
+        issues,
+        categoryChips: []
+      };
+    }
+
+    const countedGenericCols = new Set<string>();
+    for (const col of matrix.columns) {
+      if (col.scope === 'generic') {
+        if (countedGenericCols.has(col.key)) continue;
+        countedGenericCols.add(col.key);
+        const sampleRow = matrix.rows.find((row) => row.kind === 'apprentice');
+        if (!sampleRow) continue;
+        this.pushComplianceIssueFromMatrixCell(col, sampleRow.name, 'apprentice', sampleRow.cells[col.key], issues);
+        continue;
+      }
+      if (col.key === 'satisfaction') {
+        const trainerRow = matrix.rows.find((row) => row.kind === 'trainer');
+        if (trainerRow) {
+          this.pushComplianceIssueFromMatrixCell(
+            { ...col, label: 'Satisfaction formateur' },
+            trainerRow.name,
+            'trainer',
+            trainerRow.cells[col.key],
+            issues
+          );
+        }
+        const apprenticeRow = matrix.rows.find((row) => row.kind === 'apprentice');
+        if (apprenticeRow) {
+          this.pushComplianceIssueFromMatrixCell(
+            { ...col, label: 'Satisfaction apprentis' },
+            apprenticeRow.name,
+            'apprentice',
+            apprenticeRow.cells[col.key],
+            issues
+          );
+        }
+        continue;
+      }
+      for (const row of matrix.rows.filter((item) => item.kind === 'apprentice')) {
+        this.pushComplianceIssueFromMatrixCell(col, row.name, 'apprentice', row.cells[col.key], issues);
+      }
+    }
+
+    const missingCount = issues.filter((issue) => issue.status === 'missing').length;
+    const pendingSignatureCount = issues.filter((issue) => issue.status === 'pending_signature').length;
+    const rejectedCount = issues.filter((issue) => issue.status === 'rejected').length;
+    const mandatoryMissingCount = issues.filter((issue) => issue.status === 'missing' && issue.isMandatory).length;
+    const totalIssueCount = issues.length;
+    const isUpToDate = totalIssueCount === 0;
+
+    const categoryCount = new Map<AdminWorkflowCategory, number>();
+    for (const issue of issues) {
+      categoryCount.set(issue.category, (categoryCount.get(issue.category) ?? 0) + 1);
+    }
+    const categoryChips = Array.from(categoryCount.entries())
+      .map(([category, count]) => ({
+        category,
+        label: this.adminWorkflowCategoryLabel(category),
+        count,
+        variant: (count > 0 ? 'warn' : 'ok') as 'warn' | 'ok'
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
+
+    return {
+      formationId,
+      isUpToDate,
+      missingCount,
+      pendingSignatureCount,
+      rejectedCount,
+      mandatoryMissingCount,
+      totalIssueCount,
+      issues,
+      categoryChips
+    };
   }
 
   previousAdminPlanningWeek(): void {
@@ -881,6 +3095,111 @@ export class App implements OnDestroy {
     if (!selectedSessionId) return [];
     return this.documents().filter((doc) => (doc.sessionId ?? '') === selectedSessionId);
   });
+  selectedTrainerFormationWorkflowData = computed(() => {
+    const formation = this.selectedTrainerSessionFormation();
+    if (!formation) {
+      return {
+        genericDocuments: [] as AdminSessionDocumentGeneric[],
+        studentDocuments: [] as AdminSessionDocumentStudent[],
+        validationResults: [] as AdminSessionValidationResult[],
+        resources: [] as ResourceDocument[]
+      };
+    }
+    const docs = this.adminSessionDocuments();
+    const genericDocuments = docs.genericDocuments.filter((doc) => doc.formationId === formation.id);
+    const studentDocuments = docs.studentDocuments.filter((doc) => doc.formationId === formation.id);
+    const validationResults = this.adminSessionValidationResults().filter((row) => row.formationId === formation.id);
+    const resources = this.documents().filter((doc) => (doc.formationTitle ?? '').trim().toLowerCase() === formation.title.trim().toLowerCase());
+    return { genericDocuments, studentDocuments, validationResults, resources };
+  });
+  trainerSatisfactionFormateurLink = computed(() => {
+    const data = this.selectedTrainerFormationWorkflowData();
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const hasKeywords = (value: string, keywords: string[]) => {
+      const haystack = normalize(value);
+      return keywords.every((kw) => haystack.includes(normalize(kw)));
+    };
+    const fromWorkflow = [...data.genericDocuments, ...data.studentDocuments]
+      .find((doc) => hasKeywords(`${doc.documentType} ${doc.title}`, ['satisfaction', 'formateur']));
+    if (fromWorkflow?.url) return fromWorkflow.url;
+    const fromResources = data.resources.find((doc) => hasKeywords(`${doc.type} ${doc.title}`, ['satisfaction', 'formateur']));
+    return fromResources?.url ?? '';
+  });
+  trainerApprenticeFollowupRows = computed(() => {
+    const formation = this.selectedTrainerSessionFormation();
+    if (!formation) return [];
+    const data = this.selectedTrainerFormationWorkflowData();
+    const normalize = (value: string): string =>
+      (value ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const hasKeywords = (value: string, keywords: string[]) => {
+      const haystack = normalize(value);
+      return keywords.every((kw) => haystack.includes(normalize(kw)));
+    };
+    const genericHas = (keywords: string[]): boolean =>
+      data.genericDocuments.some((doc) => hasKeywords(`${doc.documentType} ${doc.title}`, keywords));
+    const findStudentDoc = (studentId: number, keywords: string[]): AdminSessionDocumentStudent | null =>
+      data.studentDocuments.find((doc) => doc.studentId === studentId && hasKeywords(`${doc.documentType} ${doc.title}`, keywords)) ?? null;
+    const findPositionnementResult = (studentId: number): AdminSessionValidationResult | null =>
+      data.validationResults.find((row) => row.studentId === studentId && hasKeywords(`${row.testTitle}`, ['positionnement'])) ?? null;
+
+    const cgvShared = genericHas(['cgv']);
+    const reglementShared = genericHas(['reglement', 'interieur']);
+    const compteRenduShared = genericHas(['compte', 'rendu']);
+
+    return this.selectedTrainerSessionApprentices().map((apprentice) => {
+      const attendanceRecords = this.selectedTrainerSessionAttendanceSessions()
+        .map((session) => session.records.find((record) => record.studentId === apprentice.id))
+        .filter((item): item is AttendanceRecord => !!item);
+      const attendanceMarked = attendanceRecords.filter((record) => record.status !== 'pending').length;
+      const attendanceTotal = this.selectedTrainerSessionAttendanceSessions().length;
+      const positionnement = findPositionnementResult(apprentice.id);
+      const cgvDoc = findStudentDoc(apprentice.id, ['cgv']);
+      const reglementDoc = findStudentDoc(apprentice.id, ['reglement', 'interieur']);
+      const compteRenduDoc = findStudentDoc(apprentice.id, ['compte', 'rendu']);
+      const supportsCount = data.resources.filter((doc) => hasKeywords(`${doc.type} ${doc.title}`, ['support'])).length;
+      return {
+        studentId: apprentice.id,
+        studentName: apprentice.name,
+        email: apprentice.email,
+        attendance: `${attendanceMarked}/${attendanceTotal}`,
+        positionnementScore: positionnement ? `${positionnement.score}/${positionnement.maxScore}` : '-',
+        hasPositionnementScore: !!positionnement,
+        cgvStatus: cgvDoc || cgvShared ? 'Disponible' : 'Manquant',
+        reglementStatus: reglementDoc || reglementShared ? 'Disponible' : 'Manquant',
+        compteRenduStatus: compteRenduDoc || compteRenduShared ? 'Disponible' : 'Manquant',
+        supportsCount
+      };
+    });
+  });
+  filteredTrainerApprenticeFollowupRows = computed(() => {
+    const search = this.trainerFollowupSearch().trim().toLowerCase();
+    const docFilter = this.trainerFollowupDocFilter();
+    const positionFilter = this.trainerFollowupPositionFilter();
+    return this.trainerApprenticeFollowupRows().filter((row) => {
+      const matchesSearch = !search || `${row.studentName} ${row.email}`.toLowerCase().includes(search);
+      if (!matchesSearch) return false;
+
+      if (docFilter === 'missing') {
+        const hasMissing = row.cgvStatus === 'Manquant' || row.reglementStatus === 'Manquant' || row.compteRenduStatus === 'Manquant';
+        if (!hasMissing) return false;
+      } else if (docFilter === 'available') {
+        const allAvailable = row.cgvStatus === 'Disponible' && row.reglementStatus === 'Disponible' && row.compteRenduStatus === 'Disponible';
+        if (!allAvailable) return false;
+      }
+
+      if (positionFilter === 'scored' && !row.hasPositionnementScore) return false;
+      if (positionFilter === 'not_scored' && row.hasPositionnementScore) return false;
+
+      return true;
+    });
+  });
   trainerSessionResourceTotalPages = computed(() => {
     const total = this.selectedTrainerSessionDocuments().length;
     return Math.max(1, Math.ceil(total / this.trainerSessionResourcePageSize));
@@ -1017,6 +3336,10 @@ export class App implements OnDestroy {
   updateTrainerSessionApprenticeSearch(value: string): void {
     this.trainerSessionApprenticeSearch.set(value);
     this.trainerSessionApprenticePage.set(1);
+  }
+
+  updateTrainerFollowupSearch(value: string): void {
+    this.trainerFollowupSearch.set(value);
   }
 
   previousTrainerSessionApprenticePage(): void {
@@ -1430,7 +3753,7 @@ export class App implements OnDestroy {
   resolveDocumentUrl(url?: string): string {
     const raw = (url ?? '').trim();
     if (!raw) return '#';
-    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    if (/^https?:\/\//i.test(raw)) {
       return raw;
     }
     if (raw.startsWith('/')) {
@@ -1440,6 +3763,12 @@ export class App implements OnDestroy {
       } catch {
         return raw;
       }
+    }
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+      return raw;
+    }
+    if (/^[\w.-]+\.[\w.-]+/i.test(raw) || raw.startsWith('www.')) {
+      return `https://${raw}`;
     }
     return raw;
   }
@@ -2256,24 +4585,34 @@ export class App implements OnDestroy {
     window.alert('Support: support@clouddev.local');
   }
 
-  markSelfAttendance(sessionId: string): void {
+  markSelfAttendance(sessionId: string, status: 'present' | 'absent' = 'present'): void {
     this.attendanceNotice.set('');
     this.attendanceError.set('');
+    this.signingAttendanceSessionId.set(sessionId);
     this.http
       .post<{ message: string }>(
         `${this.apiBaseUrl}/attendance/self`,
-        { sessionId },
+        { sessionId, status },
         { headers: this.authHeaders() }
       )
       .subscribe({
         next: (response) => {
+          this.signingAttendanceSessionId.set(null);
           this.attendanceNotice.set(response.message);
           this.loadDashboard();
         },
         error: (err) => {
-          this.attendanceError.set(err?.error?.message ?? 'Impossible de signer la presence.');
+          this.signingAttendanceSessionId.set(null);
+          this.attendanceError.set(err?.error?.message ?? 'Impossible de mettre a jour l emargement.');
         }
       });
+  }
+
+  studentPlanningAttendanceLabel(status: AttendanceStatus): string {
+    if (status === 'present') return 'Present';
+    if (status === 'late') return 'En retard';
+    if (status === 'absent') return 'Absent';
+    return 'En attente';
   }
 
   markAttendanceForStudent(sessionId: string, studentId: number, status: AttendanceStatus): void {
@@ -2409,6 +4748,16 @@ export class App implements OnDestroy {
     return 'Emargement ferme';
   }
 
+  private planningAttendanceKey(date: string, slot: string): string {
+    const normalizeSlot = (value: string): string =>
+      value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/[–—]/g, '-');
+    return `${date.trim()}|${normalizeSlot(slot)}`;
+  }
+
   private formatCountdown(totalSeconds: number): string {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -2438,6 +4787,9 @@ export class App implements OnDestroy {
         this.adminTrainers.set(response.trainers ?? []);
         this.providers.set(response.providers ?? []);
         this.documents.set(response.documents ?? []);
+        this.adminSessionDocuments.set(response.adminSessionDocuments ?? { genericDocuments: [], studentDocuments: [] });
+        this.adminSessionValidationResults.set(response.adminSessionValidationResults ?? []);
+        this.adminValidationTests.set(response.adminValidationTests ?? []);
         if (response.role === 'admin') {
           this.loadCatalogFormations();
           this.loadCertificationCatalog();
@@ -2493,6 +4845,12 @@ export class App implements OnDestroy {
         if (!response.attendanceSessions?.length) {
           this.attendanceNotice.set('');
           this.attendanceError.set('');
+        }
+        if (
+          response.role === 'student'
+          && this.activeSection() !== 'sessions-student-detail'
+        ) {
+          this.activeSection.set('sessions-student');
         }
         this.dashboardLoading.set(false);
       },
@@ -2621,6 +4979,9 @@ interface DashboardResponse {
   students?: AdminPerson[];
   trainers?: AdminPerson[];
   providers?: ProviderRecord[];
+  adminSessionDocuments?: AdminSessionDocumentState;
+  adminSessionValidationResults?: AdminSessionValidationResult[];
+  adminValidationTests?: AdminValidationTestSummary[];
 }
 
 interface ResourceDocument {
@@ -2681,6 +5042,7 @@ interface AttendanceRecord {
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'pending';
 type UserRole = 'student' | 'trainer' | 'admin';
+type AdminWorkflowCategory = 'pre-inscription' | 'inscription' | 'en-formation' | 'cloture';
 type SectionKey = 'dashboard' | 'parcours' | 'planning' | 'mes-apprentis' | 'emargement' | 'ressources' | 'evaluations' | 'sessions' | 'sessions-detail' | 'sessions-student' | 'sessions-student-detail' | 'support' | 'formations' | 'formation-detail-admin' | 'formateurs' | 'prestataires' | 'apprentis' | 'planning-admin' | 'archives';
 
 interface AdminPerson {
@@ -2780,4 +5142,185 @@ interface ProviderRecord {
     vigilanceCertificate?: { url?: string };
     liabilityInsurance?: { url?: string };
   };
+}
+
+interface AdminFormationDocComplianceIssue {
+  documentLabel: string;
+  category: AdminWorkflowCategory;
+  categoryLabel: string;
+  scope: 'generic' | 'student' | 'trainer';
+  studentName?: string;
+  status: 'missing' | 'pending_signature' | 'rejected';
+  statusLabel: string;
+  isMandatory: boolean;
+}
+
+interface AdminFormationDocComplianceSummary {
+  formationId: string;
+  isUpToDate: boolean;
+  missingCount: number;
+  pendingSignatureCount: number;
+  rejectedCount: number;
+  mandatoryMissingCount: number;
+  totalIssueCount: number;
+  issues: AdminFormationDocComplianceIssue[];
+  categoryChips: { category: AdminWorkflowCategory; label: string; count: number; variant: 'warn' | 'ok' }[];
+}
+
+interface AdminFormationDocumentMatrix {
+  columns: ReadonlyArray<AdminFormationDocMatrixColumn>;
+  rows: AdminFormationDocumentMatrixRow[];
+}
+
+interface AdminFormationDocumentMatrixRow {
+  rowKey: string;
+  kind: 'apprentice' | 'trainer';
+  studentId: number | null;
+  name: string;
+  detail: string;
+  cells: Record<string, AdminFormationDocMatrixCell>;
+}
+
+interface AdminFormationDocMatrixColumn {
+  key: string;
+  label: string;
+  shortLabel: string;
+  category: AdminWorkflowCategory;
+  documentType: string;
+  scope: 'generic' | 'student';
+  keywords: string[];
+  mandatoryGeneric?: boolean;
+}
+
+interface AdminFormationDocMatrixCell {
+  status: string;
+  statusVariant: 'ok' | 'neutral' | 'warn' | 'danger' | 'na';
+  url: string | null;
+  docId: number | null;
+  signatureStatus: 'pending' | 'signed' | 'rejected' | null;
+  canUpload: boolean;
+  isNa: boolean;
+}
+
+interface AdminSessionDocumentGeneric {
+  id: number;
+  formationId: string;
+  sessionId: string;
+  category: AdminWorkflowCategory;
+  documentType: string;
+  title: string;
+  url: string;
+  isMandatory: boolean;
+  createdAt: string;
+}
+
+interface AdminSessionDocumentStudent {
+  id: number;
+  studentId: number;
+  formationId: string;
+  sessionId: string;
+  category: AdminWorkflowCategory;
+  documentType: string;
+  title: string;
+  url: string;
+  signatureStatus: 'pending' | 'signed' | 'rejected';
+  signedAt: string | null;
+  createdAt: string;
+}
+
+interface AdminSessionDocumentState {
+  genericDocuments: AdminSessionDocumentGeneric[];
+  studentDocuments: AdminSessionDocumentStudent[];
+}
+
+interface AdminSessionValidationResult {
+  id: number;
+  studentId: number;
+  formationId: string;
+  sessionId: string;
+  testId: number;
+  testTitle: string;
+  testLink: string;
+  maxScore: number;
+  score: number;
+  status: 'pending' | 'passed' | 'failed';
+  notes: string;
+  scoredAt: string;
+  sourceType?: string;
+}
+
+interface AdminValidationTestSummary {
+  id: number;
+  formationId: string;
+  sessionId: string;
+  title: string;
+  maxScore: number;
+  passThreshold: number;
+  isPublished: boolean;
+  sourceType: string;
+  questionCount: number;
+  assignedCount: number;
+  completedCount: number;
+  createdAt: string;
+}
+
+interface AdminValidationQuestionDraft {
+  prompt: string;
+  points: number;
+  options: { label: string; isCorrect: boolean }[];
+}
+
+interface AdminValidationTestDetail {
+  test: AdminValidationTestSummary;
+  questions: {
+    id: number;
+    sortOrder: number;
+    prompt: string;
+    points: number;
+    options: { id: number; sortOrder: number; label: string; isCorrect: boolean }[];
+  }[];
+  apprentices: {
+    resultId: number;
+    studentId: number;
+    studentName: string;
+    email: string;
+    score: number;
+    status: 'pending' | 'passed' | 'failed';
+    scoredAt: string;
+    notes: string;
+    attempts: {
+      id: number;
+      score: number;
+      maxScore: number;
+      status: 'pending' | 'passed' | 'failed';
+      answersJson: string;
+      answers: AdminValidationAnswerReview[];
+      submittedAt: string;
+    }[];
+  }[];
+}
+
+interface AdminValidationAnswerReview {
+  questionId: number;
+  prompt: string;
+  selectedOptionIds: number[];
+  selectedLabels: string[];
+  correctOptionIds: number[];
+  correctLabels: string[];
+  isCorrect: boolean;
+}
+
+interface StudentValidationTestTake {
+  id: number;
+  title: string;
+  maxScore: number;
+  passThreshold: number;
+  currentStatus: 'pending' | 'passed' | 'failed';
+  currentScore: number;
+  questions: {
+    id: number;
+    prompt: string;
+    points: number;
+    options: { id: number; label: string }[];
+  }[];
 }

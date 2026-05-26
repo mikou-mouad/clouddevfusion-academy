@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Data\IntranetData;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -18,6 +19,11 @@ final class IntranetController extends AbstractController
 {
     private static array $attendanceOverrides = [];
     private ?bool $sqlIntranetSchemaAvailable = null;
+
+    public function __construct(
+        private readonly Connection $dbConnection,
+    ) {
+    }
 
     #[Route('/{any}', name: 'preflight', methods: ['OPTIONS'], requirements: ['any' => '.+'])]
     public function preflight(): JsonResponse
@@ -94,7 +100,7 @@ final class IntranetController extends AbstractController
             }
         }
 
-        if ($student !== null && $student['password'] === $password) {
+        if ($student !== null && (string) ($student['password'] ?? '') === $password) {
             return $this->json([
                 'token' => $this->buildToken('student', (int) $student['id']),
                 'role' => 'student',
@@ -108,7 +114,7 @@ final class IntranetController extends AbstractController
         }
 
         foreach ($this->trainers() as $trainer) {
-            if (strtolower($trainer['email']) !== $email || $trainer['password'] !== $password) {
+            if (strtolower((string) ($trainer['email'] ?? '')) !== $email || (string) ($trainer['password'] ?? '') !== $password) {
                 continue;
             }
 
@@ -136,14 +142,14 @@ final class IntranetController extends AbstractController
         }
 
         if ($auth['role'] === 'student') {
-            return $this->buildStudentDashboard((int) $auth['id']);
+            return $this->buildStudentDashboard($this->resolveStudentIdFromAuthId((int) $auth['id']));
         }
 
         if ($auth['role'] === 'admin') {
             return $this->buildAdminDashboard((int) $auth['id']);
         }
 
-        return $this->buildTrainerDashboard((int) $auth['id']);
+        return $this->buildTrainerDashboard($this->resolveTrainerIdFromAuthId((int) $auth['id']));
     }
 
     #[Route('/admin/overview', name: 'admin_overview', methods: ['GET'])]
@@ -1537,25 +1543,32 @@ final class IntranetController extends AbstractController
         if ($auth === null || $auth['role'] !== 'student') {
             return $this->json(['message' => 'Unauthorized'], 401);
         }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
 
         $payload = json_decode($request->getContent(), true);
         $sessionId = trim((string) ($payload['sessionId'] ?? ''));
+        $status = trim((string) ($payload['status'] ?? 'present'));
         if ($sessionId === '') {
             return $this->json(['message' => 'Session invalide.'], 400);
+        }
+        if (!in_array($status, ['present', 'absent'], true)) {
+            return $this->json(['message' => 'Statut invalide.'], 400);
         }
         if (!$this->isAttendanceWindowOpen($sessionId)) {
             return $this->json(['message' => 'Emargement ferme pour cette session.'], 400);
         }
 
-        self::$attendanceOverrides[$this->attendanceKey($sessionId, (int) $auth['id'])] = [
+        self::$attendanceOverrides[$this->attendanceKey($sessionId, $studentId)] = [
             'sessionId' => $sessionId,
-            'studentId' => (int) $auth['id'],
-            'status' => 'present',
+            'studentId' => $studentId,
+            'status' => $status,
             'updatedAt' => date('Y-m-d H:i'),
         ];
-        $this->persistAttendanceOverride($sessionId, (int) $auth['id'], 'present');
+        $this->persistAttendanceOverride($sessionId, $studentId, $status);
 
-        return $this->json(['message' => 'Presence signee avec succes.']);
+        return $this->json([
+            'message' => $status === 'absent' ? 'Absence enregistree avec succes.' : 'Presence signee avec succes.',
+        ]);
     }
 
     #[Route('/trainer/resources', name: 'trainer_resources_create', methods: ['POST'])]
@@ -2001,6 +2014,845 @@ final class IntranetController extends AbstractController
         ]);
     }
 
+    #[Route('/admin/session-documents', name: 'admin_list_session_documents', methods: ['GET'])]
+    public function listAdminSessionDocuments(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+
+        $formationId = trim((string) $request->query->get('formationId', ''));
+
+        return $this->json($this->adminSessionDocuments($formationId !== '' ? $formationId : null));
+    }
+
+    #[Route('/admin/session-documents/generic', name: 'admin_create_session_document_generic', methods: ['POST'])]
+    public function createAdminSessionGenericDocument(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $formationId = trim((string) ($payload['formationId'] ?? $request->request->get('formationId', '')));
+        $sessionId = trim((string) ($payload['sessionId'] ?? $request->request->get('sessionId', '')));
+        $category = trim((string) ($payload['category'] ?? $request->request->get('category', '')));
+        $documentType = trim((string) ($payload['documentType'] ?? $request->request->get('documentType', '')));
+        $title = trim((string) ($payload['title'] ?? $request->request->get('title', '')));
+        $url = trim((string) ($payload['url'] ?? $request->request->get('url', '')));
+        $isMandatoryRaw = $payload['isMandatory'] ?? $request->request->get('isMandatory', true);
+        $isMandatory = filter_var($isMandatoryRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($isMandatory === null) {
+            $isMandatory = true;
+        }
+
+        /** @var UploadedFile|null $uploadedFile */
+        $uploadedFile = $request->files->get('file');
+        if (is_string($uploadedFile)) {
+            $uploadedFile = null;
+        }
+
+        if ($formationId === '' || $category === '' || $documentType === '' || $title === '') {
+            return $this->json(['message' => 'formationId, category, documentType et title sont requis.'], 400);
+        }
+        if ($url === '' && $uploadedFile === null) {
+            return $this->json(['message' => 'Ajoutez un lien ou un fichier.'], 400);
+        }
+
+        $allowedCategories = ['pre-inscription', 'inscription', 'en-formation', 'cloture'];
+        if (!in_array($category, $allowedCategories, true)) {
+            return $this->json(['message' => 'Categorie invalide.'], 400);
+        }
+
+        if ($uploadedFile !== null) {
+            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
+            if (!is_dir($resourcesDir)) {
+                mkdir($resourcesDir, 0775, true);
+            }
+
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+            $safeName = trim((string) $safeName, '-');
+            if ($safeName === '') {
+                $safeName = 'session-document';
+            }
+            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+            $uploadedFile->move($resourcesDir, $filename);
+            $url = '/uploads/intranet-session-documents/'.$filename;
+        }
+
+        try {
+            $this->db()->insert('session_documents_generic', [
+                'formation_id' => $formationId,
+                'session_id' => $sessionId !== '' ? $sessionId : null,
+                'category' => $category,
+                'document_type' => $documentType,
+                'title' => $title,
+                'url' => $url,
+                'is_mandatory' => $isMandatory,
+                'created_by_admin_id' => (int) $auth['id'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $exception) {
+            return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
+        }
+
+        return $this->json(['message' => 'Document generique ajoute.'], 201);
+    }
+
+    #[Route('/admin/session-documents/student', name: 'admin_create_session_document_student', methods: ['POST'])]
+    public function createAdminStudentDocument(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $studentIdRaw = $payload['studentId'] ?? $request->request->get('studentId', 0);
+        $applyToAllStudents = is_string($studentIdRaw) && strtolower(trim($studentIdRaw)) === 'all';
+        $studentId = $applyToAllStudents ? 0 : (int) $studentIdRaw;
+        $formationId = trim((string) ($payload['formationId'] ?? $request->request->get('formationId', '')));
+        $sessionId = trim((string) ($payload['sessionId'] ?? $request->request->get('sessionId', '')));
+        $category = trim((string) ($payload['category'] ?? $request->request->get('category', '')));
+        $documentType = trim((string) ($payload['documentType'] ?? $request->request->get('documentType', '')));
+        $title = trim((string) ($payload['title'] ?? $request->request->get('title', '')));
+        $url = trim((string) ($payload['url'] ?? $request->request->get('url', '')));
+
+        /** @var UploadedFile|null $uploadedFile */
+        $uploadedFile = $request->files->get('file');
+        if (is_string($uploadedFile)) {
+            $uploadedFile = null;
+        }
+
+        if ((!$applyToAllStudents && $studentId <= 0) || $formationId === '' || $category === '' || $documentType === '' || $title === '') {
+            return $this->json(['message' => 'studentId, formationId, category, documentType et title sont requis.'], 400);
+        }
+        if ($url === '' && $uploadedFile === null) {
+            return $this->json(['message' => 'Ajoutez un lien ou un fichier.'], 400);
+        }
+
+        $allowedCategories = ['pre-inscription', 'inscription', 'en-formation', 'cloture'];
+        if (!in_array($category, $allowedCategories, true)) {
+            return $this->json(['message' => 'Categorie invalide.'], 400);
+        }
+
+        if ($uploadedFile !== null) {
+            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
+            if (!is_dir($resourcesDir)) {
+                mkdir($resourcesDir, 0775, true);
+            }
+
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+            $safeName = trim((string) $safeName, '-');
+            if ($safeName === '') {
+                $safeName = 'student-document';
+            }
+            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+            $uploadedFile->move($resourcesDir, $filename);
+            $url = '/uploads/intranet-session-documents/'.$filename;
+        }
+
+        $studentIds = [];
+        if ($applyToAllStudents) {
+            $studentIds = array_map(
+                'intval',
+                $this->db()->fetchFirstColumn(
+                    'SELECT DISTINCT s.id
+                     FROM students s
+                     INNER JOIN class_enrollments ce ON ce.student_id = s.id
+                     INNER JOIN classes c ON c.id = ce.class_id
+                     WHERE c.formation_id = :formation_id
+                     ORDER BY s.id',
+                    ['formation_id' => $formationId]
+                )
+            );
+            if (count($studentIds) === 0) {
+                return $this->json(['message' => 'Aucun apprenti dans cette formation.'], 400);
+            }
+        } else {
+            $studentIds = [$studentId];
+        }
+
+        try {
+            $this->db()->beginTransaction();
+            $now = date('Y-m-d H:i:s');
+            $adminId = (int) $auth['id'];
+            $sessionValue = $sessionId !== '' ? $sessionId : null;
+            foreach ($studentIds as $sid) {
+                $this->db()->insert('student_documents', [
+                    'student_id' => $sid,
+                    'formation_id' => $formationId,
+                    'session_id' => $sessionValue,
+                    'category' => $category,
+                    'document_type' => $documentType,
+                    'title' => $title,
+                    'url' => $url,
+                    'source' => 'admin',
+                    'signature_status' => 'pending',
+                    'created_by_admin_id' => $adminId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+            $this->db()->commit();
+        } catch (\Throwable $exception) {
+            try {
+                $this->db()->rollBack();
+            } catch (\Throwable) {
+            }
+
+            return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
+        }
+
+        $count = count($studentIds);
+        $message = 1 === $count
+            ? 'Document etudiant ajoute.'
+            : sprintf('Document ajoute pour %d apprentis.', $count);
+
+        return $this->json(['message' => $message], 201);
+    }
+
+    #[Route('/admin/session-documents/student/{documentId}/sign', name: 'admin_mark_student_document_signed', methods: ['POST'])]
+    public function markStudentDocumentSigned(int $documentId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+
+        if ($documentId <= 0) {
+            return $this->json(['message' => 'Document invalide.'], 400);
+        }
+
+        $updated = $this->db()->update('student_documents', [
+            'signature_status' => 'signed',
+            'signed_at' => date('Y-m-d H:i:s'),
+            'signed_by_user_id' => (int) $auth['id'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ], ['id' => $documentId]);
+
+        if ($updated <= 0) {
+            return $this->json(['message' => 'Document introuvable.'], 404);
+        }
+
+        return $this->json(['message' => 'Document marque comme signe.']);
+    }
+
+    #[Route('/admin/session-validations', name: 'admin_list_session_validations', methods: ['GET'])]
+    public function listAdminSessionValidations(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow validations indisponible. Appliquez la migration.'], 400);
+        }
+
+        $formationId = trim((string) $request->query->get('formationId', ''));
+
+        return $this->json([
+            'validationResults' => $this->adminSessionValidationResults($formationId !== '' ? $formationId : null),
+            'validationTests' => $this->adminValidationTestsList($formationId !== '' ? $formationId : null),
+        ]);
+    }
+
+    #[Route('/admin/session-validations/tests', name: 'admin_create_validation_test', methods: ['POST'])]
+    public function createAdminValidationTest(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible. Appliquez la migration quiz.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $formationId = trim((string) ($payload['formationId'] ?? ''));
+        $sessionId = trim((string) ($payload['sessionId'] ?? ''));
+        $title = trim((string) ($payload['title'] ?? ''));
+        $passThreshold = (float) ($payload['passThreshold'] ?? 0.7);
+        $questions = $payload['questions'] ?? [];
+
+        if ($formationId === '' || $title === '') {
+            return $this->json(['message' => 'formationId et title sont requis.'], 400);
+        }
+        if (!is_array($questions) || count($questions) === 0) {
+            return $this->json(['message' => 'Ajoutez au moins une question avec des reponses.'], 400);
+        }
+        if ($passThreshold <= 0 || $passThreshold > 1) {
+            $passThreshold = 0.7;
+        }
+
+        $totalPoints = 0.0;
+        foreach ($questions as $index => $question) {
+            if (!is_array($question)) {
+                return $this->json(['message' => sprintf('Question %d invalide.', $index + 1)], 400);
+            }
+            $prompt = trim((string) ($question['prompt'] ?? ''));
+            $options = $question['options'] ?? [];
+            if ($prompt === '' || !is_array($options) || count($options) < 2) {
+                return $this->json(['message' => sprintf('Question %d : texte et au moins 2 reponses requis.', $index + 1)], 400);
+            }
+            $hasCorrect = false;
+            foreach ($options as $option) {
+                if (is_array($option) && !empty($option['isCorrect'])) {
+                    $hasCorrect = true;
+                    break;
+                }
+            }
+            if (!$hasCorrect) {
+                return $this->json(['message' => sprintf('Question %d : cochez au moins une bonne reponse.', $index + 1)], 400);
+            }
+            $totalPoints += max(0, (float) ($question['points'] ?? 1));
+        }
+        if ($totalPoints <= 0) {
+            $totalPoints = (float) count($questions);
+        }
+
+        try {
+            $this->db()->beginTransaction();
+            $now = date('Y-m-d H:i:s');
+            $this->db()->insert('session_validation_tests', [
+                'formation_id' => $formationId,
+                'session_id' => $sessionId !== '' ? $sessionId : null,
+                'title' => $title,
+                'external_link' => null,
+                'max_score' => $totalPoints,
+                'pass_threshold' => $passThreshold,
+                'is_published' => true,
+                'source_type' => 'intranet',
+                'created_by_admin_id' => (int) $auth['id'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], [
+                'is_published' => ParameterType::BOOLEAN,
+            ]);
+            $testId = (int) $this->db()->lastInsertId();
+
+            foreach ($questions as $qIndex => $question) {
+                $this->db()->insert('validation_questions', [
+                    'validation_test_id' => $testId,
+                    'sort_order' => $qIndex,
+                    'prompt' => trim((string) ($question['prompt'])),
+                    'points' => max(0, (float) ($question['points'] ?? 1)),
+                ]);
+                $questionId = (int) $this->db()->lastInsertId();
+                $options = is_array($question['options'] ?? null) ? $question['options'] : [];
+                foreach ($options as $oIndex => $option) {
+                    if (!is_array($option)) {
+                        continue;
+                    }
+                    $label = trim((string) ($option['label'] ?? ''));
+                    if ($label === '') {
+                        continue;
+                    }
+                    $isCorrect = filter_var($option['isCorrect'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $this->db()->insert('validation_question_options', [
+                        'question_id' => $questionId,
+                        'sort_order' => $oIndex,
+                        'label' => $label,
+                        'is_correct' => $isCorrect,
+                    ], [
+                        'is_correct' => ParameterType::BOOLEAN,
+                    ]);
+                }
+            }
+
+            $this->assignValidationTestToFormationApprentices($testId, $formationId);
+            $this->db()->commit();
+        } catch (\Throwable $exception) {
+            try {
+                $this->db()->rollBack();
+            } catch (\Throwable) {
+            }
+
+            return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
+        }
+
+        return $this->json([
+            'message' => 'Test de validation cree et affecte aux apprentis de la session.',
+            'testId' => $testId,
+        ], 201);
+    }
+
+    #[Route('/admin/session-validations/tests/{testId}', name: 'admin_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
+    public function getAdminValidationTest(int $testId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible.'], 400);
+        }
+        if ($testId <= 0) {
+            return $this->json(['message' => 'Test invalide.'], 400);
+        }
+
+        $detail = $this->adminValidationTestDetail($testId);
+        if ($detail === null) {
+            return $this->json(['message' => 'Test introuvable.'], 404);
+        }
+
+        return $this->json($detail);
+    }
+
+    #[Route('/student/validation-tests/{testId}', name: 'student_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
+    public function getStudentValidationTest(int $testId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'student') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible.'], 400);
+        }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
+        if ($testId <= 0 || $studentId <= 0) {
+            return $this->json(['message' => 'Test invalide.'], 400);
+        }
+
+        if (!$this->isFormationValidationPeriodOpenForTest($testId)) {
+            return $this->json(['message' => 'Le delai pour passer ce test de validation est termine.'], 403);
+        }
+
+        if ($this->studentValidationTestAlreadyCompleted($testId, $studentId)) {
+            return $this->json(['message' => 'Vous avez deja passe ce test.'], 403);
+        }
+
+        $test = $this->studentValidationTestForTaking($testId, $studentId);
+        if ($test === null) {
+            return $this->json(['message' => 'Test introuvable ou non autorise.'], 404);
+        }
+
+        return $this->json(['test' => $test]);
+    }
+
+    #[Route('/student/validation-tests/{testId}/submit', name: 'student_submit_validation_test', methods: ['POST'], requirements: ['testId' => '\d+'])]
+    public function submitStudentValidationTest(int $testId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'student') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible.'], 400);
+        }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
+        if ($testId <= 0 || $studentId <= 0) {
+            return $this->json(['message' => 'Test invalide.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+        $answers = $payload['answers'] ?? [];
+        if (!is_array($answers)) {
+            return $this->json(['message' => 'Reponses invalides.'], 400);
+        }
+
+        if (!$this->isFormationValidationPeriodOpenForTest($testId)) {
+            return $this->json(['message' => 'Le delai pour passer ce test de validation est termine.'], 403);
+        }
+
+        if ($this->studentValidationTestAlreadyCompleted($testId, $studentId)) {
+            return $this->json(['message' => 'Vous avez deja passe ce test.'], 403);
+        }
+
+        $graded = $this->gradeAndStoreValidationAttempt($testId, $studentId, $answers);
+        if ($graded === null) {
+            return $this->json(['message' => 'Test introuvable ou non autorise.'], 404);
+        }
+
+        return $this->json([
+            'message' => 'Test envoye.',
+            'result' => $graded,
+        ]);
+    }
+
+    #[Route('/admin/session-validations/result', name: 'admin_save_session_validation_result', methods: ['POST'])]
+    public function saveAdminSessionValidationResult(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow validations indisponible. Appliquez la migration.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $studentId = (int) ($payload['studentId'] ?? 0);
+        $formationId = trim((string) ($payload['formationId'] ?? ''));
+        $sessionId = trim((string) ($payload['sessionId'] ?? ''));
+        $testTitle = trim((string) ($payload['testTitle'] ?? 'Test de validation'));
+        $testLink = trim((string) ($payload['testLink'] ?? ''));
+        $score = (float) ($payload['score'] ?? 0);
+        $maxScore = (float) ($payload['maxScore'] ?? 100);
+        $notes = trim((string) ($payload['notes'] ?? ''));
+
+        if ($studentId <= 0 || $formationId === '') {
+            return $this->json(['message' => 'studentId et formationId sont requis.'], 400);
+        }
+
+        $status = 'pending';
+        if ($score > 0 && $maxScore > 0) {
+            $status = ($score / $maxScore) >= 0.7 ? 'passed' : 'failed';
+        }
+
+        try {
+            $testId = $this->db()->fetchOne(
+                'SELECT id FROM session_validation_tests
+                 WHERE formation_id = :formation_id
+                   AND COALESCE(session_id, \'\') = :session_id
+                   AND title = :title
+                 LIMIT 1',
+                [
+                    'formation_id' => $formationId,
+                    'session_id' => $sessionId,
+                    'title' => $testTitle,
+                ]
+            );
+
+            if ($testId === false) {
+                $this->db()->insert('session_validation_tests', [
+                    'formation_id' => $formationId,
+                    'session_id' => $sessionId !== '' ? $sessionId : null,
+                    'title' => $testTitle,
+                    'external_link' => $testLink !== '' ? $testLink : null,
+                    'max_score' => $maxScore,
+                    'created_by_admin_id' => (int) $auth['id'],
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $testId = (int) $this->db()->lastInsertId();
+            } else {
+                $testId = (int) $testId;
+                $this->db()->update('session_validation_tests', [
+                    'external_link' => $testLink !== '' ? $testLink : null,
+                    'max_score' => $maxScore,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ], ['id' => $testId]);
+            }
+
+            $this->db()->executeStatement(
+                'INSERT INTO student_validation_results (validation_test_id, student_id, score, status, scored_at, scored_by_admin_id, notes, created_at, updated_at)
+                 VALUES (:validation_test_id, :student_id, :score, :status, NOW(), :scored_by_admin_id, :notes, NOW(), NOW())
+                 ON CONFLICT (validation_test_id, student_id) DO UPDATE
+                 SET score = EXCLUDED.score,
+                     status = EXCLUDED.status,
+                     scored_at = EXCLUDED.scored_at,
+                     scored_by_admin_id = EXCLUDED.scored_by_admin_id,
+                     notes = EXCLUDED.notes,
+                     updated_at = NOW()',
+                [
+                    'validation_test_id' => $testId,
+                    'student_id' => $studentId,
+                    'score' => $score,
+                    'status' => $status,
+                    'scored_by_admin_id' => (int) $auth['id'],
+                    'notes' => $notes !== '' ? $notes : null,
+                ]
+            );
+        } catch (\Throwable $exception) {
+            return $this->json(['message' => sprintf('Enregistrement impossible: %s', $exception->getMessage())], 500);
+        }
+
+        return $this->json(['message' => 'Resultat de validation enregistre.']);
+    }
+
+    #[Route('/student/session-documents/{documentId}/sign-upload', name: 'student_sign_upload_document', methods: ['POST'])]
+    public function studentSignAndUploadDocument(int $documentId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'student') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+        if ($documentId <= 0) {
+            return $this->json(['message' => 'Document invalide.'], 400);
+        }
+
+        /** @var UploadedFile|null $uploadedFile */
+        $uploadedFile = $request->files->get('file');
+        if (is_string($uploadedFile) || $uploadedFile === null) {
+            return $this->json(['message' => 'Ajoutez le document signe a uploader.'], 400);
+        }
+
+        $existing = $this->db()->fetchAssociative(
+            'SELECT id, student_id FROM student_documents WHERE id = :id LIMIT 1',
+            ['id' => $documentId]
+        );
+        if (!is_array($existing)) {
+            return $this->json(['message' => 'Document introuvable.'], 404);
+        }
+        if ((int) ($existing['student_id'] ?? 0) !== $studentId) {
+            return $this->json(['message' => 'Document non autorise pour cet etudiant.'], 403);
+        }
+
+        $uploadDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-student-signed-documents';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+        }
+        $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+        $safeName = trim((string) $safeName, '-');
+        if ($safeName === '') {
+            $safeName = 'signed-document';
+        }
+        $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+        $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+        $uploadedFile->move($uploadDir, $filename);
+        $url = '/uploads/intranet-student-signed-documents/'.$filename;
+
+        $updated = $this->db()->update('student_documents', [
+            'url' => $url,
+            'source' => 'student',
+            'signature_status' => 'signed',
+            'signed_at' => date('Y-m-d H:i:s'),
+            'signed_by_user_id' => (int) $auth['id'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ], ['id' => $documentId]);
+        if ($updated <= 0) {
+            return $this->json(['message' => 'Mise a jour document impossible.'], 500);
+        }
+
+        return $this->json(['message' => 'Document signe et recharge avec succes.']);
+    }
+
+    #[Route('/admin/session-validations/sync-by-email', name: 'admin_sync_session_validation_scores_by_email', methods: ['POST'])]
+    public function syncAdminSessionValidationScoresByEmail(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow validations indisponible. Appliquez la migration.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $formationId = trim((string) ($payload['formationId'] ?? ''));
+        $sessionId = trim((string) ($payload['sessionId'] ?? ''));
+        $testTitle = trim((string) ($payload['testTitle'] ?? 'Test de positionnement'));
+        $testLink = trim((string) ($payload['testLink'] ?? ''));
+        $maxScore = (float) ($payload['maxScore'] ?? 100);
+
+        if ($formationId === '' || $testLink === '') {
+            return $this->json(['message' => 'formationId et testLink sont requis.'], 400);
+        }
+        if (!preg_match('#^https?://#i', $testLink)) {
+            return $this->json(['message' => 'Le lien testLink doit etre une URL http(s).'], 400);
+        }
+        if ($maxScore <= 0) {
+            $maxScore = 100;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 15,
+                'header' => "Accept: application/json\r\nUser-Agent: CloudDev-Intranet/1.0\r\n",
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ],
+        ]);
+        $raw = @file_get_contents($testLink, false, $context);
+        if ($raw === false || trim($raw) === '') {
+            return $this->json(['message' => 'Impossible de recuperer les resultats depuis le site test.'], 400);
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return $this->json(['message' => 'Le site test doit renvoyer du JSON.'], 400);
+        }
+
+        $rows = $this->extractExternalScoreRowsByEmail($decoded);
+        if (count($rows) === 0) {
+            return $this->json(['message' => 'Aucun score exploitable trouve (email + score).'], 400);
+        }
+
+        $students = $this->db()->fetchAllAssociative(
+            'SELECT s.id, s.email
+             FROM students s
+             INNER JOIN class_enrollments ce ON ce.student_id = s.id
+             INNER JOIN classes c ON c.id = ce.class_id
+             WHERE c.formation_id = :formation_id',
+            ['formation_id' => $formationId]
+        );
+        $studentIdsByEmail = [];
+        foreach ($students as $student) {
+            $email = strtolower(trim((string) ($student['email'] ?? '')));
+            if ($email === '') {
+                continue;
+            }
+            $studentIdsByEmail[$email] = (int) ($student['id'] ?? 0);
+        }
+
+        if (count($studentIdsByEmail) === 0) {
+            return $this->json(['message' => 'Aucun apprenti trouve pour cette formation.'], 400);
+        }
+
+        try {
+            $testId = $this->db()->fetchOne(
+                'SELECT id FROM session_validation_tests
+                 WHERE formation_id = :formation_id
+                   AND COALESCE(session_id, \'\') = :session_id
+                   AND title = :title
+                 LIMIT 1',
+                [
+                    'formation_id' => $formationId,
+                    'session_id' => $sessionId,
+                    'title' => $testTitle,
+                ]
+            );
+            if ($testId === false) {
+                $this->db()->insert('session_validation_tests', [
+                    'formation_id' => $formationId,
+                    'session_id' => $sessionId !== '' ? $sessionId : null,
+                    'title' => $testTitle,
+                    'external_link' => $testLink,
+                    'max_score' => $maxScore,
+                    'created_by_admin_id' => (int) $auth['id'],
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $testId = (int) $this->db()->lastInsertId();
+            } else {
+                $testId = (int) $testId;
+                $this->db()->update('session_validation_tests', [
+                    'external_link' => $testLink,
+                    'max_score' => $maxScore,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ], ['id' => $testId]);
+            }
+        } catch (\Throwable $exception) {
+            return $this->json(['message' => sprintf('Preparation du test impossible: %s', $exception->getMessage())], 500);
+        }
+
+        $synced = 0;
+        $unmatched = 0;
+        foreach ($rows as $row) {
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            $score = (float) ($row['score'] ?? 0);
+            if ($email === '' || !array_key_exists($email, $studentIdsByEmail)) {
+                ++$unmatched;
+                continue;
+            }
+            $studentId = (int) $studentIdsByEmail[$email];
+            $status = ($score / $maxScore) >= 0.7 ? 'passed' : 'failed';
+            try {
+                $this->db()->executeStatement(
+                    'INSERT INTO student_validation_results (validation_test_id, student_id, score, status, scored_at, scored_by_admin_id, notes, created_at, updated_at)
+                     VALUES (:validation_test_id, :student_id, :score, :status, NOW(), :scored_by_admin_id, :notes, NOW(), NOW())
+                     ON CONFLICT (validation_test_id, student_id) DO UPDATE
+                     SET score = EXCLUDED.score,
+                         status = EXCLUDED.status,
+                         scored_at = EXCLUDED.scored_at,
+                         scored_by_admin_id = EXCLUDED.scored_by_admin_id,
+                         notes = EXCLUDED.notes,
+                         updated_at = NOW()',
+                    [
+                        'validation_test_id' => $testId,
+                        'student_id' => $studentId,
+                        'score' => $score,
+                        'status' => $status,
+                        'scored_by_admin_id' => (int) $auth['id'],
+                        'notes' => 'Sync auto par email',
+                    ]
+                );
+                ++$synced;
+            } catch (\Throwable) {
+                ++$unmatched;
+            }
+        }
+
+        return $this->json([
+            'message' => sprintf('Sync terminee: %d note(s) importee(s), %d email(s) sans correspondance.', $synced, $unmatched),
+            'synced' => $synced,
+            'unmatched' => $unmatched,
+            'sourceRows' => count($rows),
+        ]);
+    }
+
+
+    /**
+     * @param mixed $decoded
+     * @return array<int, array{email:string, score:float}>
+     */
+    private function extractExternalScoreRowsByEmail(mixed $decoded): array
+    {
+        $items = [];
+        if (is_array($decoded) && array_is_list($decoded)) {
+            $items = $decoded;
+        } elseif (is_array($decoded) && isset($decoded['results']) && is_array($decoded['results'])) {
+            $items = $decoded['results'];
+        } elseif (is_array($decoded) && isset($decoded['data']) && is_array($decoded['data'])) {
+            $items = $decoded['data'];
+        } elseif (is_array($decoded) && isset($decoded['rows']) && is_array($decoded['rows'])) {
+            $items = $decoded['rows'];
+        }
+
+        $rows = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $email = strtolower(trim((string) ($item['email'] ?? $item['mail'] ?? $item['userEmail'] ?? '')));
+            $scoreRaw = $item['score'] ?? $item['note'] ?? $item['result'] ?? null;
+            if ($email === '' || !is_numeric($scoreRaw)) {
+                continue;
+            }
+            $rows[] = ['email' => $email, 'score' => (float) $scoreRaw];
+        }
+
+        return $rows;
+    }
+
     #[Route('/attendance/window/open', name: 'attendance_window_open', methods: ['POST'])]
     public function openAttendanceWindow(Request $request): JsonResponse
     {
@@ -2171,6 +3023,9 @@ final class IntranetController extends AbstractController
             'formations' => $studentFormations,
             'attendanceSessions' => $this->buildAttendanceSessionsForStudent($studentId),
             'documents' => $this->documentsForStudent($studentId),
+            'adminSessionDocuments' => $this->studentSessionDocuments($studentId),
+            'adminSessionValidationResults' => $this->studentSessionValidationResults($studentId),
+            'adminValidationTests' => $this->studentValidationTestsList($studentId),
         ]);
     }
 
@@ -2329,6 +3184,9 @@ final class IntranetController extends AbstractController
             'formations' => $this->formations(true),
             'attendanceSessions' => $this->buildAllAttendanceSessions(),
             'documents' => $this->documentsForAdmin(),
+            'adminSessionDocuments' => $this->adminSessionDocuments(),
+            'adminSessionValidationResults' => $this->adminSessionValidationResults(),
+            'adminValidationTests' => $this->adminValidationTestsList(null),
             'providers' => array_values((array) ($this->loadAdminState()['providers'] ?? [])),
         ]);
     }
@@ -2385,7 +3243,7 @@ final class IntranetController extends AbstractController
                     'date' => $slot['date'],
                     'slot' => $slot['slot'],
                     'topic' => $slot['topic'],
-                    'canSelfSign' => ($record === null || $record['status'] !== 'present') && $this->isAttendanceWindowOpen($sessionId),
+                    'canSelfSign' => $this->isAttendanceWindowOpen($sessionId),
                     'attendanceWindow' => $this->attendanceWindowForSession($sessionId),
                     'records' => [
                         [
@@ -3065,10 +3923,7 @@ final class IntranetController extends AbstractController
 
     private function db(): Connection
     {
-        /** @var Connection $connection */
-        $connection = $this->container->get('doctrine.dbal.default_connection');
-
-        return $connection;
+        return $this->dbConnection;
     }
 
     private function isSqlIntranetSchemaAvailable(): bool
@@ -3092,6 +3947,151 @@ final class IntranetController extends AbstractController
         return $this->sqlIntranetSchemaAvailable;
     }
 
+    private function isAdminWorkflowSchemaAvailable(): bool
+    {
+        if (!$this->isSqlIntranetSchemaAvailable()) {
+            return false;
+        }
+
+        try {
+            $this->db()->executeQuery('SELECT 1 FROM session_documents_generic LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM student_documents LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM session_validation_tests LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM student_validation_results LIMIT 1');
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function adminSessionDocuments(?string $formationId = null): array
+    {
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return [
+                'genericDocuments' => [],
+                'studentDocuments' => [],
+            ];
+        }
+
+        $genericSql = 'SELECT id, formation_id, session_id, category, document_type, title, url, is_mandatory, created_at
+                       FROM session_documents_generic';
+        $studentSql = 'SELECT id, student_id, formation_id, session_id, category, document_type, title, url, signature_status, signed_at, created_at
+                       FROM student_documents';
+        $params = [];
+        if ($formationId !== null && $formationId !== '') {
+            $genericSql .= ' WHERE formation_id = :formation_id';
+            $studentSql .= ' WHERE formation_id = :formation_id';
+            $params['formation_id'] = $formationId;
+        }
+        $genericSql .= ' ORDER BY created_at DESC';
+        $studentSql .= ' ORDER BY created_at DESC';
+
+        $genericRows = $this->db()->fetchAllAssociative($genericSql, $params);
+        $studentRows = $this->db()->fetchAllAssociative($studentSql, $params);
+
+        return [
+            'genericDocuments' => array_map(static fn(array $row): array => [
+                'id' => (int) ($row['id'] ?? 0),
+                'formationId' => (string) ($row['formation_id'] ?? ''),
+                'sessionId' => (string) ($row['session_id'] ?? ''),
+                'category' => (string) ($row['category'] ?? ''),
+                'documentType' => (string) ($row['document_type'] ?? ''),
+                'title' => (string) ($row['title'] ?? ''),
+                'url' => (string) ($row['url'] ?? ''),
+                'isMandatory' => (bool) ($row['is_mandatory'] ?? false),
+                'createdAt' => (string) ($row['created_at'] ?? ''),
+            ], $genericRows),
+            'studentDocuments' => array_map(static fn(array $row): array => [
+                'id' => (int) ($row['id'] ?? 0),
+                'studentId' => (int) ($row['student_id'] ?? 0),
+                'formationId' => (string) ($row['formation_id'] ?? ''),
+                'sessionId' => (string) ($row['session_id'] ?? ''),
+                'category' => (string) ($row['category'] ?? ''),
+                'documentType' => (string) ($row['document_type'] ?? ''),
+                'title' => (string) ($row['title'] ?? ''),
+                'url' => (string) ($row['url'] ?? ''),
+                'signatureStatus' => (string) ($row['signature_status'] ?? 'pending'),
+                'signedAt' => (string) ($row['signed_at'] ?? ''),
+                'createdAt' => (string) ($row['created_at'] ?? ''),
+            ], $studentRows),
+        ];
+    }
+
+    private function adminSessionValidationResults(?string $formationId = null): array
+    {
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return [];
+        }
+
+        $sql = 'SELECT r.id, r.student_id, r.score, r.status, r.scored_at, r.notes,
+                       t.id AS test_id, t.formation_id, t.session_id, t.title AS test_title, t.external_link, t.max_score, t.source_type
+                FROM student_validation_results r
+                INNER JOIN session_validation_tests t ON t.id = r.validation_test_id';
+        $params = [];
+        if ($formationId !== null && $formationId !== '') {
+            $sql .= ' WHERE t.formation_id = :formation_id';
+            $params['formation_id'] = $formationId;
+        }
+        $sql .= ' ORDER BY r.scored_at DESC NULLS LAST, r.id DESC';
+
+        $rows = $this->db()->fetchAllAssociative($sql, $params);
+
+        return array_map(static fn(array $row): array => [
+            'id' => (int) ($row['id'] ?? 0),
+            'studentId' => (int) ($row['student_id'] ?? 0),
+            'formationId' => (string) ($row['formation_id'] ?? ''),
+            'sessionId' => (string) ($row['session_id'] ?? ''),
+            'testId' => (int) ($row['test_id'] ?? 0),
+            'testTitle' => (string) ($row['test_title'] ?? ''),
+            'testLink' => (string) ($row['external_link'] ?? ''),
+            'maxScore' => (float) ($row['max_score'] ?? 0),
+            'score' => (float) ($row['score'] ?? 0),
+            'status' => (string) ($row['status'] ?? 'pending'),
+            'sourceType' => (string) ($row['source_type'] ?? 'intranet'),
+            'notes' => (string) ($row['notes'] ?? ''),
+            'scoredAt' => (string) ($row['scored_at'] ?? ''),
+        ], $rows);
+    }
+
+    private function studentSessionDocuments(int $studentId): array
+    {
+        $formationIds = $this->formationIdsForStudent($studentId);
+        if (count($formationIds) === 0) {
+            return ['genericDocuments' => [], 'studentDocuments' => []];
+        }
+
+        $all = $this->adminSessionDocuments();
+        $generic = array_values(array_filter(
+            (array) ($all['genericDocuments'] ?? []),
+            static fn(array $item): bool => in_array((string) ($item['formationId'] ?? ''), $formationIds, true)
+        ));
+        $studentDocs = array_values(array_filter(
+            (array) ($all['studentDocuments'] ?? []),
+            static fn(array $item): bool => in_array((string) ($item['formationId'] ?? ''), $formationIds, true)
+                && (int) ($item['studentId'] ?? 0) === $studentId
+        ));
+
+        return [
+            'genericDocuments' => $generic,
+            'studentDocuments' => $studentDocs,
+        ];
+    }
+
+    private function studentSessionValidationResults(int $studentId): array
+    {
+        $formationIds = $this->formationIdsForStudent($studentId);
+        if (count($formationIds) === 0) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->adminSessionValidationResults(),
+            static fn(array $item): bool => in_array((string) ($item['formationId'] ?? ''), $formationIds, true)
+                && (int) ($item['studentId'] ?? 0) === $studentId
+        ));
+    }
+
     private function trainerById(int $trainerId): ?array
     {
         foreach ($this->trainers() as $trainer) {
@@ -3112,6 +4112,44 @@ final class IntranetController extends AbstractController
         }
 
         return null;
+    }
+
+    private function resolveStudentIdFromAuthId(int $authId): int
+    {
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $studentId = $this->db()->fetchOne(
+                    'SELECT id FROM students WHERE user_id = :user_id LIMIT 1',
+                    ['user_id' => $authId]
+                );
+                if ($studentId !== false) {
+                    return (int) $studentId;
+                }
+            } catch (\Throwable) {
+                // Fallback to legacy token id behavior.
+            }
+        }
+
+        return $authId;
+    }
+
+    private function resolveTrainerIdFromAuthId(int $authId): int
+    {
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $trainerId = $this->db()->fetchOne(
+                    'SELECT id FROM trainers WHERE user_id = :user_id LIMIT 1',
+                    ['user_id' => $authId]
+                );
+                if ($trainerId !== false) {
+                    return (int) $trainerId;
+                }
+            } catch (\Throwable) {
+                // Fallback to legacy token id behavior.
+            }
+        }
+
+        return $authId;
     }
 
     private function slugify(string $value): string
@@ -3646,5 +4684,557 @@ final class IntranetController extends AbstractController
         ]);
 
         return (int) $connection->lastInsertId();
+    }
+
+    private function isValidationQuizSchemaAvailable(): bool
+    {
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return false;
+        }
+
+        try {
+            $this->db()->executeQuery('SELECT 1 FROM validation_questions LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM student_validation_attempts LIMIT 1');
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function studentDbIdsForFormation(string $formationId): array
+    {
+        return array_map(
+            'intval',
+            $this->db()->fetchFirstColumn(
+                'SELECT DISTINCT s.id
+                 FROM students s
+                 INNER JOIN class_enrollments ce ON ce.student_id = s.id
+                 INNER JOIN classes c ON c.id = ce.class_id
+                 WHERE c.formation_id = :formation_id
+                 ORDER BY s.id',
+                ['formation_id' => $formationId]
+            )
+        );
+    }
+
+    private function assignValidationTestToFormationApprentices(int $testId, string $formationId): void
+    {
+        foreach ($this->studentDbIdsForFormation($formationId) as $studentId) {
+            if ($studentId <= 0) {
+                continue;
+            }
+            $this->db()->executeStatement(
+                'INSERT INTO student_validation_results (validation_test_id, student_id, score, status, scored_at, scored_by_admin_id, notes, created_at, updated_at)
+                 VALUES (:validation_test_id, :student_id, 0, \'pending\', NULL, NULL, NULL, NOW(), NOW())
+                 ON CONFLICT (validation_test_id, student_id) DO NOTHING',
+                [
+                    'validation_test_id' => $testId,
+                    'student_id' => $studentId,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Tests QCM intranet affectes a un apprenti (pour son tableau de bord).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function studentValidationTestsList(int $studentId): array
+    {
+        if ($studentId <= 0 || !$this->isValidationQuizSchemaAvailable()) {
+            return [];
+        }
+
+        $rows = $this->db()->fetchAllAssociative(
+            'SELECT t.id, t.formation_id, t.session_id, t.title, t.max_score, t.pass_threshold, t.is_published, t.source_type, t.created_at,
+                    (SELECT COUNT(*) FROM validation_questions q WHERE q.validation_test_id = t.id) AS question_count,
+                    r.status AS student_status, r.score AS student_score
+             FROM session_validation_tests t
+             INNER JOIN student_validation_results r ON r.validation_test_id = t.id AND r.student_id = :student_id
+             WHERE t.source_type = \'intranet\' AND t.is_published = TRUE
+             ORDER BY t.created_at DESC, t.id DESC',
+            ['student_id' => $studentId]
+        );
+
+        $tests = [];
+        foreach ($rows as $row) {
+            $questionCount = (int) ($row['question_count'] ?? 0);
+            if ($questionCount <= 0) {
+                continue;
+            }
+            $tests[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'formationId' => (string) ($row['formation_id'] ?? ''),
+                'sessionId' => (string) ($row['session_id'] ?? ''),
+                'title' => (string) ($row['title'] ?? ''),
+                'maxScore' => (float) ($row['max_score'] ?? 0),
+                'passThreshold' => (float) ($row['pass_threshold'] ?? 0.7),
+                'isPublished' => (bool) ($row['is_published'] ?? true),
+                'sourceType' => (string) ($row['source_type'] ?? 'intranet'),
+                'questionCount' => $questionCount,
+                'assignedCount' => 1,
+                'completedCount' => (string) ($row['student_status'] ?? 'pending') !== 'pending' ? 1 : 0,
+                'createdAt' => (string) ($row['created_at'] ?? ''),
+            ];
+        }
+
+        return $tests;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function adminValidationTestsList(?string $formationId): array
+    {
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return [];
+        }
+
+        $sql = 'SELECT t.id, t.formation_id, t.session_id, t.title, t.max_score, t.pass_threshold, t.is_published, t.source_type, t.created_at,
+                       (SELECT COUNT(*) FROM validation_questions q WHERE q.validation_test_id = t.id) AS question_count,
+                       (SELECT COUNT(*) FROM student_validation_results r WHERE r.validation_test_id = t.id) AS assigned_count,
+                       (SELECT COUNT(*) FROM student_validation_results r WHERE r.validation_test_id = t.id AND r.status <> \'pending\') AS completed_count
+                FROM session_validation_tests t';
+        $params = [];
+        if ($formationId !== null && $formationId !== '') {
+            $sql .= ' WHERE t.formation_id = :formation_id';
+            $params['formation_id'] = $formationId;
+        }
+        $sql .= ' ORDER BY t.created_at DESC, t.id DESC';
+
+        $rows = $this->db()->fetchAllAssociative($sql, $params);
+
+        return array_map(static fn(array $row): array => [
+            'id' => (int) ($row['id'] ?? 0),
+            'formationId' => (string) ($row['formation_id'] ?? ''),
+            'sessionId' => (string) ($row['session_id'] ?? ''),
+            'title' => (string) ($row['title'] ?? ''),
+            'maxScore' => (float) ($row['max_score'] ?? 0),
+            'passThreshold' => (float) ($row['pass_threshold'] ?? 0.7),
+            'isPublished' => (bool) ($row['is_published'] ?? true),
+            'sourceType' => (string) ($row['source_type'] ?? 'intranet'),
+            'questionCount' => (int) ($row['question_count'] ?? 0),
+            'assignedCount' => (int) ($row['assigned_count'] ?? 0),
+            'completedCount' => (int) ($row['completed_count'] ?? 0),
+            'createdAt' => (string) ($row['created_at'] ?? ''),
+        ], $rows);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function adminValidationTestDetail(int $testId): ?array
+    {
+        $testRow = $this->db()->fetchAssociative(
+            'SELECT id, formation_id, session_id, title, max_score, pass_threshold, is_published, source_type, created_at
+             FROM session_validation_tests WHERE id = :id',
+            ['id' => $testId]
+        );
+        if (!is_array($testRow)) {
+            return null;
+        }
+
+        $questions = $this->db()->fetchAllAssociative(
+            'SELECT id, sort_order, prompt, points FROM validation_questions WHERE validation_test_id = :test_id ORDER BY sort_order, id',
+            ['test_id' => $testId]
+        );
+        $questionPayload = [];
+        foreach ($questions as $question) {
+            $questionId = (int) ($question['id'] ?? 0);
+            $options = $this->db()->fetchAllAssociative(
+                'SELECT id, sort_order, label, is_correct FROM validation_question_options WHERE question_id = :question_id ORDER BY sort_order, id',
+                ['question_id' => $questionId]
+            );
+            $questionPayload[] = [
+                'id' => $questionId,
+                'sortOrder' => (int) ($question['sort_order'] ?? 0),
+                'prompt' => (string) ($question['prompt'] ?? ''),
+                'points' => (float) ($question['points'] ?? 0),
+                'options' => array_map(static fn(array $opt): array => [
+                    'id' => (int) ($opt['id'] ?? 0),
+                    'sortOrder' => (int) ($opt['sort_order'] ?? 0),
+                    'label' => (string) ($opt['label'] ?? ''),
+                    'isCorrect' => (bool) ($opt['is_correct'] ?? false),
+                ], $options),
+            ];
+        }
+
+        $apprenticeRows = $this->db()->fetchAllAssociative(
+            'SELECT r.id, r.student_id, r.score, r.status, r.scored_at, r.notes,
+                    s.first_name, s.last_name, s.email
+             FROM student_validation_results r
+             INNER JOIN students s ON s.id = r.student_id
+             WHERE r.validation_test_id = :test_id
+             ORDER BY s.last_name, s.first_name',
+            ['test_id' => $testId]
+        );
+
+        $attemptsByStudent = [];
+        $attemptRows = $this->db()->fetchAllAssociative(
+            'SELECT id, student_id, score, max_score, status, answers_json, submitted_at
+             FROM student_validation_attempts
+             WHERE validation_test_id = :test_id
+             ORDER BY submitted_at DESC NULLS LAST, id DESC',
+            ['test_id' => $testId]
+        );
+        foreach ($attemptRows as $attempt) {
+            $sid = (int) ($attempt['student_id'] ?? 0);
+            if (!isset($attemptsByStudent[$sid])) {
+                $attemptsByStudent[$sid] = [];
+            }
+            $answersJson = (string) ($attempt['answers_json'] ?? '');
+            $attemptsByStudent[$sid][] = [
+                'id' => (int) ($attempt['id'] ?? 0),
+                'score' => (float) ($attempt['score'] ?? 0),
+                'maxScore' => (float) ($attempt['max_score'] ?? 0),
+                'status' => (string) ($attempt['status'] ?? 'pending'),
+                'answersJson' => $answersJson,
+                'answers' => $this->buildValidationAnswerReview($questionPayload, $answersJson),
+                'submittedAt' => (string) ($attempt['submitted_at'] ?? ''),
+            ];
+        }
+
+        $apprentices = [];
+        foreach ($apprenticeRows as $row) {
+            $studentId = (int) ($row['student_id'] ?? 0);
+            $apprentices[] = [
+                'resultId' => (int) ($row['id'] ?? 0),
+                'studentId' => $studentId,
+                'studentName' => trim((string) ($row['first_name'] ?? '').' '.(string) ($row['last_name'] ?? '')),
+                'email' => (string) ($row['email'] ?? ''),
+                'score' => (float) ($row['score'] ?? 0),
+                'status' => (string) ($row['status'] ?? 'pending'),
+                'scoredAt' => (string) ($row['scored_at'] ?? ''),
+                'notes' => (string) ($row['notes'] ?? ''),
+                'attempts' => $attemptsByStudent[$studentId] ?? [],
+            ];
+        }
+
+        return [
+            'test' => [
+                'id' => (int) ($testRow['id'] ?? 0),
+                'formationId' => (string) ($testRow['formation_id'] ?? ''),
+                'sessionId' => (string) ($testRow['session_id'] ?? ''),
+                'title' => (string) ($testRow['title'] ?? ''),
+                'maxScore' => (float) ($testRow['max_score'] ?? 0),
+                'passThreshold' => (float) ($testRow['pass_threshold'] ?? 0.7),
+                'isPublished' => (bool) ($testRow['is_published'] ?? true),
+                'sourceType' => (string) ($testRow['source_type'] ?? 'intranet'),
+                'createdAt' => (string) ($testRow['created_at'] ?? ''),
+            ],
+            'questions' => $questionPayload,
+            'apprentices' => $apprentices,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $questionPayload
+     * @return list<array<string, mixed>>
+     */
+    private function buildValidationAnswerReview(array $questionPayload, string $answersJson): array
+    {
+        $decoded = [];
+        if ($answersJson !== '') {
+            try {
+                $parsed = json_decode($answersJson, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($parsed)) {
+                    $decoded = $parsed;
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        $review = [];
+        foreach ($questionPayload as $question) {
+            $questionId = (int) ($question['id'] ?? 0);
+            $raw = $decoded[(string) $questionId] ?? $decoded[$questionId] ?? [];
+            $selectedIds = [];
+            if (is_array($raw)) {
+                $selectedIds = array_values(array_unique(array_filter(
+                    array_map('intval', $raw),
+                    static fn(int $id): bool => $id > 0
+                )));
+            } elseif (is_numeric($raw)) {
+                $selectedIds = [(int) $raw];
+            }
+            sort($selectedIds);
+
+            $options = is_array($question['options'] ?? null) ? $question['options'] : [];
+            $correctIds = [];
+            $optionLabels = [];
+            foreach ($options as $option) {
+                if (!is_array($option)) {
+                    continue;
+                }
+                $optionId = (int) ($option['id'] ?? 0);
+                $optionLabels[$optionId] = (string) ($option['label'] ?? '');
+                if (!empty($option['isCorrect'])) {
+                    $correctIds[] = $optionId;
+                }
+            }
+            sort($correctIds);
+
+            $selectedLabels = [];
+            foreach ($selectedIds as $selectedId) {
+                $label = $optionLabels[$selectedId] ?? '';
+                if ($label !== '') {
+                    $selectedLabels[] = $label;
+                }
+            }
+
+            $correctLabels = [];
+            foreach ($correctIds as $correctId) {
+                $label = $optionLabels[$correctId] ?? '';
+                if ($label !== '') {
+                    $correctLabels[] = $label;
+                }
+            }
+
+            $review[] = [
+                'questionId' => $questionId,
+                'prompt' => (string) ($question['prompt'] ?? ''),
+                'selectedOptionIds' => $selectedIds,
+                'selectedLabels' => $selectedLabels,
+                'correctOptionIds' => $correctIds,
+                'correctLabels' => $correctLabels,
+                'isCorrect' => $selectedIds === $correctIds,
+            ];
+        }
+
+        return $review;
+    }
+
+    private function isFormationValidationPeriodOpenForTest(int $testId): bool
+    {
+        if ($testId <= 0) {
+            return false;
+        }
+
+        $formationId = $this->db()->fetchOne(
+            'SELECT formation_id FROM session_validation_tests WHERE id = :id',
+            ['id' => $testId]
+        );
+        if ($formationId === false || trim((string) $formationId) === '') {
+            return true;
+        }
+
+        $endDate = $this->db()->fetchOne(
+            'SELECT end_date FROM formations WHERE id = :id',
+            ['id' => (string) $formationId]
+        );
+        if ($endDate === false || trim((string) $endDate) === '') {
+            return true;
+        }
+
+        $end = \DateTimeImmutable::createFromFormat('Y-m-d', substr((string) $endDate, 0, 10));
+        if ($end === false) {
+            return true;
+        }
+
+        $today = new \DateTimeImmutable('today');
+
+        return $today <= $end;
+    }
+
+    private function studentValidationTestAlreadyCompleted(int $testId, int $studentId): bool
+    {
+        if ($testId <= 0 || $studentId <= 0) {
+            return true;
+        }
+
+        $status = $this->db()->fetchOne(
+            'SELECT status FROM student_validation_results
+             WHERE validation_test_id = :test_id AND student_id = :student_id',
+            ['test_id' => $testId, 'student_id' => $studentId]
+        );
+        if ($status !== false && (string) $status !== 'pending') {
+            return true;
+        }
+
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return false;
+        }
+
+        $attemptCount = (int) $this->db()->fetchOne(
+            'SELECT COUNT(*) FROM student_validation_attempts
+             WHERE validation_test_id = :test_id AND student_id = :student_id',
+            ['test_id' => $testId, 'student_id' => $studentId]
+        );
+
+        return $attemptCount > 0;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function studentValidationTestForTaking(int $testId, int $studentId): ?array
+    {
+        if ($this->studentValidationTestAlreadyCompleted($testId, $studentId)) {
+            return null;
+        }
+
+        $assigned = $this->db()->fetchAssociative(
+            'SELECT r.id, r.status, r.score
+             FROM student_validation_results r
+             WHERE r.validation_test_id = :test_id AND r.student_id = :student_id',
+            ['test_id' => $testId, 'student_id' => $studentId]
+        );
+        if (!is_array($assigned)) {
+            return null;
+        }
+
+        $testRow = $this->db()->fetchAssociative(
+            'SELECT id, formation_id, title, max_score, pass_threshold, source_type, is_published
+             FROM session_validation_tests
+             WHERE id = :id AND source_type = \'intranet\' AND is_published = TRUE',
+            ['id' => $testId]
+        );
+        if (!is_array($testRow)) {
+            return null;
+        }
+
+        $questions = $this->db()->fetchAllAssociative(
+            'SELECT id, sort_order, prompt, points FROM validation_questions WHERE validation_test_id = :test_id ORDER BY sort_order, id',
+            ['test_id' => $testId]
+        );
+        $questionPayload = [];
+        foreach ($questions as $question) {
+            $questionId = (int) ($question['id'] ?? 0);
+            $options = $this->db()->fetchAllAssociative(
+                'SELECT id, sort_order, label FROM validation_question_options WHERE question_id = :question_id ORDER BY sort_order, id',
+                ['question_id' => $questionId]
+            );
+            $questionPayload[] = [
+                'id' => $questionId,
+                'prompt' => (string) ($question['prompt'] ?? ''),
+                'points' => (float) ($question['points'] ?? 0),
+                'options' => array_map(static fn(array $opt): array => [
+                    'id' => (int) ($opt['id'] ?? 0),
+                    'label' => (string) ($opt['label'] ?? ''),
+                ], $options),
+            ];
+        }
+
+        return [
+            'id' => (int) ($testRow['id'] ?? 0),
+            'title' => (string) ($testRow['title'] ?? ''),
+            'maxScore' => (float) ($testRow['max_score'] ?? 0),
+            'passThreshold' => (float) ($testRow['pass_threshold'] ?? 0.7),
+            'currentStatus' => (string) ($assigned['status'] ?? 'pending'),
+            'currentScore' => (float) ($assigned['score'] ?? 0),
+            'questions' => $questionPayload,
+        ];
+    }
+
+    /**
+     * @param array<int|string, mixed> $answers
+     * @return array<string, mixed>|null
+     */
+    private function gradeAndStoreValidationAttempt(int $testId, int $studentId, array $answers): ?array
+    {
+        $test = $this->studentValidationTestForTaking($testId, $studentId);
+        if ($test === null || count($test['questions']) === 0) {
+            return null;
+        }
+
+        $questionsDb = $this->db()->fetchAllAssociative(
+            'SELECT id, points FROM validation_questions WHERE validation_test_id = :test_id',
+            ['test_id' => $testId]
+        );
+        $maxScore = 0.0;
+        $earnedScore = 0.0;
+        $normalizedAnswers = [];
+
+        foreach ($questionsDb as $qRow) {
+            $questionId = (int) ($qRow['id'] ?? 0);
+            $points = (float) ($qRow['points'] ?? 0);
+            if ($points <= 0) {
+                $points = 1.0;
+            }
+            $maxScore += $points;
+
+            $correctIds = array_map(
+                'intval',
+                $this->db()->fetchFirstColumn(
+                    'SELECT id FROM validation_question_options WHERE question_id = :question_id AND is_correct = TRUE ORDER BY id',
+                    ['question_id' => $questionId]
+                )
+            );
+            sort($correctIds);
+
+            $raw = $answers[$questionId] ?? $answers[(string) $questionId] ?? [];
+            $selectedIds = [];
+            if (is_array($raw)) {
+                $selectedIds = array_map('intval', $raw);
+            } elseif (is_numeric($raw)) {
+                $selectedIds = [(int) $raw];
+            }
+            $selectedIds = array_values(array_unique(array_filter($selectedIds, static fn(int $id): bool => $id > 0)));
+            sort($selectedIds);
+
+            $isCorrect = $selectedIds === $correctIds;
+            if ($isCorrect) {
+                $earnedScore += $points;
+            }
+            $normalizedAnswers[(string) $questionId] = $selectedIds;
+        }
+
+        $passThreshold = (float) ($test['passThreshold'] ?? 0.7);
+        if ($passThreshold <= 0 || $passThreshold > 1) {
+            $passThreshold = 0.7;
+        }
+        $ratio = $maxScore > 0 ? $earnedScore / $maxScore : 0;
+        $status = $ratio >= $passThreshold ? 'passed' : 'failed';
+        $now = date('Y-m-d H:i:s');
+        $answersJson = json_encode($normalizedAnswers, JSON_THROW_ON_ERROR);
+
+        $this->db()->insert('student_validation_attempts', [
+            'validation_test_id' => $testId,
+            'student_id' => $studentId,
+            'score' => $earnedScore,
+            'max_score' => $maxScore,
+            'status' => $status,
+            'answers_json' => $answersJson,
+            'started_at' => $now,
+            'submitted_at' => $now,
+            'created_at' => $now,
+        ]);
+
+        $this->db()->executeStatement(
+            'INSERT INTO student_validation_results (validation_test_id, student_id, score, status, scored_at, scored_by_admin_id, notes, created_at, updated_at)
+             VALUES (:validation_test_id, :student_id, :score, :status, :scored_at, NULL, :notes, NOW(), NOW())
+             ON CONFLICT (validation_test_id, student_id) DO UPDATE
+             SET score = EXCLUDED.score,
+                 status = EXCLUDED.status,
+                 scored_at = EXCLUDED.scored_at,
+                 notes = EXCLUDED.notes,
+                 updated_at = NOW()',
+            [
+                'validation_test_id' => $testId,
+                'student_id' => $studentId,
+                'score' => $earnedScore,
+                'status' => $status,
+                'scored_at' => $now,
+                'notes' => 'Soumission intranet',
+            ]
+        );
+
+        $this->db()->update('session_validation_tests', [
+            'max_score' => $maxScore,
+            'updated_at' => $now,
+        ], ['id' => $testId]);
+
+        return [
+            'testId' => $testId,
+            'score' => $earnedScore,
+            'maxScore' => $maxScore,
+            'status' => $status,
+            'ratio' => $ratio,
+        ];
     }
 }
