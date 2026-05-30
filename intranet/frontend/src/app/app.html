@@ -15,7 +15,7 @@
 
         <form (submit)="onSubmitLogin($event)" class="login-form">
           <label class="login-field">
-            Email
+            <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
             <input
               type="email"
               class="login-input"
@@ -26,7 +26,7 @@
             />
           </label>
           <label class="login-field">
-            Mot de passe
+            <span class="label-field-line">Mot de passe <abbr class="required-mark" title="Obligatoire">*</abbr></span>
             <input
               type="password"
               class="login-input"
@@ -347,80 +347,329 @@
             @if (!selectedStudentSessionFormation()) {
               <p class="sub">Aucune formation selectionnee.</p>
             } @else {
-              <section class="sessions-block sessions-block-planning student-session-detail-card">
-                <div class="student-session-hero">
-                  <div>
-                    <p class="student-session-kicker">Session formation</p>
-                    <p class="sub">Formateur {{ selectedStudentSessionFormation()!.trainer }}</p>
+              <div class="student-session-tabs" role="tablist">
+                <button type="button" class="student-session-tab" [class.active]="studentSessionDetailTab() === 'cours'" (click)="setStudentSessionDetailTab('cours')">Cours</button>
+                <button type="button" class="student-session-tab" [class.active]="studentSessionDetailTab() === 'administratif'" (click)="setStudentSessionDetailTab('administratif')">Administratif</button>
+                <button type="button" class="student-session-tab" [class.active]="studentSessionDetailTab() === 'tests'" (click)="setStudentSessionDetailTab('tests')">Tests</button>
+              </div>
+              @if (studentSessionDetailTab() === 'cours') {
+                <section class="sessions-block student-session-detail-card student-course-panel">
+                  <div class="student-session-hero">
+                    <div>
+                      <p class="student-session-kicker">Espace cours</p>
+                      <p class="sub">Formateur {{ selectedStudentSessionFormation()!.trainer }}</p>
+                    </div>
+                    @if (selectedStudentSessionFormation()!.teamsLink) {
+                      <a class="teams-link admin-teams-link student-session-teams" [href]="selectedStudentSessionFormation()!.teamsLink" target="_blank" rel="noopener noreferrer">
+                        Ouvrir Teams
+                      </a>
+                    }
                   </div>
-                  @if (selectedStudentSessionFormation()!.teamsLink) {
-                    <a class="teams-link admin-teams-link student-session-teams" [href]="selectedStudentSessionFormation()!.teamsLink" target="_blank" rel="noopener noreferrer">
-                      Ouvrir Teams
-                    </a>
-                  }
-                </div>
 
-                <div class="planning-table-wrap">
-                  <table class="planning-table doc-table admin-table">
-                    <thead>
-                      <tr>
-                        <th>Jour</th>
-                        <th>Date</th>
-                        <th>Horaire</th>
-                        <th>Contenu</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (slot of selectedStudentSessionFormation()!.planning; track slot.day + slot.date + slot.slot) {
-                        <tr>
-                          <td>{{ slot.day }}</td>
-                          <td>{{ slot.date }}</td>
-                          <td>{{ slot.slot }}</td>
-                          <td>{{ slot.topic }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                  @if (attendanceNotice()) { <p class="success student-course-flash">{{ attendanceNotice() }}</p> }
+                  @if (attendanceError()) { <p class="error student-course-flash">{{ attendanceError() }}</p> }
 
-                @if (!studentSessionsForSelectedFormation().length) {
-                  <p class="sub">Aucune session d'emargement disponible pour cette formation.</p>
-                } @else {
-                  <div class="planning-table-wrap">
-                    <table class="planning-table doc-table admin-table student-attendance-table">
+                  <header class="student-course-section-head">
+                    <h5>Planning & emargement</h5>
+                    <p class="sub">Signez votre presence ou votre absence pendant la fenetre d emargement.</p>
+                  </header>
+
+                  <div class="planning-table-wrap student-planning-wrap">
+                    <table class="planning-table doc-table admin-table student-planning-table">
                       <thead>
                         <tr>
+                          <th>Jour</th>
                           <th>Date</th>
                           <th>Horaire</th>
                           <th>Contenu</th>
-                          <th>Statut</th>
-                          <th>Action</th>
+                          <th>Emargement</th>
                         </tr>
                       </thead>
                       <tbody>
-                        @for (session of studentSessionsForSelectedFormation(); track session.id) {
+                        @for (row of studentPlanningRowsWithAttendance(); track row.key) {
                           <tr>
-                            <td>{{ session.date }}</td>
-                            <td>{{ session.slot }}</td>
-                            <td>{{ session.topic }}</td>
-                            <td><span class="status student-status">{{ studentAttendanceStatusLabel(session) }}</span></td>
-                            <td>
-                              <button
-                                type="button"
-                                class="support-btn"
-                                [disabled]="!session.canSelfSign"
-                                (click)="markSelfAttendance(session.id)"
-                              >
-                                {{ studentAttendanceStatusLabel(session) }}
-                              </button>
+                            <td>{{ row.day }}</td>
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.slot }}</td>
+                            <td>{{ row.topic }}</td>
+                            <td class="student-planning-attendance">
+                              @if (!row.session) {
+                                <span class="student-attendance-pill" data-status="closed">—</span>
+                              } @else if (row.canSelfSign) {
+                                <div class="student-attendance-actions">
+                                  <button
+                                    type="button"
+                                    class="student-attendance-btn present"
+                                    [class.is-active]="row.recordStatus === 'present' || row.recordStatus === 'late'"
+                                    [disabled]="signingAttendanceSessionId() === row.session.id"
+                                    (click)="markSelfAttendance(row.session.id, 'present')"
+                                  >
+                                    Present
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="student-attendance-btn absent"
+                                    [class.is-active]="row.recordStatus === 'absent'"
+                                    [disabled]="signingAttendanceSessionId() === row.session.id"
+                                    (click)="markSelfAttendance(row.session.id, 'absent')"
+                                  >
+                                    Absent
+                                  </button>
+                                </div>
+                              } @else {
+                                <span class="student-attendance-pill" [attr.data-status]="row.recordStatus">
+                                  {{ studentPlanningAttendanceLabel(row.recordStatus) }}
+                                </span>
+                              }
                             </td>
                           </tr>
                         }
                       </tbody>
                     </table>
                   </div>
-                }
-              </section>
+
+                  <div class="student-course-resources">
+                    <h5 class="student-course-resources-title">Ressources pedagogiques</h5>
+                    <div class="student-course-resources-grid">
+                      <article class="student-course-resource-card supports">
+                        <header>
+                          <span class="student-course-resource-icon" aria-hidden="true">DOC</span>
+                          <h6>Supports</h6>
+                        </header>
+                        @if (!studentCourseSupportRowsForSelectedFormation().length) {
+                          <p class="sub">Aucun support pour le moment.</p>
+                        } @else {
+                          <ul class="student-course-resource-list">
+                            @for (item of studentCourseSupportRowsForSelectedFormation(); track item.key) {
+                              <li>
+                                <span>{{ item.title }}</span>
+                                <a class="student-course-resource-link" [href]="resolveDocumentUrl(item.url)" target="_blank" rel="noopener noreferrer">Ouvrir</a>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </article>
+
+                      <article class="student-course-resource-card recordings">
+                        <header>
+                          <span class="student-course-resource-icon" aria-hidden="true">VID</span>
+                          <h6>Enregistrements video</h6>
+                        </header>
+                        @if (!studentCourseRecordingRowsForSelectedFormation().length) {
+                          <p class="sub">Aucun enregistrement disponible.</p>
+                        } @else {
+                          <ul class="student-course-resource-list">
+                            @for (item of studentCourseRecordingRowsForSelectedFormation(); track item.key) {
+                              <li>
+                                <span>{{ item.title }}</span>
+                                <a class="student-course-resource-link" [href]="resolveDocumentUrl(item.url)" target="_blank" rel="noopener noreferrer">Voir</a>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </article>
+
+                      <article class="student-course-resource-card links">
+                        <header>
+                          <span class="student-course-resource-icon" aria-hidden="true">URL</span>
+                          <h6>Liens utiles</h6>
+                        </header>
+                        @if (!studentUsefulLinksForSelectedFormation().length) {
+                          <p class="sub">Aucun lien utile pour le moment.</p>
+                        } @else {
+                          <ul class="student-course-resource-list">
+                            @for (item of studentUsefulLinksForSelectedFormation(); track item.key) {
+                              <li>
+                                <span>{{ item.title }}</span>
+                                <a class="student-course-resource-link" [href]="resolveDocumentUrl(item.url)" target="_blank" rel="noopener noreferrer">Ouvrir</a>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </article>
+                    </div>
+                  </div>
+                </section>
+              }
+              @if (studentSessionDetailTab() === 'administratif') {
+                <section class="sessions-block student-session-detail-card student-docs-panel">
+                  <header class="student-docs-panel-head">
+                    <h5>Documents</h5>
+                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document.</p>
+                  </header>
+                  @if (studentDocumentNotice()) { <p class="success">{{ studentDocumentNotice() }}</p> }
+                  @if (studentDocumentError()) { <p class="error">{{ studentDocumentError() }}</p> }
+                  <div class="student-docs-table-wrap planning-table-wrap">
+                    <table class="planning-table doc-table admin-table student-docs-table">
+                      <thead><tr><th>Document</th><th>Statut</th><th>Action</th></tr></thead>
+                      <tbody>
+                        @for (row of filteredStudentRequiredDocumentRowsForSelectedFormation(); track row.key) {
+                          <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row)">
+                            <td class="student-doc-name">{{ row.label }}</td>
+                            <td>
+                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable)">
+                                {{ studentDocumentStatusLabel(row.status, row.available, row.signable) }}
+                              </span>
+                            </td>
+                            <td class="student-doc-actions">
+                              @if (studentDocumentNeedsSignature(row)) {
+                                <div class="student-doc-sign-flow">
+                                  <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">Telecharger</a>
+                                  <label class="student-doc-sign-upload">
+                                    <span class="student-doc-sign-upload-label">Document signe</span>
+                                    <input
+                                      type="file"
+                                      class="student-doc-sign-file"
+                                      accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
+                                      (change)="onStudentSignedDocumentSelected(row.sourceDocumentId!, $event)"
+                                    />
+                                    <span class="student-doc-sign-file-name">
+                                      {{ studentSignedUploadFiles()[row.sourceDocumentId!]?.name || 'Choisir le fichier signe' }}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    class="support-btn student-doc-sign-submit"
+                                    [disabled]="uploadingStudentDocumentId() === row.sourceDocumentId || !studentSignedUploadFiles()[row.sourceDocumentId!]"
+                                    (click)="submitStudentSignedDocument(row.sourceDocumentId!)"
+                                  >
+                                    {{ uploadingStudentDocumentId() === row.sourceDocumentId ? 'Envoi...' : 'Renvoyer signe' }}
+                                  </button>
+                                </div>
+                              } @else if (row.key === 'test_validation' && row.available) {
+                                @if (row.intranetValidationTestId) {
+                                  <button
+                                    type="button"
+                                    class="support-btn"
+                                    (click)="openStudentValidationInTestsTab(row.intranetValidationTestId)"
+                                  >
+                                    Passer le test
+                                  </button>
+                                } @else if (row.url) {
+                                  <a
+                                    class="teams-link admin-teams-link student-doc-open-link"
+                                    [href]="resolveDocumentUrl(row.url)"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Ouvrir le test
+                                  </a>
+                                } @else {
+                                  <button type="button" class="support-btn" (click)="setStudentSessionDetailTab('tests')">
+                                    Voir les tests
+                                  </button>
+                                }
+                              } @else if (row.key === 'test_validation' && !row.validationPeriodOpen) {
+                                <span class="sub">Delai termine</span>
+                              } @else if (row.available && row.linkOnly) {
+                                <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">
+                                  Ouvrir le lien
+                                </a>
+                              } @else if (row.url) {
+                                <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">
+                                  {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
+                                </a>
+                              } @else {
+                                <span class="sub">—</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              }
+              @if (studentSessionDetailTab() === 'tests') {
+                <section class="sessions-block student-session-detail-card student-validation-panel">
+                  @if (studentActiveValidationTest(); as take) {
+                    <button type="button" class="ghost-btn dark-ghost-btn student-validation-back-btn" (click)="cancelStudentValidationTest()">← Retour aux tests</button>
+                    <header class="student-validation-take-head">
+                      <h5>{{ take.title }}</h5>
+                      <p class="sub">Seuil de reussite : {{ take.passThreshold * 100 }} % · {{ take.questions.length }} question(s)</p>
+                    </header>
+                    @if (studentValidationSubmitError()) { <p class="error">{{ studentValidationSubmitError() }}</p> }
+                    <form class="student-validation-take-form" (submit)="submitStudentValidationTest($event)">
+                      @for (q of take.questions; track q.id; let qi = $index) {
+                        <fieldset class="admin-validation-question-card student-validation-question-card">
+                          <div class="admin-validation-question-head">
+                            <span class="admin-validation-question-badge">Question {{ qi + 1 }}</span>
+                          </div>
+                          <p class="student-validation-question-prompt">{{ q.prompt }}</p>
+                          <div class="admin-validation-options">
+                            @for (opt of q.options; track opt.id) {
+                              <button
+                                type="button"
+                                class="admin-validation-option-row student-validation-option-row"
+                                [class.is-selected]="studentValidationAnswers()[q.id]?.[0] === opt.id"
+                                (click)="toggleStudentValidationAnswer(q.id, opt.id)"
+                              >
+                                <span class="admin-validation-option-radio-ui" aria-hidden="true"></span>
+                                <span class="student-validation-option-label">{{ opt.label }}</span>
+                              </button>
+                            }
+                          </div>
+                        </fieldset>
+                      }
+                      <footer class="student-validation-take-footer">
+                        <button type="submit" class="support-btn" [disabled]="submittingStudentValidationTest()">
+                          {{ submittingStudentValidationTest() ? 'Envoi en cours...' : 'Envoyer mes reponses' }}
+                        </button>
+                      </footer>
+                    </form>
+                  } @else {
+                    <header class="student-validation-list-head">
+                      <h5>Tests de validation</h5>
+                      <p class="sub">
+                        Les tests restent accessibles jusqu'au dernier jour de la formation
+                        @if (selectedStudentSessionFormation()?.endDate) {
+                          ({{ selectedStudentSessionFormation()!.endDate }}).
+                        }
+                      </p>
+                    </header>
+                    @if (studentValidationSubmitNotice()) { <p class="success">{{ studentValidationSubmitNotice() }}</p> }
+                    @if (studentValidationSubmitError()) { <p class="error">{{ studentValidationSubmitError() }}</p> }
+                    @if (!studentValidationTestsWithStatus().length) {
+                      <p class="admin-validation-empty">Aucun test de validation pour cette formation pour le moment.</p>
+                    } @else {
+                      <div class="student-validation-tests-wrap planning-table-wrap">
+                        <table class="planning-table doc-table admin-table student-validation-tests-table">
+                          <thead>
+                            <tr>
+                              <th>Test</th>
+                              <th>Score</th>
+                              <th>Statut</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (t of studentValidationTestsWithStatus(); track t.testId) {
+                              <tr>
+                                <td class="student-validation-test-title">{{ t.title }}</td>
+                                <td><strong>{{ t.score }}</strong> / {{ t.maxScore }}</td>
+                                <td>
+                                  <span class="admin-validation-status-pill" [attr.data-status]="t.status">{{ validationStatusLabel(t.status) }}</span>
+                                </td>
+                                <td>
+                                  @if (t.canTake) {
+                                    <button type="button" class="support-btn" (click)="startStudentValidationTest(t.testId)">Passer le test</button>
+                                  } @else if (t.isIntranet && t.periodOpen) {
+                                    <span class="sub">Test deja passe</span>
+                                  } @else if (t.canOpenLink) {
+                                    <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(t.testLink)" target="_blank" rel="noopener noreferrer">Ouvrir le test</a>
+                                  } @else if (!t.periodOpen) {
+                                    <span class="sub">Delai termine</span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    }
+                  }
+                </section>
+              }
             }
           </section>
         }
@@ -768,7 +1017,7 @@
                   <form class="admin-create-form session-resource-form" (submit)="createTrainerResource($event)">
                     <div class="admin-form-grid">
                       <label>
-                        Session
+                        <span class="label-field-line">Session <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                         <select [ngModel]="selectedTrainerResourceSessionId()" (ngModelChange)="setSelectedTrainerResourceSessionId($event)" name="selectedTrainerResourceSessionId" required>
                           @for (option of trainerSessionResourceOptions(); track option.id) {
                             <option [value]="option.id">{{ option.label }}</option>
@@ -787,7 +1036,7 @@
                         </select>
                       </label>
                       <label>
-                        Titre
+                        <span class="label-field-line">Titre <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                         <input type="text" [ngModel]="trainerResourceTitle()" (ngModelChange)="trainerResourceTitle.set($event)" name="trainerResourceTitle" placeholder="Support session" required />
                       </label>
                       <label>
@@ -990,7 +1239,7 @@
             <h3>Sessions</h3>
             <p class="sub">Cree une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
             <div class="admin-form-actions">
-              <button type="button" class="support-btn" (click)="toggleAdminFormationCreateForm()">
+              <button type="button" class="support-btn create-session-btn" (click)="toggleAdminFormationCreateForm()">
                 {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Creer une session' }}
               </button>
             </div>
@@ -999,7 +1248,7 @@
                 <h4>Creer une session</h4>
                 <div class="admin-form-grid">
                   <label>
-                    Formation catalogue
+                    <span class="label-field-line">Formation catalogue <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <select
                       [ngModel]="newFormationCatalogCourseId()"
                       (ngModelChange)="newFormationCatalogCourseId.set($event)"
@@ -1014,27 +1263,22 @@
                   </label>
                   <label>
                     Mode
-                    <select [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode">
-                      <option value="À distance">À distance</option>
-                      <option value="Présentiel">Présentiel</option>
-                      <option value="Hybride">Hybride</option>
-                    </select>
+                    <input type="text" [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode" />
                   </label>
                   <label>
-                    Formateur
-                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId">
-                      <option value="0">Assigner plus tard</option>
+                    <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId" required>
                       @for (trainerItem of adminTrainers(); track trainerItem.id) {
                         <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                       }
                     </select>
                   </label>
                   <label>
-                    Date debut
+                    <span class="label-field-line">Date debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <input type="date" [ngModel]="newFormationStartDate()" (ngModelChange)="newFormationStartDate.set($event)" name="newFormationStartDate" required />
                   </label>
                   <label>
-                    Date fin
+                    <span class="label-field-line">Date fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                     <input type="date" [ngModel]="newFormationEndDate()" (ngModelChange)="newFormationEndDate.set($event)" name="newFormationEndDate" required />
                   </label>
                   <label>
@@ -1054,21 +1298,49 @@
                     <h5>Planning</h5>
                     <button type="button" class="ghost-btn dark-ghost-btn" (click)="addPlanningRow()">Ajouter un créneau</button>
                   </div>
-                  @for (row of sortedPlanningRows(); track $index) {
+                  <div class="apprentice-selector-row">
+                    <label>
+                      Filtrer les créneaux par date
+                      <input
+                        type="date"
+                        [ngModel]="planningDateFilter()"
+                        (ngModelChange)="planningDateFilter.set($event)"
+                        name="planningDateFilter"
+                      />
+                    </label>
+                    @if (planningDateFilter()) {
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="planningDateFilter.set('')">Afficher tout</button>
+                    }
+                  </div>
+                  @if (planningDateFilter() && !filteredPlanningRowsForCreate().length) {
+                    <p class="sub">Aucun créneau saisi pour cette date.</p>
+                  }
+                  @if (filteredPlanningRowsForCreate().length) {
+                    <div class="admin-planning-row admin-planning-row--head" aria-hidden="true">
+                      <span>Date <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span>Sujet <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <span></span>
+                    </div>
+                  }
+                  @for (rowItem of filteredPlanningRowsForCreate(); track rowItem.index) {
+                    @let row = rowItem.row;
+                    @let rowIndex = rowItem.index;
                     <div class="admin-planning-row">
-                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow($index, 'date', $event)" [name]="'planDate' + $index" required />
-                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'start', $event)" [name]="'planStart' + $index" required>
+                      <input type="date" [ngModel]="row.date" (ngModelChange)="updatePlanningRow(rowIndex, 'date', $event)" [name]="'planDate' + rowIndex" required />
+                      <select class="compact-time-select" [ngModel]="planningRowStartTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'start', $event)" [name]="'planStart' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime($index, 'end', $event)" [name]="'planEnd' + $index" required>
+                      <select class="compact-time-select" [ngModel]="planningRowEndTime(row)" (ngModelChange)="updatePlanningRowTime(rowIndex, 'end', $event)" [name]="'planEnd' + rowIndex" required>
                         @for (time of planningTimeOptions; track time) {
                           <option [value]="time">{{ time }}</option>
                         }
                       </select>
-                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow($index, 'topic', $event)" [name]="'planTopic' + $index" placeholder="Sujet" required />
-                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow($index)" [disabled]="planningRows().length === 1">Retirer</button>
+                      <input type="text" [ngModel]="row.topic" (ngModelChange)="updatePlanningRow(rowIndex, 'topic', $event)" [name]="'planTopic' + rowIndex" placeholder="Sujet" required />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removePlanningRow(rowIndex)" [disabled]="planningRows().length === 1">Retirer</button>
                     </div>
                   }
                 </div>
@@ -1078,12 +1350,6 @@
                   @if (!adminStudents().length) {
                     <p class="sub">Aucun apprenti disponible. Cree d'abord des apprentis dans l'onglet `Apprentis`.</p>
                   } @else {
-                    <div class="apprentice-selector-row">
-                      <label>
-                        Rechercher apprenti
-                        <input type="text" [ngModel]="studentFilterForSelector()" (ngModelChange)="studentFilterForSelector.set($event)" name="studentFilterForSelector" placeholder="Nom, prenom ou email" />
-                      </label>
-                    </div>
                     <label class="student-checkbox-field">
                       Selection apprenti
                       <details class="student-selector">
@@ -1094,18 +1360,28 @@
                             {{ selectedStudentIds().length }} apprenti(s) selectionne(s)
                           }
                         </summary>
+                        <div class="student-selector-search">
+                          <input
+                            type="text"
+                            [ngModel]="studentFilterForSelector()"
+                            (ngModelChange)="studentFilterForSelector.set($event)"
+                            name="studentFilterForSelector"
+                            placeholder="Rechercher un apprenti..."
+                          />
+                        </div>
                         <div class="admin-students-grid">
-                          @for (studentItem of adminStudents(); track studentItem.id) {
-                            @if (!studentFilterForSelector() || (`${studentItem.firstName} ${studentItem.lastName} ${studentItem.email}`).toLowerCase().includes(studentFilterForSelector().toLowerCase())) {
-                              <label class="student-check">
-                                <input
-                                  type="checkbox"
-                                  [checked]="selectedStudentIds().includes(studentItem.id)"
-                                  (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
-                                />
-                                <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
-                              </label>
-                            }
+                          @for (studentItem of availableStudentsForSelector(); track studentItem.id) {
+                            <label class="student-check">
+                              <input
+                                type="checkbox"
+                                [checked]="selectedStudentIds().includes(studentItem.id)"
+                                (change)="toggleStudentSelection(studentItem.id, $any($event.target).checked)"
+                              />
+                              <span>{{ studentItem.firstName }} {{ studentItem.lastName }} · {{ studentItem.email }}</span>
+                            </label>
+                          }
+                          @if (!availableStudentsForSelector().length) {
+                            <p class="sub student-selector-empty">Aucun apprenti trouve.</p>
                           }
                         </div>
                       </details>
@@ -1222,9 +1498,11 @@
               }
               <div class="formation-cards-grid">
                 @for (formation of filteredAdminSessionCards(); track formation.id) {
+                  @let compliance = adminFormationDocComplianceById()[formation.id];
                   <article
                     class="formation-session-card selectable"
                     [class.active]="selectedAdminFormation()?.id === formation.id"
+                    [class.formation-session-card--outdated]="compliance && !compliance.isUpToDate"
                     (click)="selectAdminFormation(formation.id)"
                   >
                     <div class="formation-session-head">
@@ -1242,6 +1520,18 @@
                       </button>
                     </div>
                     <p class="sub formation-session-meta">{{ formation.startDate }} au {{ formation.endDate }} · {{ formation.mode }}</p>
+                    @if (compliance) {
+                      <div class="formation-session-compliance" (click)="$event.stopPropagation()">
+                        <button
+                          type="button"
+                          class="admin-session-compliance-tag"
+                          [attr.data-variant]="compliance.isUpToDate ? 'ok' : 'warn'"
+                          (click)="openAdminSessionComplianceModal(formation.id, 'all', $event)"
+                        >
+                          {{ compliance.isUpToDate ? 'A jour' : 'A mettre a jour' }}
+                        </button>
+                      </div>
+                    }
                   </article>
                 }
               </div>
@@ -1249,6 +1539,93 @@
                 <p class="sub">Aucune session ne correspond a votre recherche/filtre.</p>
               }
             </div>
+
+            @if (adminSessionComplianceModalFormationId(); as modalFormationId) {
+              @if (adminSessionComplianceModalSummary(); as summary) {
+                @if (adminSessionComplianceModalMatrix(); as mv) {
+                <div class="trainer-modal-overlay admin-session-compliance-overlay" (click)="closeAdminSessionComplianceModal()">
+                  <section
+                    class="trainer-modal admin-session-compliance-modal card content-card"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="adminSessionComplianceModalTitle"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <header class="trainer-modal-head admin-session-compliance-modal-head">
+                      <div>
+                        <p class="admin-session-compliance-modal-kicker">Suivi documents</p>
+                        <h3 id="adminSessionComplianceModalTitle">{{ adminFormationTitleById(modalFormationId) }}</h3>
+                        <p class="sub">
+                          @if (summary.isUpToDate) {
+                            Tous les documents suivis sont a jour.
+                          } @else {
+                            {{ summary.totalIssueCount }} point(s) a traiter
+                            @if (summary.mandatoryMissingCount > 0) {
+                              · {{ summary.mandatoryMissingCount }} obligatoire(s) manquant(s)
+                            }
+                          }
+                        </p>
+                      </div>
+                      <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminSessionComplianceModal()" aria-label="Fermer">×</button>
+                    </header>
+                    <p class="sub admin-session-compliance-modal-lead">
+                      Meme grille que le suivi documents : pastilles Envoyé / Non envoyé par personne.
+                    </p>
+                    <div class="admin-doc-matrix-wrap admin-doc-matrix-suivi admin-session-compliance-matrix">
+                      <div class="admin-doc-matrix-scroll admin-doc-matrix-scroll--suivi">
+                        <table class="admin-doc-matrix-table admin-doc-matrix-table--suivi">
+                          <thead>
+                            <tr>
+                              <th class="admin-doc-matrix-sticky-col admin-doc-matrix-corner" scope="col">Personne</th>
+                              @for (col of mv.columns; track col.key) {
+                                <th
+                                  class="admin-doc-matrix-th-doc admin-doc-matrix-th-doc--suivi"
+                                  scope="col"
+                                  [attr.title]="col.label"
+                                >
+                                  <span class="admin-doc-matrix-th-title">{{ col.shortLabel }}</span>
+                                  <span class="admin-doc-matrix-th-tag" [attr.data-scope]="col.scope">{{ col.scope === 'generic' ? 'Gen.' : 'Indiv.' }}</span>
+                                </th>
+                              }
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (mrow of mv.rows; track mrow.rowKey) {
+                              <tr class="admin-doc-matrix-body-row" [class.admin-doc-matrix-trainer-row]="mrow.kind === 'trainer'">
+                                <th class="admin-doc-matrix-sticky-col admin-doc-matrix-row-head" scope="row">
+                                  <span class="admin-doc-matrix-person-name">{{ mrow.name }}</span>
+                                  <span class="admin-doc-matrix-detail">{{ mrow.detail }}</span>
+                                  @if (mrow.kind === 'trainer') {
+                                    <span class="admin-doc-matrix-badge">Formateur</span>
+                                  } @else {
+                                    <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                                  }
+                                </th>
+                                @for (col of mv.columns; track col.key) {
+                                  @let cell = mrow.cells[col.key];
+                                  <td class="admin-doc-matrix-cell admin-doc-matrix-cell--status-only">
+                                    @if (cell.isNa) {
+                                      <span class="admin-doc-matrix-pill admin-doc-matrix-pill--solo" data-variant="na">—</span>
+                                    } @else {
+                                      <span class="admin-doc-matrix-pill admin-doc-matrix-pill--solo" [attr.data-variant]="cell.statusVariant" [attr.title]="cell.status">{{ docMatrixStatusShort(cell.status) }}</span>
+                                    }
+                                  </td>
+                                }
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <footer class="admin-session-compliance-modal-footer">
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="closeAdminSessionComplianceModal()">Fermer</button>
+                      <button type="button" class="support-btn" (click)="goToFormationSuiviFromComplianceModal()">Ouvrir le suivi complet</button>
+                    </footer>
+                  </section>
+                </div>
+                }
+              }
+            }
           </section>
         }
 
@@ -1283,7 +1660,7 @@
                   <h4>Modifier la session</h4>
                   <div class="admin-form-grid">
                     <label>
-                      Titre session
+                      <span class="label-field-line">Titre session <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="text" [ngModel]="editFormationTitle()" (ngModelChange)="editFormationTitle.set($event)" name="editFormationTitle" required />
                     </label>
                     <label>
@@ -1291,7 +1668,7 @@
                       <input type="text" [ngModel]="editFormationMode()" (ngModelChange)="editFormationMode.set($event)" name="editFormationMode" />
                     </label>
                     <label>
-                      Formateur
+                      <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <select [ngModel]="editFormationTrainerId()" (ngModelChange)="editFormationTrainerId.set(+$event)" name="editFormationTrainerId" required>
                         @for (trainerItem of adminTrainers(); track trainerItem.id) {
                           <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
@@ -1299,11 +1676,11 @@
                       </select>
                     </label>
                     <label>
-                      Date debut
+                      <span class="label-field-line">Date debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="date" [ngModel]="editFormationStartDate()" (ngModelChange)="editFormationStartDate.set($event)" name="editFormationStartDate" required />
                     </label>
                     <label>
-                      Date fin
+                      <span class="label-field-line">Date fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                       <input type="date" [ngModel]="editFormationEndDate()" (ngModelChange)="editFormationEndDate.set($event)" name="editFormationEndDate" required />
                     </label>
                     <label>
@@ -1317,6 +1694,15 @@
                       <h5>Planning</h5>
                       <button type="button" class="ghost-btn dark-ghost-btn" (click)="addEditPlanningRow()">Ajouter un créneau</button>
                     </div>
+                    @if (editPlanningRows().length) {
+                      <div class="admin-planning-row admin-planning-row--head" aria-hidden="true">
+                        <span>Date <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Debut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Fin <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span>Sujet <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                        <span></span>
+                      </div>
+                    }
                     @for (row of editPlanningRows(); track $index) {
                       <div class="admin-planning-row">
                         <input type="date" [ngModel]="row.date" (ngModelChange)="updateEditPlanningRow($index, 'date', $event)" [name]="'editPlanDate' + $index" required />
@@ -1357,69 +1743,661 @@
                 {{ selectedAdminFormation()!.startDate }} au {{ selectedAdminFormation()!.endDate }}
               </p>
 
-              <div class="sessions-sections-grid">
-                <section class="sessions-block sessions-block-apprentices">
-                  <div class="sessions-block-head">
-                    <h5>Apprentis affectes</h5>
-                  </div>
-                  @if (!selectedAdminFormationApprentices().length) {
-                    <p class="sub">Aucun apprenti affecte.</p>
-                  } @else {
-                    <div class="planning-table-wrap">
-                      <table class="planning-table doc-table admin-table">
-                        <thead>
-                          <tr>
-                            <th>Apprenti</th>
-                            <th>Email</th>
-                            <th>Classe</th>
-                            <th>Emargement</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (item of selectedAdminFormationApprentices(); track item.id) {
-                            <tr>
-                              <td>{{ item.name }}</td>
-                              <td>{{ item.email }}</td>
-                              <td>{{ item.classLabel }}</td>
-                              <td>{{ item.attendanceMarked }} / {{ item.attendanceTotal }}</td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                  }
-                </section>
+              @if (adminWorkflowNotice().trim() || adminWorkflowError().trim()) {
+                <div class="admin-formation-workflow-flash">
+                  @if (adminWorkflowNotice().trim()) { <p class="success">{{ adminWorkflowNotice() }}</p> }
+                  @if (adminWorkflowError().trim()) { <p class="error">{{ adminWorkflowError() }}</p> }
+                </div>
+              }
 
-                <section class="sessions-block sessions-block-planning">
-                  <div class="sessions-block-head">
-                    <h5>Planning</h5>
-                  </div>
-                  @if (!selectedAdminFormationSessions().length) {
-                    <p class="sub">Aucune session pour cette session.</p>
-                  } @else {
-                    <div class="planning-table-wrap">
-                      <table class="planning-table doc-table admin-table">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Horaire</th>
-                            <th>Contenu</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (session of selectedAdminFormationSessions(); track session.id) {
-                            <tr>
-                              <td>{{ session.date }}</td>
-                              <td>{{ session.slot }}</td>
-                              <td>{{ session.topic }}</td>
-                            </tr>
+              <div class="admin-formation-tabs admin-formation-tabs--segmented" role="tablist" aria-label="Detail session admin">
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="adminFormationDetailTab() === 'resume'" [class.active]="adminFormationDetailTab() === 'resume'" (click)="setAdminFormationDetailTab('resume')">Vue d'ensemble</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="adminFormationDetailTab() === 'emargement'" [class.active]="adminFormationDetailTab() === 'emargement'" (click)="setAdminFormationDetailTab('emargement')">Emargement</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="adminFormationDetailTab() === 'planning'" [class.active]="adminFormationDetailTab() === 'planning'" (click)="setAdminFormationDetailTab('planning')">Planning</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="adminFormationDetailTab() === 'suivi'" [class.active]="adminFormationDetailTab() === 'suivi'" (click)="setAdminFormationDetailTab('suivi')">Suivi documents</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="adminFormationDetailTab() === 'validation'" [class.active]="adminFormationDetailTab() === 'validation'" (click)="setAdminFormationDetailTab('validation')">Tests</button>
+              </div>
+
+              <div class="admin-formation-tab-panels">
+                <ng-template #adminFormationDocUploadForms>
+                  <div class="admin-unified-doc-upload-shell">
+                    <form class="admin-create-form admin-workflow-form admin-unified-doc-form" (submit)="submitAdminUnifiedDocument($event)">
+                      <div class="admin-unified-doc-form-grid admin-form-grid">
+                        <section class="admin-unified-doc-section">
+                          <h6 class="admin-unified-doc-section-title">Type de document</h6>
+                          <label class="admin-unified-doc-field">
+                            <span>Document</span>
+                            <select
+                            [ngModel]="adminUnifiedDocSlotKey()"
+                            (ngModelChange)="onAdminUnifiedDocSlotChange($event)"
+                            name="adminUnifiedDocSlot"
+                            required
+                          >
+                            @for (opt of adminDocUploadSlotOptions(); track opt.key) {
+                              <option [value]="opt.key">{{ opt.label }}</option>
+                            }
+                          </select>
+                          </label>
+                          <p class="admin-unified-doc-slot-summary">{{ adminUnifiedDocSlotSummary() }}</p>
+                        </section>
+
+                        <section class="admin-unified-doc-section">
+                          <h6 class="admin-unified-doc-section-title">Destinataire</h6>
+                        @if (adminUnifiedDocSlotKey() === 'satisfaction') {
+                          <div class="admin-unified-doc-satisfaction-pick" role="group" aria-label="Lien satisfaction">
+                            <span class="admin-unified-doc-satisfaction-pick-label">Lien pour</span>
+                            <div class="admin-satisfaction-segment">
+                              <button type="button" class="admin-satisfaction-segment-btn" [class.is-active]="adminSatisfactionAudience() === 'apprentices'" (click)="setAdminSatisfactionAudience('apprentices')">Tous les apprentis</button>
+                              <button type="button" class="admin-satisfaction-segment-btn" [class.is-active]="adminSatisfactionAudience() === 'trainer'" (click)="setAdminSatisfactionAudience('trainer')">Formateur</button>
+                            </div>
+                            <p class="sub admin-satisfaction-title-preview">Titre : <strong>{{ adminSatisfactionAutoTitle() }}</strong></p>
+                          </div>
+                        }
+                        @if (adminUnifiedDocSlotColumn().scope === 'student' && adminUnifiedDocSlotKey() !== 'satisfaction') {
+                          <label class="admin-searchable-select-label">
+                            <span class="label-field-line">Apprenti <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                            <div class="admin-searchable-select" #adminStudentDocSelectRoot>
+                              <button
+                                type="button"
+                                class="admin-native-searchable-select-trigger"
+                                [class.is-open]="adminStudentDocStudentComboOpen()"
+                                [class.is-placeholder]="!adminStudentDocStudentId()"
+                                (click)="toggleAdminStudentDocStudentDropdown($event)"
+                                aria-haspopup="listbox"
+                                [attr.aria-expanded]="adminStudentDocStudentComboOpen()"
+                              >
+                                <span class="admin-native-searchable-select-value">{{ adminStudentDocStudentTriggerLabel() }}</span>
+                                <span class="admin-native-searchable-select-chevron" aria-hidden="true"></span>
+                              </button>
+                              @if (adminStudentDocStudentComboOpen()) {
+                                <div class="admin-searchable-select-panel" role="presentation">
+                                  <div class="admin-searchable-select-panel-search-wrap">
+                                    <input
+                                      type="text"
+                                      class="admin-searchable-select-panel-search"
+                                      autocomplete="off"
+                                      [ngModel]="adminStudentDocStudentComboQuery()"
+                                      (ngModelChange)="onAdminStudentDocDropdownSearchInput($event)"
+                                      name="adminStudentDocStudentSearch"
+                                      placeholder="Rechercher un etudiant..."
+                                      (click)="$event.stopPropagation()"
+                                    />
+                                  </div>
+                                  <ul class="admin-searchable-select-list admin-searchable-select-list--in-panel" role="listbox">
+                                    @if (!selectedAdminFormationApprentices().length) {
+                                      <li class="admin-searchable-select-empty">Aucun apprenti dans cette formation.</li>
+                                    } @else {
+                                      @if (!adminStudentDocStudentComboQuery().trim()) {
+                                        <li
+                                          role="option"
+                                          class="admin-searchable-select-option admin-searchable-select-option--placeholder"
+                                          (mousedown)="$event.preventDefault(); clearAdminStudentDocStudentSelection($event)"
+                                        >
+                                          <span class="admin-searchable-select-name">Choisir un etudiant</span>
+                                        </li>
+                                      }
+                                      @if (!filteredAdminStudentDocApprentices().length && adminStudentDocStudentComboQuery().trim()) {
+                                        <li class="admin-searchable-select-empty">Aucun resultat pour cette recherche.</li>
+                                      }
+                                      @for (student of filteredAdminStudentDocApprentices(); track student.id) {
+                                        <li
+                                          role="option"
+                                          tabindex="0"
+                                          class="admin-searchable-select-option"
+                                          [class.admin-searchable-select-option--selected]="adminStudentDocStudentId() === student.id"
+                                          [attr.title]="student.email + ' — ' + student.classLabel"
+                                          (mousedown)="$event.preventDefault(); selectAdminStudentDocApprentice(student)"
+                                        >
+                                          <span class="admin-searchable-select-name">{{ student.name }}</span>
+                                        </li>
+                                      }
+                                    }
+                                  </ul>
+                                </div>
+                              }
+                            </div>
+                          </label>
+                        } @else {
+                          <p class="admin-unified-doc-hint">
+                            Document <strong>generique</strong> : envoye pour la ligne <strong>Formateur</strong>.
+                          </p>
+                        }
+                        </section>
+
+                        <section class="admin-unified-doc-section">
+                          <h6 class="admin-unified-doc-section-title">Contenu</h6>
+                          <div class="admin-unified-doc-top-row">
+                            <label class="admin-unified-doc-field">
+                              <span>Session (optionnel)</span>
+                              <select
+                                [ngModel]="adminUnifiedDocSessionId()"
+                                (ngModelChange)="adminUnifiedDocSessionId.set($event)"
+                                name="adminUnifiedDocSessionId"
+                              >
+                                <option value="">Toute la session</option>
+                                @for (slot of selectedAdminFormationSessions(); track slot.id) {
+                                  <option [value]="slot.id">{{ slot.date }} · {{ slot.slot }}</option>
+                                }
+                              </select>
+                            </label>
+                            @if (adminUnifiedDocSlotKey() !== 'satisfaction') {
+                              <label class="admin-unified-doc-field">
+                                <span>Titre</span>
+                                <input type="text" [ngModel]="adminUnifiedDocTitle()" (ngModelChange)="adminUnifiedDocTitle.set($event)" name="adminUnifiedDocTitle" required />
+                              </label>
+                            } @else {
+                              <p class="admin-unified-doc-title-auto-note">Titre genere automatiquement selon le lien satisfaction.</p>
+                            }
+                          </div>
+                          <div class="admin-unified-doc-top-row">
+                            <label class="admin-unified-doc-field">
+                              <span>Lien (optionnel)</span>
+                              <input type="url" [ngModel]="adminUnifiedDocUrl()" (ngModelChange)="adminUnifiedDocUrl.set($event)" name="adminUnifiedDocUrl" placeholder="https://..." />
+                            </label>
+                            <label class="admin-unified-doc-field admin-unified-doc-field--file">
+                              <span>Fichier</span>
+                              <div class="admin-unified-doc-file-wrap">
+                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" />
+                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, image...' }}</span>
+                              </div>
+                            </label>
+                          </div>
+                          @if (adminUnifiedDocSlotColumn().scope === 'generic') {
+                            <label class="admin-inline-checkbox admin-unified-doc-mandatory">
+                              <input
+                                type="checkbox"
+                                [ngModel]="adminGenericDocMandatory()"
+                                (ngModelChange)="adminGenericDocMandatory.set($event)"
+                                name="adminGenericDocMandatory"
+                              />
+                              <span>Document obligatoire pour le formateur</span>
+                            </label>
                           }
-                        </tbody>
-                      </table>
+                        </section>
+                      </div>
+                      <footer class="admin-form-actions admin-unified-doc-form-footer">
+                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="closeAdminDocUploadModal()">Annuler</button>
+                        <button type="submit" class="support-btn" [disabled]="creatingAdminWorkflowItem()">
+                          {{ creatingAdminWorkflowItem() ? 'Envoi en cours...' : 'Envoyer le document' }}
+                        </button>
+                      </footer>
+                    </form>
+                  </div>
+                </ng-template>
+
+                @if (adminFormationDetailTab() === 'resume') {
+                  <div class="sessions-sections-grid admin-session-detail-single">
+                    <section class="sessions-block sessions-block-apprentices">
+                      <div class="sessions-block-head"><h5>Apprentis affectes</h5></div>
+                      @if (!selectedAdminFormationApprentices().length) {
+                        <p class="sub">Aucun apprenti affecte.</p>
+                      } @else {
+                        <div class="planning-table-wrap">
+                          <table class="planning-table doc-table admin-table">
+                            <thead><tr><th>Apprenti</th><th>Email</th><th>Classe</th><th>Emargement</th></tr></thead>
+                            <tbody>
+                              @for (item of selectedAdminFormationApprentices(); track item.id) {
+                                <tr><td>{{ item.name }}</td><td>{{ item.email }}</td><td>{{ item.classLabel }}</td><td>{{ item.attendanceMarked }} / {{ item.attendanceTotal }}</td></tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </section>
+                  </div>
+                }
+
+                @if (adminFormationDetailTab() === 'emargement') {
+                  @if (selectedAdminFormationEmargementMatrixView(); as emGrid) {
+                    <div class="admin-doc-matrix-wrap admin-emargement-matrix-wrap">
+                      <div class="sessions-block-head admin-doc-matrix-intro">
+                        <h5>Emargement par apprenti et par seance</h5>
+                        <p class="sub">
+                          Statut pour chaque creneau : present, retard, absent ou en attente. Les modifications se font depuis la page
+                          <strong>Emargement</strong> (menu principal).
+                        </p>
+                      </div>
+                      @if (!emGrid.sessions.length) {
+                        <p class="sub">Aucune seance d'emargement pour cette formation.</p>
+                      } @else if (!emGrid.rows.length) {
+                        @if (adminEmargementMatrixQuery().trim()) {
+                          <p class="sub">Aucun apprenti ne correspond a la recherche.</p>
+                        } @else {
+                          <p class="sub">Aucun apprenti affecte a cette formation.</p>
+                        }
+                      } @else {
+                        <div class="admin-emargement-matrix-toolbar">
+                          <input
+                            type="search"
+                            class="admin-doc-matrix-search"
+                            placeholder="Rechercher (nom, email, classe)..."
+                            [ngModel]="adminEmargementMatrixQuery()"
+                            (ngModelChange)="adminEmargementMatrixQuery.set($event)"
+                            name="adminEmargementMatrixQuery"
+                            autocomplete="off"
+                            aria-label="Filtrer les apprentis"
+                          />
+                        </div>
+                        <div class="admin-doc-matrix-scroll admin-doc-matrix-scroll--emargement">
+                          <table class="admin-doc-matrix-table admin-emargement-matrix-table">
+                            <thead>
+                              <tr>
+                                <th class="admin-doc-matrix-sticky-col admin-doc-matrix-corner" scope="col">Apprenti</th>
+                                @for (session of emGrid.sessions; track session.id) {
+                                  <th
+                                    class="admin-doc-matrix-th-doc admin-emargement-matrix-th"
+                                    scope="col"
+                                    [attr.title]="session.date + ' · ' + session.slot + ' — ' + session.topic"
+                                  >
+                                    <span class="admin-doc-matrix-th-title">{{ session.date }}</span>
+                                    <span class="admin-doc-matrix-th-tag admin-emargement-matrix-th-slot">{{ session.slot }}</span>
+                                  </th>
+                                }
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (erow of emGrid.rows; track erow.studentId) {
+                                <tr class="admin-doc-matrix-body-row">
+                                  <th class="admin-doc-matrix-sticky-col admin-doc-matrix-row-head" scope="row">
+                                    <span class="admin-doc-matrix-person-name">{{ erow.studentName }}</span>
+                                    <span class="admin-doc-matrix-detail">{{ erow.studentEmail }}</span>
+                                    <span class="admin-doc-matrix-detail">{{ erow.classLabel }}</span>
+                                    <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                                  </th>
+                                  @for (cell of erow.cells; track cell.sessionId) {
+                                    <td class="admin-doc-matrix-cell admin-emargement-matrix-cell">
+                                      <span
+                                        class="attendance-status-chip"
+                                        [class.present]="cell.status === 'present'"
+                                        [class.late]="cell.status === 'late'"
+                                        [class.absent]="cell.status === 'absent'"
+                                        [class.pending]="cell.status === 'pending'"
+                                        [class.missing]="cell.status === 'missing'"
+                                      >
+                                        {{ adminEmargementStatusLabel(cell.status) }}
+                                      </span>
+                                    </td>
+                                  }
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+
+                @if (adminFormationDetailTab() === 'planning') {
+                  <div class="sessions-sections-grid admin-session-detail-single">
+                    <section class="sessions-block sessions-block-planning">
+                      <div class="sessions-block-head"><h5>Planning</h5></div>
+                      @if (!selectedAdminFormationSessions().length) {
+                        <p class="sub">Aucune session pour cette formation.</p>
+                      } @else {
+                        <div class="planning-table-wrap">
+                          <table class="planning-table doc-table admin-table">
+                            <thead><tr><th>Date</th><th>Horaire</th><th>Contenu</th></tr></thead>
+                            <tbody>
+                              @for (session of selectedAdminFormationSessions(); track session.id) {
+                                <tr><td>{{ session.date }}</td><td>{{ session.slot }}</td><td>{{ session.topic }}</td></tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </section>
+                  </div>
+                }
+
+                @if (adminFormationDetailTab() === 'suivi') {
+                  <section class="sessions-block admin-doc-matrix-suivi-toolbar">
+                    <div class="sessions-block-head admin-doc-matrix-suivi-toolbar-head">
+                      <div>
+                        <h5>Suivi documents</h5>
+                        <p class="sub">Consultez les statuts par personne et envoyez les documents de la session.</p>
+                      </div>
+                      <button type="button" class="support-btn" (click)="openAdminDocUploadModal()">Envoyer un document</button>
+                    </div>
+                  </section>
+
+                  @if (adminDocUploadModalOpen()) {
+                    <div class="trainer-modal-overlay admin-doc-upload-modal-overlay" (click)="closeAdminDocUploadModal()">
+                      <section class="trainer-modal admin-doc-upload-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="adminDocUploadModalTitle">
+                        <header class="admin-doc-upload-modal-head">
+                          <div>
+                            <p class="admin-doc-upload-modal-kicker">Suivi documents</p>
+                            <h3 id="adminDocUploadModalTitle">Envoyer un document</h3>
+                            <p class="admin-doc-upload-modal-sub">Selectionnez le type, le destinataire, puis ajoutez un fichier ou un lien.</p>
+                          </div>
+                          <button type="button" class="admin-doc-upload-modal-close" (click)="closeAdminDocUploadModal()" aria-label="Fermer">×</button>
+                        </header>
+                        @if (adminWorkflowError().trim()) {
+                          <p class="admin-doc-upload-modal-alert error">{{ adminWorkflowError() }}</p>
+                        }
+                        <div class="admin-doc-upload-modal-body">
+                          <ng-container *ngTemplateOutlet="adminFormationDocUploadForms" />
+                        </div>
+                      </section>
+                    </div>
+                  }
+
+                  @if (adminFormationDocumentMatrixView(); as mv) {
+                    <div class="admin-doc-matrix-wrap admin-doc-matrix-suivi">
+                      <div class="admin-doc-matrix-suivi-head">
+                        <h5>Statuts par personne</h5>
+                        <p class="sub admin-doc-matrix-suivi-lead">
+                          Pastilles de statut pour chaque document requis.
+                        </p>
+                      </div>
+                      <div class="admin-doc-matrix-toolbar">
+                        <input
+                          type="search"
+                          class="admin-doc-matrix-search"
+                          placeholder="Rechercher (nom, email)..."
+                          [ngModel]="adminDocMatrixQuery()"
+                          (ngModelChange)="adminDocMatrixQuery.set($event)"
+                          name="adminDocMatrixQuery"
+                          autocomplete="off"
+                        />
+                        <select
+                          class="admin-doc-matrix-filter-select"
+                          [ngModel]="adminDocMatrixRowFilter()"
+                          (ngModelChange)="setAdminDocMatrixRowFilter($event)"
+                          name="adminDocMatrixRowFilter"
+                          aria-label="Filtrer les lignes"
+                        >
+                          <option value="all">Toutes les lignes</option>
+                          <option value="trainer">Formateur seulement</option>
+                          <option value="apprentice">Apprentis seulement</option>
+                        </select>
+                        <select
+                          class="admin-doc-matrix-filter-select"
+                          [ngModel]="adminDocMatrixColumnCategory()"
+                          (ngModelChange)="setAdminDocMatrixColumnCategory($event)"
+                          name="adminDocMatrixColumnCategory"
+                          aria-label="Categorie des colonnes"
+                        >
+                          <option value="all">Toutes categories</option>
+                          <option value="pre-inscription">Pre-inscription</option>
+                          <option value="inscription">Inscription</option>
+                          <option value="en-formation">En formation</option>
+                          <option value="cloture">Cloture</option>
+                        </select>
+                      </div>
+                      @if (!mv.columns.length) {
+                        <p class="sub">Aucune colonne pour cette categorie.</p>
+                      } @else if (!mv.rows.length) {
+                        <p class="sub">Aucune ligne ne correspond aux filtres.</p>
+                      } @else {
+                        <div class="admin-doc-matrix-scroll admin-doc-matrix-scroll--suivi">
+                          <table class="admin-doc-matrix-table admin-doc-matrix-table--suivi">
+                            <thead>
+                              <tr>
+                                <th class="admin-doc-matrix-sticky-col admin-doc-matrix-corner" scope="col">Personne</th>
+                                @for (col of mv.columns; track col.key) {
+                                  <th
+                                    class="admin-doc-matrix-th-doc admin-doc-matrix-th-doc--suivi"
+                                    scope="col"
+                                    [attr.title]="col.label + (col.scope === 'generic' ? ' (document generique)' : ' (document individuel)')"
+                                  >
+                                    <span class="admin-doc-matrix-th-title">{{ col.label }}</span>
+                                    <span class="admin-doc-matrix-th-tag" [attr.data-scope]="col.scope">{{ col.scope === 'generic' ? 'Gen.' : 'Indiv.' }}</span>
+                                  </th>
+                                }
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (mrow of mv.rows; track mrow.rowKey) {
+                                <tr class="admin-doc-matrix-body-row" [class.admin-doc-matrix-trainer-row]="mrow.kind === 'trainer'">
+                                  <th class="admin-doc-matrix-sticky-col admin-doc-matrix-row-head" scope="row">
+                                    <span class="admin-doc-matrix-person-name">{{ mrow.name }}</span>
+                                    <span class="admin-doc-matrix-detail">{{ mrow.detail }}</span>
+                                    @if (mrow.kind === 'trainer') {
+                                      <span class="admin-doc-matrix-badge">Formateur</span>
+                                    } @else {
+                                      <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                                    }
+                                  </th>
+                                  @for (col of mv.columns; track col.key) {
+                                    @let cell = mrow.cells[col.key];
+                                    <td class="admin-doc-matrix-cell admin-doc-matrix-cell--status-only">
+                                      @if (cell.isNa) {
+                                        <span class="admin-doc-matrix-pill admin-doc-matrix-pill--solo" data-variant="na" title="Non applicable">—</span>
+                                      } @else {
+                                        <span class="admin-doc-matrix-pill admin-doc-matrix-pill--solo" [attr.data-variant]="cell.statusVariant" [attr.title]="cell.status">{{ docMatrixStatusShort(cell.status) }}</span>
+                                        @if (cell.url) {
+                                          <a class="admin-doc-matrix-link admin-doc-matrix-link--compact" [href]="resolveDocumentUrl(cell.url)" target="_blank" rel="noopener noreferrer" title="Voir">Voir</a>
+                                        }
+                                      }
+                                    </td>
+                                  }
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+
+                @if (adminFormationDetailTab() === 'validation') {
+                <section class="sessions-block admin-validation-panel">
+                  <header class="admin-validation-panel-head">
+                    <div>
+                      <h5>Tests de validation</h5>
+                      <p class="sub">Creez un QCM, affectez-le a tous les apprentis, puis consultez les resultats.</p>
+                    </div>
+                  </header>
+
+                  @if (!adminValidationTestDetail()) {
+                    <form class="admin-validation-quiz-form" (submit)="createAdminValidationQuizTest($event)">
+                      <div class="admin-validation-meta-card">
+                        <h6 class="admin-validation-card-title">Parametres du test</h6>
+                        <div class="admin-validation-meta-grid">
+                          <label class="admin-validation-field">
+                            <span>Titre du test</span>
+                            <input type="text" [ngModel]="adminValidationTestCreateTitle()" (ngModelChange)="adminValidationTestCreateTitle.set($event)" name="adminValidationTestCreateTitle" placeholder="Ex. Test de validation finale" required />
+                          </label>
+                          <label class="admin-validation-field admin-validation-field--narrow">
+                            <span>Seuil de reussite</span>
+                            <div class="admin-validation-threshold-wrap">
+                              <input type="number" min="1" max="100" [ngModel]="adminValidationTestCreatePassThreshold()" (ngModelChange)="adminValidationTestCreatePassThreshold.set($event !== '' ? +$event : 70)" name="passThreshold" />
+                              <span class="admin-validation-threshold-suffix">%</span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="admin-validation-questions">
+                        <div class="admin-validation-questions-head">
+                          <h6 class="admin-validation-card-title">Questions</h6>
+                          <span class="admin-validation-questions-count">{{ adminValidationTestCreateQuestions().length }} question(s)</span>
+                        </div>
+
+                        @for (q of adminValidationTestCreateQuestions(); track $index; let qi = $index) {
+                          <fieldset class="admin-validation-question-card">
+                            <div class="admin-validation-question-head">
+                              <span class="admin-validation-question-badge">Question {{ qi + 1 }}</span>
+                              @if (adminValidationTestCreateQuestions().length > 1) {
+                                <button type="button" class="admin-validation-question-remove" (click)="removeAdminValidationQuestion(qi)">Supprimer</button>
+                              }
+                            </div>
+                            <label class="admin-validation-field admin-validation-field--full">
+                              <span>Enonce</span>
+                              <input type="text" [ngModel]="q.prompt" (ngModelChange)="updateAdminValidationQuestionPrompt(qi, $event)" [name]="'vqP' + qi" placeholder="Saisissez la question..." required />
+                            </label>
+                            <p class="admin-validation-options-label">Reponses — cochez la bonne reponse</p>
+                            <div class="admin-validation-options">
+                              @for (opt of q.options; track $index; let oi = $index) {
+                                <label class="admin-validation-option-row" [class.is-correct]="opt.isCorrect">
+                                  <input type="radio" class="admin-validation-option-radio" [name]="'vqC' + qi" [checked]="opt.isCorrect" (change)="setAdminValidationOptionCorrect(qi, oi)" />
+                                  <span class="admin-validation-option-radio-ui" aria-hidden="true"></span>
+                                  <input type="text" class="admin-validation-option-input" [ngModel]="opt.label" (ngModelChange)="updateAdminValidationOptionLabel(qi, oi, $event)" [name]="'vqO' + qi + oi" placeholder="Texte de la reponse" />
+                                  @if (q.options.length > 2) {
+                                    <button type="button" class="admin-validation-option-remove" title="Retirer" (click)="removeAdminValidationQuestionOption(qi, oi)">×</button>
+                                  }
+                                </label>
+                              }
+                            </div>
+                            <button type="button" class="admin-validation-add-option-btn" (click)="addAdminValidationQuestionOption(qi)">+ Ajouter une reponse</button>
+                          </fieldset>
+                        }
+                      </div>
+
+                      <footer class="admin-validation-form-footer">
+                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="addAdminValidationQuestion()">+ Ajouter une question</button>
+                        <button type="submit" class="support-btn admin-validation-submit-btn" [disabled]="creatingAdminWorkflowItem()">
+                          {{ creatingAdminWorkflowItem() ? 'Creation en cours...' : 'Creer et affecter aux apprentis' }}
+                        </button>
+                      </footer>
+                    </form>
+
+                    <div class="admin-validation-tests-section">
+                      <h6 class="admin-validation-section-title">Tests de cette session</h6>
+                      @if (!selectedAdminFormationValidationTests().length) {
+                        <p class="admin-validation-empty">Aucun test cree pour le moment.</p>
+                      } @else {
+                        <div class="admin-validation-tests-table-wrap planning-table-wrap">
+                          <table class="planning-table doc-table admin-table admin-validation-tests-table">
+                            <thead>
+                              <tr>
+                                <th>Titre</th>
+                                <th>Questions</th>
+                                <th>Apprentis</th>
+                                <th>Termines</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (test of selectedAdminFormationValidationTests(); track test.id) {
+                                <tr>
+                                  <td class="admin-validation-test-title">{{ test.title }}</td>
+                                  <td>{{ test.questionCount }}</td>
+                                  <td>{{ test.assignedCount }}</td>
+                                  <td>{{ test.completedCount }}</td>
+                                  <td>
+                                    <button type="button" class="ghost-btn dark-ghost-btn admin-validation-history-btn" (click)="loadAdminValidationTestDetail(test.id)">Historique</button>
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="admin-validation-detail">
+                      <button type="button" class="admin-validation-back-btn" (click)="closeAdminValidationTestDetail()">← Retour a la liste</button>
+                      <header class="admin-validation-detail-head">
+                        <h6>{{ adminValidationTestDetail()!.test.title }}</h6>
+                        <p class="sub">Seuil {{ adminValidationTestDetail()!.test.passThreshold * 100 }} % · {{ adminValidationTestDetail()!.test.questionCount }} question(s)</p>
+                      </header>
+                      <input type="search" class="admin-doc-matrix-search admin-validation-history-search" placeholder="Rechercher un apprenti (nom, email)..." [ngModel]="adminValidationHistoryQuery()" (ngModelChange)="adminValidationHistoryQuery.set($event)" />
+                      <div class="admin-validation-history-table-wrap planning-table-wrap">
+                        <table class="planning-table doc-table admin-table admin-validation-history-table">
+                          <thead>
+                            <tr>
+                              <th>Apprenti</th>
+                              <th>Score</th>
+                              <th>Statut</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (app of filteredAdminValidationTestApprentices(); track app.studentId) {
+                              <tr class="admin-validation-history-row">
+                                <td>
+                                  <span class="admin-validation-apprentice-name">{{ app.studentName }}</span>
+                                  <span class="sub admin-validation-apprentice-email">{{ app.email }}</span>
+                                </td>
+                                <td><strong>{{ app.score }}</strong> / {{ adminValidationTestDetail()!.test.maxScore }}</td>
+                                <td>
+                                  <span class="admin-validation-status-pill" [attr.data-status]="app.status">{{ validationStatusLabel(app.status) }}</span>
+                                </td>
+                                <td>
+                                  @if (app.attempts.length) {
+                                    <button
+                                      type="button"
+                                      class="ghost-btn dark-ghost-btn admin-validation-view-answers-btn"
+                                      (click)="selectAdminValidationHistoryStudent(app.studentId)"
+                                    >
+                                      Voir les reponses
+                                    </button>
+                                  } @else {
+                                    <span class="sub">Non soumis</span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                        </div>
+
+                      @if (selectedAdminValidationHistoryStudent(); as student) {
+                        <div class="trainer-modal-overlay admin-validation-answers-modal-overlay" (click)="closeAdminValidationHistoryModal()">
+                          <section class="trainer-modal admin-validation-answers-modal card content-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="validationAnswersModalTitle">
+                            <header class="trainer-modal-head admin-validation-answers-modal-head">
+                              <div>
+                                <p class="trainer-modal-kicker">Reponses du test</p>
+                                <h3 id="validationAnswersModalTitle">{{ student.studentName }}</h3>
+                                <p class="sub">{{ student.email }}</p>
+                              </div>
+                              <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminValidationHistoryModal()" aria-label="Fermer">×</button>
+                            </header>
+
+                            @if (!student.attempts.length) {
+                              <p class="admin-validation-empty">Cet apprenti n'a pas encore soumis le test.</p>
+                            } @else if (selectedAdminValidationHistoryAttempt(); as attempt) {
+                                <div class="admin-validation-attempt-summary">
+                                  <span class="admin-validation-status-pill" [attr.data-status]="attempt.status">{{ validationStatusLabel(attempt.status) }}</span>
+                                  <span><strong>{{ attempt.score }}</strong> / {{ attempt.maxScore }}</span>
+                                  @if (attempt.submittedAt) {
+                                    <span class="sub">Soumis le {{ attempt.submittedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                  }
+                                </div>
+
+                                <div class="admin-validation-answer-review">
+                                  @for (answer of attempt.answers; track answer.questionId; let qi = $index) {
+                                    <article class="admin-validation-answer-card" [class.is-correct]="answer.isCorrect" [class.is-wrong]="!answer.isCorrect && answer.selectedLabels.length">
+                                      <div class="admin-validation-answer-card-head">
+                                        <span class="admin-validation-question-badge">Q{{ qi + 1 }}</span>
+                                        <span class="admin-validation-answer-verdict" [attr.data-correct]="answer.isCorrect">
+                                          {{ answer.isCorrect ? 'Correct' : (answer.selectedLabels.length ? 'Incorrect' : 'Non repondu') }}
+                                        </span>
+                                      </div>
+                                      <p class="admin-validation-answer-prompt">{{ answer.prompt }}</p>
+                                      <div class="admin-validation-answer-lines">
+                                        <p>
+                                          <span class="admin-validation-answer-label">Reponse donnee :</span>
+                                          @if (answer.selectedLabels.length) {
+                                            <strong>{{ answer.selectedLabels.join(', ') }}</strong>
+                                          } @else {
+                                            <em>Aucune reponse</em>
+                                          }
+                                        </p>
+                                        @if (!answer.isCorrect && answer.correctLabels.length) {
+                                          <p class="admin-validation-answer-expected">
+                                            <span class="admin-validation-answer-label">Bonne reponse :</span>
+                                            <strong>{{ answer.correctLabels.join(', ') }}</strong>
+                                          </p>
+                                        }
+                                      </div>
+                                    </article>
+                                  }
+                                </div>
+                            }
+                          </section>
+                        </div>
+                      }
                     </div>
                   }
                 </section>
+              }
+
               </div>
+
             } @else {
               <p class="sub">Aucune session selectionnee.</p>
             }
@@ -1439,6 +2417,13 @@
               <div class="admin-planning-head">
                 <h4>Creer des apprentis</h4>
                 <button type="button" class="ghost-btn dark-ghost-btn" (click)="addApprenticeRow()">Ajouter un apprenti</button>
+              </div>
+              <div class="apprentice-row apprentice-row--head" aria-hidden="true">
+                <span>Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Date naissance</span>
+                <span>Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span></span>
               </div>
               @for (row of apprenticeRows(); track $index) {
                 <div class="apprentice-row">
@@ -1461,20 +2446,14 @@
                 </button>
               </div>
             </form>
-            <div class="planning-table-wrap">
-              <div class="apprentice-selector-row">
-                <label>
-                  Rechercher dans la liste
-                  <input type="text" [ngModel]="apprenticeSearch()" (ngModelChange)="apprenticeSearch.set($event)" name="apprenticeSearch" placeholder="Nom, prenom, email..." />
-                </label>
-              </div>
+            <div class="planning-table-wrap providers-table-wrap">
               @if (studentPasswordNotice()) {
                 <p class="success">{{ studentPasswordNotice() }}</p>
               }
               @if (studentPasswordError()) {
                 <p class="error">{{ studentPasswordError() }}</p>
               }
-              <table class="planning-table doc-table admin-table">
+              <table class="planning-table doc-table admin-table providers-table">
                 <thead>
                   <tr>
                     <th>Apprenti</th>
@@ -1510,36 +2489,69 @@
         @if (activeSection() === 'formateurs' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Formateurs</h3>
-            <p class="sub">Ajoute un formateur puis affecte-le a une ou plusieurs formations.</p>
+            <p class="sub">Creation, consultation, edition et suppression des formateurs.</p>
             <form class="admin-create-form" (submit)="createTrainer($event)">
               <div class="admin-form-grid">
                 <label>
-                  Prenom
+                  <span class="label-field-line">Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="newTrainerFirstName()" (ngModelChange)="newTrainerFirstName.set($event)" name="newTrainerFirstName" required />
                 </label>
                 <label>
-                  Nom
+                  <span class="label-field-line">Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="newTrainerLastName()" (ngModelChange)="newTrainerLastName.set($event)" name="newTrainerLastName" required />
                 </label>
                 <label>
-                  Email
+                  <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="email" [ngModel]="newTrainerEmail()" (ngModelChange)="newTrainerEmail.set($event)" name="newTrainerEmail" required />
                 </label>
                 <label>
-                  Mot de passe
-                  <input type="text" [ngModel]="newTrainerPassword()" (ngModelChange)="newTrainerPassword.set($event)" name="newTrainerPassword" />
+                  <span class="label-field-line">Telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="newTrainerPhone()" (ngModelChange)="newTrainerPhone.set($event)" name="newTrainerPhone" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Statut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <select [ngModel]="newTrainerStatus()" (ngModelChange)="onTrainerStatusChange($event)" name="newTrainerStatus" required>
+                    <option value="salarie">Salarie</option>
+                    <option value="freelance">Freelance</option>
+                    <option value="partenaire">Partenaire</option>
+                  </select>
+                </label>
+                @if (newTrainerStatus() === 'freelance' || newTrainerStatus() === 'partenaire') {
+                  <label>
+                    <span class="label-field-line">Societe (depuis Prestataires) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="newTrainerCompanyName()" (ngModelChange)="newTrainerCompanyName.set($event)" name="newTrainerCompanyName" required>
+                      <option value="">Choisir une societe</option>
+                      @for (providerName of providerCompanyOptions(); track providerName) {
+                        <option [value]="providerName">{{ providerName }}</option>
+                      }
+                    </select>
+                  </label>
+                } @else {
+                  <label>
+                    Societe
+                    <input
+                      type="text"
+                      [ngModel]="newTrainerCompanyName()"
+                      (ngModelChange)="newTrainerCompanyName.set($event)"
+                      name="newTrainerCompanyName"
+                      disabled
+                      placeholder="Non applicable (salarie)"
+                    />
+                  </label>
+                }
+                <label>
+                  <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" required />
+                </label>
+                <label>
+                  <span class="label-field-line">CV (document) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onTrainerCvFileSelected($event)" name="newTrainerCvFile" required />
                 </label>
               </div>
 
               @if (!formations().length) {
                 <p class="sub">Aucune formation disponible. Cree d'abord une formation dans l'onglet `Formations`.</p>
               } @else {
-                <div class="apprentice-selector-row">
-                  <label>
-                    Rechercher formation
-                    <input type="text" [ngModel]="formationFilterForTrainer()" (ngModelChange)="formationFilterForTrainer.set($event)" name="formationFilterForTrainer" placeholder="Titre ou formateur" />
-                  </label>
-                </div>
                 <div class="apprentice-selector-row">
                   <label>
                     Affecter a une formation
@@ -1586,18 +2598,519 @@
                 <thead>
                   <tr>
                     <th>Formateur</th>
-                    <th>Email</th>
+                    <th>Statut</th>
+                    <th>Societe</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                    <tr>
+                    <tr [class.trainer-row-expiring]="trainerHasExpiringCertification(trainerItem)">
                       <td>{{ trainerItem.firstName }} {{ trainerItem.lastName }}</td>
-                      <td>{{ trainerItem.email }}</td>
+                      <td>
+                        {{ trainerItem.status || '-' }}
+                        @if (trainerHasExpiringCertification(trainerItem)) {
+                          <div class="trainer-expiring-note">Expire bientot: {{ trainerExpiringCertificationNames(trainerItem).join(', ') }}</div>
+                        }
+                      </td>
+                      <td>{{ trainerItem.companyName || '-' }}</td>
+                      <td class="trainer-table-actions-cell">
+                        <div class="attendance-actions trainer-table-actions">
+                          <button
+                            type="button"
+                            class="ghost-btn dark-ghost-btn trainer-icon-action"
+                            (click)="selectTrainerForView(trainerItem.id)"
+                            aria-label="Voir le formateur"
+                            title="Voir"
+                          >
+                            <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-linecap="round" stroke-linejoin="round" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="ghost-btn dark-ghost-btn trainer-icon-action"
+                            (click)="startEditTrainer(trainerItem.id)"
+                            aria-label="Editer le formateur"
+                            title="Editer"
+                          >
+                            <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-linecap="round" stroke-linejoin="round" />
+                              <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="archive-btn trainer-icon-action trainer-icon-action--danger"
+                            (click)="deleteTrainer(trainerItem.id)"
+                            [disabled]="deletingTrainerId() === trainerItem.id"
+                            [attr.aria-label]="deletingTrainerId() === trainerItem.id ? 'Suppression en cours' : 'Supprimer le formateur'"
+                            [attr.title]="deletingTrainerId() === trainerItem.id ? 'Suppression...' : 'Supprimer'"
+                          >
+                            @if (deletingTrainerId() === trainerItem.id) {
+                              <span class="trainer-icon-spinner" aria-hidden="true"></span>
+                            } @else {
+                              <svg class="trainer-icon-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" />
+                                <line x1="10" y1="11" x2="10" y2="17" stroke-linecap="round" />
+                                <line x1="14" y1="11" x2="14" y2="17" stroke-linecap="round" />
+                              </svg>
+                            }
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   }
                 </tbody>
               </table>
+            </div>
+
+          </section>
+        }
+
+        @if (selectedTrainer()) {
+          <div class="trainer-modal-overlay" (click)="closeTrainerView()">
+            <section class="trainer-modal card content-card" (click)="$event.stopPropagation()">
+              <div class="trainer-modal-head">
+                <div>
+                  <p class="trainer-modal-kicker">Profil formateur</p>
+                  <h3>Fiche formateur</h3>
+                </div>
+                <button type="button" class="ghost-btn dark-ghost-btn" (click)="closeTrainerView()">Fermer</button>
+              </div>
+              <div class="trainer-modal-identity">
+                <p class="trainer-modal-name">{{ selectedTrainer()!.firstName }} {{ selectedTrainer()!.lastName }}</p>
+                <span class="trainer-modal-badge">{{ selectedTrainer()!.status || 'Statut non renseigne' }}</span>
+              </div>
+
+              <div class="trainer-info-grid">
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Email</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.email || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Telephone</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.phone || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Societe</p>
+                  <p class="trainer-info-value">{{ selectedTrainer()!.companyName || '-' }}</p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">Transcription Microsoft</p>
+                  <p class="trainer-info-value">
+                    @if (selectedTrainer()!.microsoftTranscriptUrl) {
+                      <a class="teams-link admin-teams-link" [href]="selectedTrainer()!.microsoftTranscriptUrl!" target="_blank" rel="noopener noreferrer">Ouvrir le lien</a>
+                    } @else {
+                      -
+                    }
+                  </p>
+                </article>
+                <article class="trainer-info-item">
+                  <p class="trainer-info-label">CV</p>
+                  <p class="trainer-info-value">
+                    @if (selectedTrainer()!.cvUrl) {
+                      <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(selectedTrainer()!.cvUrl)" target="_blank" rel="noopener noreferrer">Ouvrir CV</a>
+                    } @else {
+                      -
+                    }
+                  </p>
+                </article>
+              </div>
+
+              <div class="trainer-certifications-block">
+                <div class="sessions-block-head">
+                  <h5>Certifications</h5>
+                  <p class="sub">{{ selectedTrainer()!.certifications?.length || 0 }} certification(s)</p>
+                </div>
+              <div class="planning-table-wrap">
+                <table class="planning-table doc-table admin-table">
+                  <thead>
+                    <tr>
+                      <th>Certification</th>
+                      <th>Certificateur</th>
+                      <th>Expiration</th>
+                      <th>Preuve</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if (!selectedTrainer()!.certifications?.length) {
+                      <tr><td colspan="4">Aucune certification.</td></tr>
+                    } @else {
+                      @for (cert of selectedTrainer()!.certifications!; track cert.name + cert.expiresAt) {
+                        <tr [class.trainer-row-expiring]="certificationExpiresSoon(cert.expiresAt)">
+                          <td>{{ cert.name || '-' }}</td>
+                          <td>{{ cert.issuer || '-' }}</td>
+                          <td [class.trainer-expiring-date]="certificationExpiresSoon(cert.expiresAt)">{{ cert.expiresAt || '-' }}</td>
+                          <td>
+                            @if (cert.proof) {
+                              <a class="teams-link admin-teams-link" [href]="cert.proof" target="_blank" rel="noopener noreferrer">Voir preuve</a>
+                            } @else {
+                              -
+                            }
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+              </div>
+
+              <div class="trainer-certifications-block">
+                <div class="sessions-block-head">
+                  <h5>Formations deja passees</h5>
+                  <p class="sub">{{ selectedTrainer()!.completedTrainings?.length || 0 }} formation(s)</p>
+                </div>
+                <div class="planning-table-wrap">
+                  <table class="planning-table doc-table admin-table">
+                    <thead>
+                      <tr>
+                        <th>Domaine</th>
+                        <th>Description</th>
+                        <th>Objectif</th>
+                        <th>Organisme</th>
+                        <th>Date</th>
+                        <th>Duree (h)</th>
+                        <th>Attestation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (!selectedTrainer()!.completedTrainings?.length) {
+                        <tr><td colspan="7">Aucune formation enregistree.</td></tr>
+                      } @else {
+                        @for (training of selectedTrainer()!.completedTrainings!; track training.trainingDate + training.description) {
+                          <tr>
+                            <td>{{ training.domain || '-' }}</td>
+                            <td>{{ training.description || '-' }}</td>
+                            <td>{{ training.objective || '-' }}</td>
+                            <td>{{ training.trainingOrganization || '-' }}</td>
+                            <td>{{ training.trainingDate || '-' }}</td>
+                            <td>{{ training.durationHours || '-' }}</td>
+                            <td>
+                              @if (training.attestationUrl) {
+                                <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(training.attestationUrl)" target="_blank" rel="noopener noreferrer">Voir attestation</a>
+                              } @else {
+                                -
+                              }
+                            </td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        }
+
+        @if (trainerEditId()) {
+          <div class="trainer-modal-overlay" (click)="cancelEditTrainer()">
+            <section class="trainer-modal card content-card" (click)="$event.stopPropagation()">
+              <form class="admin-create-form" (submit)="saveTrainerEdit($event)">
+                <div class="trainer-modal-head">
+                  <div>
+                    <p class="trainer-modal-kicker">Edition formateur</p>
+                    <h3>Editer formateur</h3>
+                  </div>
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="cancelEditTrainer()">Fermer</button>
+                </div>
+                <div class="admin-form-grid">
+                  <label>
+                    <span class="label-field-line">Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditFirstName()" (ngModelChange)="trainerEditFirstName.set($event)" name="trainerEditFirstName" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditLastName()" (ngModelChange)="trainerEditLastName.set($event)" name="trainerEditLastName" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="email" [ngModel]="trainerEditEmail()" (ngModelChange)="trainerEditEmail.set($event)" name="trainerEditEmail" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="text" [ngModel]="trainerEditPhone()" (ngModelChange)="trainerEditPhone.set($event)" name="trainerEditPhone" required />
+                  </label>
+                  <label>
+                    <span class="label-field-line">Statut <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <select [ngModel]="trainerEditStatus()" (ngModelChange)="onTrainerEditStatusChange($event)" name="trainerEditStatus" required>
+                      <option value="salarie">Salarie</option>
+                      <option value="freelance">Freelance</option>
+                      <option value="partenaire">Partenaire</option>
+                    </select>
+                  </label>
+                  @if (trainerEditStatus() === 'freelance' || trainerEditStatus() === 'partenaire') {
+                    <label>
+                      <span class="label-field-line">Societe (depuis Prestataires) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      <select [ngModel]="trainerEditCompanyName()" (ngModelChange)="trainerEditCompanyName.set($event)" name="trainerEditCompanyName" required>
+                        <option value="">Choisir une societe</option>
+                        @for (providerName of providerCompanyOptions(); track providerName) {
+                          <option [value]="providerName">{{ providerName }}</option>
+                        }
+                      </select>
+                    </label>
+                  } @else {
+                    <label>
+                      Societe
+                      <input
+                        type="text"
+                        [ngModel]="trainerEditCompanyName()"
+                        (ngModelChange)="trainerEditCompanyName.set($event)"
+                        name="trainerEditCompanyNameSalarie"
+                        disabled
+                        placeholder="Non applicable (salarie)"
+                      />
+                    </label>
+                  }
+                  <label>
+                    <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                    <input type="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" required />
+                  </label>
+                  <label>
+                    CV (remplacer)
+                    <input type="file" (change)="onTrainerEditCvFileSelected($event)" name="trainerEditCvFile" />
+                    @if (trainerEditCvUrl()) {
+                      <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(trainerEditCvUrl())" target="_blank" rel="noopener noreferrer">CV actuel</a>
+                    }
+                  </label>
+                </div>
+
+                <div class="admin-planning-block">
+                  <div class="admin-planning-head">
+                    <h5>Certifications</h5>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addTrainerCertificationRow()">Ajouter</button>
+                  </div>
+                  @if (certificationCatalogLoading()) {
+                    <p class="sub">Chargement du catalogue certifications...</p>
+                  }
+                  @if (certificationCatalogError()) {
+                    <p class="error">{{ certificationCatalogError() }}</p>
+                  }
+                  @for (cert of trainerCertifications(); track $index) {
+                    <div class="admin-planning-row">
+                      <select [ngModel]="cert.name" (ngModelChange)="updateTrainerCertification($index, 'name', $event)" [name]="'certName' + $index">
+                        <option value="">Nom certif (catalogue)</option>
+                        @for (catalogName of certificationNameOptions(); track catalogName) {
+                          <option [value]="catalogName">{{ catalogName }}</option>
+                        }
+                      </select>
+                      <input type="text" [ngModel]="cert.issuer" (ngModelChange)="updateTrainerCertification($index, 'issuer', $event)" [name]="'certIssuer' + $index" placeholder="Certificateur" />
+                      <input type="date" [ngModel]="cert.expiresAt" (ngModelChange)="updateTrainerCertification($index, 'expiresAt', $event)" [name]="'certExpiry' + $index" />
+                      <input type="url" [ngModel]="cert.proof" (ngModelChange)="updateTrainerCertification($index, 'proof', $event)" [name]="'certProof' + $index" placeholder="Lien preuve (optionnel)" />
+                      <input type="file" (change)="onTrainerCertificationProofSelected($index, $event)" [name]="'certProofFile' + $index" />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removeTrainerCertificationRow($index)" [disabled]="trainerCertifications().length === 1">Retirer</button>
+                    </div>
+                  }
+                </div>
+
+                <div class="admin-planning-block">
+                  <div class="admin-planning-head">
+                    <h5>Formations deja passees</h5>
+                    <button type="button" class="ghost-btn dark-ghost-btn" (click)="addTrainerCompletedTrainingRow()">Ajouter</button>
+                  </div>
+                  @for (training of trainerCompletedTrainings(); track $index) {
+                    <div class="admin-planning-row">
+                      <select [ngModel]="training.domain" (ngModelChange)="updateTrainerCompletedTraining($index, 'domain', $event)" [name]="'trainingDomain' + $index">
+                        <option value="">Domaine</option>
+                        <option value="expertise technique">Expertise technique</option>
+                        <option value="experience pedagogique">Experience pedagogique</option>
+                        <option value="inclusion et accessibilite">Inclusion et accessibilite</option>
+                        <option value="reglementation et qualite">Reglementation et qualite</option>
+                        <option value="soft skills et communication">Soft skills et communication</option>
+                      </select>
+                      <input type="text" [ngModel]="training.description" (ngModelChange)="updateTrainerCompletedTraining($index, 'description', $event)" [name]="'trainingDescription' + $index" placeholder="Description" />
+                      <input type="text" [ngModel]="training.objective" (ngModelChange)="updateTrainerCompletedTraining($index, 'objective', $event)" [name]="'trainingObjective' + $index" placeholder="Objectif" />
+                      <input type="text" [ngModel]="training.trainingOrganization" (ngModelChange)="updateTrainerCompletedTraining($index, 'trainingOrganization', $event)" [name]="'trainingOrg' + $index" placeholder="Organisme de formation" />
+                      <input type="date" [ngModel]="training.trainingDate" (ngModelChange)="updateTrainerCompletedTraining($index, 'trainingDate', $event)" [name]="'trainingDate' + $index" />
+                      <input type="number" min="0" step="0.5" [ngModel]="training.durationHours" (ngModelChange)="updateTrainerCompletedTraining($index, 'durationHours', $event)" [name]="'trainingDuration' + $index" placeholder="Duree (h)" />
+                      <input type="url" [ngModel]="training.attestationUrl" (ngModelChange)="updateTrainerCompletedTraining($index, 'attestationUrl', $event)" [name]="'trainingAttestationUrl' + $index" placeholder="Lien attestation (optionnel)" />
+                      <input type="file" (change)="onTrainerCompletedTrainingAttestationSelected($index, $event)" [name]="'trainingAttestationFile' + $index" />
+                      <button type="button" class="ghost-btn dark-ghost-btn" (click)="removeTrainerCompletedTrainingRow($index)" [disabled]="trainerCompletedTrainings().length === 1">Retirer</button>
+                    </div>
+                  }
+                </div>
+
+                @if (trainerCreateError()) {
+                  <p class="error">{{ trainerCreateError() }}</p>
+                }
+
+                <div class="admin-form-actions">
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="cancelEditTrainer()">Annuler</button>
+                  <button type="submit" class="support-btn" [disabled]="creatingTrainer()">{{ creatingTrainer() ? 'Enregistrement...' : 'Enregistrer' }}</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        }
+
+        @if (activeSection() === 'prestataires' && isAdmin()) {
+          <section class="card content-card admin-workspace">
+            <h3>Prestataires</h3>
+            <p class="sub">Creation de prestataires avec champs et documents obligatoires.</p>
+
+            <form class="admin-create-form" (submit)="createProvider($event)">
+              <div class="admin-form-grid">
+                <label>
+                  <span class="label-field-line">Nom de l'entreprise <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerCompanyName()" (ngModelChange)="providerCompanyName.set($event)" name="providerCompanyName" required />
+                </label>
+                <label>
+                  <span class="label-field-line">SIRET <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerSiret()" (ngModelChange)="providerSiret.set($event)" name="providerSiret" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Adresse <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerAddress()" (ngModelChange)="providerAddress.set($event)" name="providerAddress" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Numero de telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerPhone()" (ngModelChange)="providerPhone.set($event)" name="providerPhone" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Numero declaration d'activite <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="text" [ngModel]="providerActivityDeclarationNumber()" (ngModelChange)="providerActivityDeclarationNumber.set($event)" name="providerActivityDeclarationNumber" required />
+                </label>
+                <label>
+                  <span class="label-field-line">KBIS <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'kbis')" name="providerKbisFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">RIB <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'rib')" name="providerRibFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Attestation de vigilance <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'vigilanceCertificate')" name="providerVigilanceCertificateFile" required />
+                </label>
+                <label>
+                  <span class="label-field-line">Attestation responsabilite civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <input type="file" (change)="onProviderFileSelected($event, 'liabilityInsurance')" name="providerLiabilityInsuranceFile" required />
+                </label>
+              </div>
+
+              @if (providerNotice()) {
+                <p class="success">{{ providerNotice() }}</p>
+              }
+              @if (providerError()) {
+                <p class="error">{{ providerError() }}</p>
+              }
+
+              <div class="admin-form-actions">
+                <button type="submit" class="support-btn" [disabled]="creatingProvider()">
+                  {{ creatingProvider() ? 'Creation en cours...' : 'Creer le prestataire' }}
+                </button>
+              </div>
+            </form>
+
+            <div class="planning-table-wrap">
+              <div class="sessions-toolbar providers-toolbar">
+                <label class="sessions-search">
+                  Rechercher un prestataire
+                  <input
+                    type="text"
+                    [ngModel]="providerSearch()"
+                    (ngModelChange)="updateProviderSearch($event)"
+                    name="providerSearch"
+                    placeholder="Entreprise, SIRET, tel, adresse..."
+                  />
+                </label>
+                <label>
+                  Vue du tableau
+                  <select
+                    [ngModel]="providerTablePreset()"
+                    (ngModelChange)="applyProviderTablePreset($event)"
+                    name="providerTablePreset"
+                  >
+                    <option value="compact">Compacte</option>
+                    <option value="full">Complete</option>
+                    <option value="documents">Documents</option>
+                  </select>
+                </label>
+              </div>
+
+              <table class="planning-table doc-table admin-table">
+                <thead>
+                  <tr>
+                    @if (isProviderColumnVisible('companyName')) {
+                      <th>Entreprise</th>
+                    }
+                    @if (isProviderColumnVisible('siret')) {
+                      <th>SIRET</th>
+                    }
+                    @if (isProviderColumnVisible('phone')) {
+                      <th>Telephone</th>
+                    }
+                    @if (isProviderColumnVisible('createdAt')) {
+                      <th>Date creation</th>
+                    }
+                    @if (isProviderColumnVisible('address')) {
+                      <th>Adresse</th>
+                    }
+                    @if (isProviderColumnVisible('activityDeclarationNumber')) {
+                      <th>Declaration activite</th>
+                    }
+                    @if (isProviderColumnVisible('documents')) {
+                      <th>Documents</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (provider of paginatedProviders(); track provider.id) {
+                    <tr>
+                      @if (isProviderColumnVisible('companyName')) {
+                        <td>{{ provider.companyName }}</td>
+                      }
+                      @if (isProviderColumnVisible('siret')) {
+                        <td>{{ provider.siret }}</td>
+                      }
+                      @if (isProviderColumnVisible('phone')) {
+                        <td>{{ provider.phone }}</td>
+                      }
+                      @if (isProviderColumnVisible('createdAt')) {
+                        <td>{{ provider.createdAt }}</td>
+                      }
+                      @if (isProviderColumnVisible('address')) {
+                        <td>{{ provider.address }}</td>
+                      }
+                      @if (isProviderColumnVisible('activityDeclarationNumber')) {
+                        <td>{{ provider.activityDeclarationNumber }}</td>
+                      }
+                      @if (isProviderColumnVisible('documents')) {
+                        <td class="provider-docs-cell">
+                          @if (provider.documents?.kbis?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.kbis?.url)" target="_blank" rel="noopener noreferrer">KBIS</a>
+                          }
+                          @if (provider.documents?.rib?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.rib?.url)" target="_blank" rel="noopener noreferrer">RIB</a>
+                          }
+                          @if (provider.documents?.vigilanceCertificate?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.vigilanceCertificate?.url)" target="_blank" rel="noopener noreferrer">Vigilance</a>
+                          }
+                          @if (provider.documents?.liabilityInsurance?.url) {
+                            <a class="teams-link admin-teams-link" [href]="resolveDocumentUrl(provider.documents?.liabilityInsurance?.url)" target="_blank" rel="noopener noreferrer">Responsabilite civile</a>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                  @if (!filteredProviders().length) {
+                    <tr>
+                      <td colspan="7">Aucun prestataire trouve.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <div class="table-pagination providers-pagination">
+                <p class="sub">Page {{ providerPage() }} / {{ providerTotalPages() }}</p>
+                <div class="table-pagination-actions">
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousProviderPage()" [disabled]="providerPage() <= 1">Precedent</button>
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextProviderPage()" [disabled]="providerPage() >= providerTotalPages()">Suivant</button>
+                </div>
+              </div>
             </div>
           </section>
         }
@@ -1621,7 +3134,7 @@
                   </select>
                 </label>
                 <label>
-                  Titre
+                  <span class="label-field-line">Titre <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="adminGlobalResourceTitle()" (ngModelChange)="adminGlobalResourceTitle.set($event)" name="adminGlobalResourceTitle" placeholder="Guide, annonce, support..." required />
                 </label>
                 <label>
