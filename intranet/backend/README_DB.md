@@ -47,3 +47,23 @@ To force a fresh re-import (truncate intranet domain tables first):
 ```bash
 php bin/console app:intranet:import-state --truncate
 ```
+
+Import a production backup file:
+
+```bash
+php bin/console app:intranet:import-state --file=var/intranet-admin-state.PROD.json --truncate
+```
+
+The import also creates/updates `users` accounts (hashed passwords) for students and trainers found in the JSON.
+
+## 7) Production import (after deploy)
+
+1. Upload `intranet-admin-state.PROD.json` to `var/` on the server (do not commit this file).
+2. Upload `public/uploads/` assets if resources use local files.
+3. Run:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console app:intranet:import-state --file=var/intranet-admin-state.PROD.json --truncate
+php bin/console cache:clear --env=prod
+```

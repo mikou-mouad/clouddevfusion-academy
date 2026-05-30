@@ -73,6 +73,7 @@ final class ImportIntranetStateCommand extends Command
                 $sessionIdsByFormation
             );
             $this->importTrainerCertificationsAndTrainings((array) ($decoded['trainers'] ?? []), $trainerDbIdByLegacyId);
+            $this->syncAuthUsersFromLegacyState($decoded);
 
             $this->connection->commit();
             $io->success('Intranet state imported into SQL tables.');
@@ -703,5 +704,115 @@ final class ImportIntranetStateCommand extends Command
         }
 
         return [$matches[1].':00', $matches[2].':00'];
+    }
+
+    private function syncAuthUsersFromLegacyState(array $decoded): void
+    {
+        foreach ((array) ($decoded['students'] ?? []) as $student) {
+            if (!is_array($student)) {
+                continue;
+            }
+            $email = strtolower(trim((string) ($student['email'] ?? '')));
+            $password = trim((string) ($student['password'] ?? ''));
+            $firstName = trim((string) ($student['firstName'] ?? ''));
+            $lastName = trim((string) ($student['lastName'] ?? ''));
+            if ($email === '' || $password === '' || $firstName === '' || $lastName === '') {
+                continue;
+            }
+
+            $userId = $this->upsertAuthUser('student', $firstName, $lastName, $email, $password);
+            $this->connection->executeStatement(
+                'UPDATE students SET user_id = :user_id, updated_at = NOW() WHERE LOWER(email) = :email',
+                ['user_id' => $userId, 'email' => $email]
+            );
+        }
+
+        foreach ((array) ($decoded['trainers'] ?? []) as $trainer) {
+            if (!is_array($trainer)) {
+                continue;
+            }
+            $email = strtolower(trim((string) ($trainer['email'] ?? '')));
+            $password = trim((string) ($trainer['password'] ?? ''));
+            $firstName = trim((string) ($trainer['firstName'] ?? ''));
+            $lastName = trim((string) ($trainer['lastName'] ?? ''));
+            if ($email === '' || $password === '' || $firstName === '' || $lastName === '') {
+                continue;
+            }
+
+            $userId = $this->upsertAuthUser('trainer', $firstName, $lastName, $email, $password);
+            $this->connection->executeStatement(
+                'UPDATE trainers SET user_id = :user_id, updated_at = NOW() WHERE LOWER(email) = :email',
+                ['user_id' => $userId, 'email' => $email]
+            );
+        }
+    }
+
+    private function upsertAuthUser(string $roleCode, string $firstName, string $lastName, string $email, string $plainPassword): int
+    {
+        $roleCode = strtolower(trim($roleCode));
+        if (!in_array($roleCode, ['admin', 'trainer', 'student'], true)) {
+            $roleCode = 'student';
+        }
+
+        $roleId = $this->ensureRoleId($roleCode);
+        $passwordHash = password_hash($plainPassword, PASSWORD_DEFAULT);
+        if (!is_string($passwordHash) || $passwordHash === '') {
+            throw new \RuntimeException('Password hash failed.');
+        }
+
+        $email = strtolower($email);
+        $existingUserId = $this->connection->fetchOne(
+            'SELECT id FROM users WHERE LOWER(email) = :email',
+            ['email' => $email]
+        );
+
+        if ($existingUserId === false) {
+            $this->connection->insert('users', [
+                'role_id' => $roleId,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'password_hash' => $passwordHash,
+                'is_active' => true,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            return (int) $this->connection->lastInsertId();
+        }
+
+        $this->connection->update(
+            'users',
+            [
+                'role_id' => $roleId,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'password_hash' => $passwordHash,
+                'is_active' => true,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ],
+            ['id' => (int) $existingUserId]
+        );
+
+        return (int) $existingUserId;
+    }
+
+    private function ensureRoleId(string $roleCode): int
+    {
+        $existingRoleId = $this->connection->fetchOne(
+            'SELECT id FROM roles WHERE code = :code',
+            ['code' => $roleCode]
+        );
+        if ($existingRoleId !== false) {
+            return (int) $existingRoleId;
+        }
+
+        $this->connection->insert('roles', [
+            'code' => $roleCode,
+            'label' => ucfirst($roleCode),
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return (int) $this->connection->lastInsertId();
     }
 }
