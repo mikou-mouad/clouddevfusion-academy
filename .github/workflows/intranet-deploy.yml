@@ -29,6 +29,8 @@ jobs:
               - 'intranet/backend/**'
               - 'intranet/api/**'
               - '.htaccess'
+              - '.github/workflows/main.yml'
+              - '.github/workflows/intranet-deploy.yml'
             intranet_backend_deps:
               - 'intranet/backend/composer.lock'
               - 'intranet/backend/composer.json'
