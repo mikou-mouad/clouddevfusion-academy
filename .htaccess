@@ -1,3 +1,13 @@
+# php -- BEGIN cPanel-generated handler, do not edit
+# Match PHP Selector 8.5 (CloudLinux alt-php on o2switch)
+<IfModule mime_module>
+  AddHandler application/x-httpd-alt-php85___lsphp .php .php5 .phtml
+</IfModule>
+<FilesMatch "\.(php|phtml)$">
+  SetHandler application/x-httpd-alt-php85___lsphp
+</FilesMatch>
+# php -- END cPanel-generated handler, do not edit
+
 RewriteEngine On
 
 # ─── INTRANET API → front controller in intranet/api/ ───
