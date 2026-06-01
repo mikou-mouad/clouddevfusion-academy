@@ -1,11 +1,9 @@
-# php -- BEGIN cPanel-generated handler, do not edit
-<IfModule mime_module>
-  AddHandler application/x-httpd-ea-php84___lsphp .php .php7 .phtml
-</IfModule>
-<FilesMatch "\.(php|phtml)$">
-  SetHandler application/x-httpd-ea-php84___lsphp
+# o2switch: PHP 8.4 for API front controller
+<FilesMatch \.php$>
+  SetHandler application/x-httpd-php84
 </FilesMatch>
-# php -- END cPanel-generated handler, do not edit
+AddHandler application/x-httpd-php84 .php
+suPHP_ConfigPath /home/race8462/academy.clouddevfusion.com/race8462/intranet/
 
 <IfModule mod_rewrite.c>
   RewriteEngine On

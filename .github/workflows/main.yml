@@ -281,7 +281,7 @@ jobs:
           bye
           "
 
-      - name: Upload intranet root .htaccess (PHP handler)
+      - name: Upload intranet root .htaccess + php.ini (PHP handler)
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -296,6 +296,7 @@ jobs:
           lcd intranet
           cd ${INTRANET_BACKEND_REMOTE}/..
           put .htaccess
+          put php.ini
           bye
           "
 
