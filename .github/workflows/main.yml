@@ -7,6 +7,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "intranet/backend/**"
+      - "intranet/api/**"
       - "intranet/frontend/**"
       - ".htaccess"
       - ".github/workflows/main.yml"
@@ -47,6 +48,8 @@ jobs:
               - '.htaccess'
             intranet_backend:
               - 'intranet/backend/**'
+              - 'intranet/api/**'
+              - '.htaccess'
             intranet_backend_deps:
               - 'intranet/backend/composer.lock'
               - 'intranet/backend/composer.json'
@@ -252,6 +255,27 @@ jobs:
           bye
           "
 
+      - name: Upload intranet API front controller
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_BACKEND_REMOTE}/../api
+          lcd intranet/api
+          cd ${INTRANET_BACKEND_REMOTE}/../api
+          mirror -R --verbose --exclude-glob='.git*' . ./
+          bye
+          "
+
       - name: Upload intranet backend vendor
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -274,6 +298,23 @@ jobs:
           bye
           "
 
+      - name: Upload root .htaccess
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          put .htaccess
+          bye
+          "
+
       - name: Clear Symfony cache
         run: |
           sleep 2
@@ -283,8 +324,11 @@ jobs:
           
       - name: Verify intranet backend endpoint
         run: |
-          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health" || true)"
-          echo "BODY=$body"
+          ping="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/ping.php")"
+          echo "PING=$ping"
+          echo "$ping" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
+          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health")"
+          echo "HEALTH=$body"
           echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
 
   deploy-frontend:

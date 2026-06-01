@@ -1,7 +1,12 @@
+# Execute PHP files on O2Switch (required for rewritten Symfony routes).
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php84 .php
+</IfModule>
+
 RewriteEngine On
 
-# ─── INTRANET API → Symfony front controller (always execute index.php) ───
-RewriteRule ^intranet/api(?:/.*)?$ intranet/backend/public/index.php [L,QSA]
+# ─── INTRANET API → front controller in intranet/api/ (PHP executes here) ───
+RewriteRule ^intranet/api(?:/.*)?$ intranet/api/index.php [L,QSA]
 
 # Pass Authorization header to PHP
 RewriteCond %{HTTP:Authorization} .
