@@ -184,7 +184,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.5.4"
+          php-version: "8.4"
           tools: composer
 
       - name: Install lftp + curl
@@ -212,15 +212,15 @@ jobs:
           DEFAULT_URI: ${{ secrets.DEFAULT_URI }}
           MAILER_DSN: ${{ secrets.MAILER_DSN }}
         run: |
-          cat > intranet/backend/.env << EOF
-          APP_ENV=${APP_ENV}
-          APP_DEBUG=${APP_DEBUG}
-          APP_SECRET=${APP_SECRET}
-          DATABASE_URL=${DATABASE_URL}
-          CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
-          DEFAULT_URI=${DEFAULT_URI}
-          MAILER_DSN=${MAILER_DSN}
-          EOF
+          {
+            echo "APP_ENV=${APP_ENV}"
+            echo "APP_DEBUG=${APP_DEBUG}"
+            echo "APP_SECRET=${APP_SECRET}"
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}"
+            echo "DEFAULT_URI=${DEFAULT_URI}"
+            echo "MAILER_DSN=${MAILER_DSN}"
+          } > intranet/backend/.env
           cat intranet/backend/.env
 
       - name: Upload intranet backend files (including .env)
@@ -252,8 +252,7 @@ jobs:
           bye
           "
 
-      - name: Upload vendor (only when deps changed)
-        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
+      - name: Upload intranet backend vendor
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -274,7 +273,7 @@ jobs:
             intranet/backend/vendor/ ./
           bye
           "
-          
+
       - name: Clear Symfony cache
         run: |
           sleep 2
