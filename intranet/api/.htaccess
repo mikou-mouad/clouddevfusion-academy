@@ -1,0 +1,11 @@
+# PHP handler for O2Switch / cPanel (adjust version in MultiPHP if needed).
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php84 .php
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /intranet/api/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>
