@@ -6,3 +6,11 @@
   SetHandler application/x-httpd-alt-php85___lsphp
 </FilesMatch>
 # php -- END cPanel-generated handler, do not edit
+
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
