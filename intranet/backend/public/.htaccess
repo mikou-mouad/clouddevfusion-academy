@@ -1,0 +1,10 @@
+# Force PHP 8.4+ for Symfony 8 on O2Switch (adjust handler if needed in cPanel).
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php84 .php
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>

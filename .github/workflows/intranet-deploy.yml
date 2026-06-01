@@ -45,7 +45,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
           tools: composer
 
       - name: Install lftp + curl
@@ -68,16 +68,22 @@ jobs:
           APP_ENV: prod
           APP_DEBUG: "0"
           APP_SECRET: ${{ secrets.INTRANET_APP_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ALLOW_ORIGIN: ${{ secrets.CORS_ALLOW_ORIGIN }}
           INTRANET_LOGIN_URL: https://academy.clouddevfusion.com/intranet/
           DEFAULT_URI: https://academy.clouddevfusion.com/intranet
+          MAILER_DSN: ${{ secrets.MAILER_DSN }}
         run: |
-          cat > intranet/backend/.env << EOF
-          APP_ENV=${APP_ENV}
-          APP_DEBUG=${APP_DEBUG}
-          APP_SECRET=${APP_SECRET}
-          DEFAULT_URI=${DEFAULT_URI}
-          INTRANET_LOGIN_URL=${INTRANET_LOGIN_URL}
-          EOF
+          {
+            echo "APP_ENV=${APP_ENV}"
+            echo "APP_DEBUG=${APP_DEBUG}"
+            echo "APP_SECRET=${APP_SECRET}"
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}"
+            echo "DEFAULT_URI=${DEFAULT_URI}"
+            echo "INTRANET_LOGIN_URL=${INTRANET_LOGIN_URL}"
+            echo "MAILER_DSN=${MAILER_DSN}"
+          } > intranet/backend/.env
 
       - name: Upload intranet backend files
         env:
@@ -106,8 +112,7 @@ jobs:
           bye
           "
 
-      - name: Upload intranet backend vendor (when deps changed)
-        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
+      - name: Upload intranet backend vendor
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
