@@ -140,25 +140,6 @@ jobs:
           bye
           "
 
-      - name: Remove conflicting intranet PHP htaccess (use PHP Selector)
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          cd ${INTRANET_BACKEND_REMOTE}/..
-          rm -f .htaccess php.ini
-          cd public
-          rm -f .htaccess
-          bye
-          "
-
       - name: Upload intranet backend vendor
         if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
         timeout-minutes: 40
