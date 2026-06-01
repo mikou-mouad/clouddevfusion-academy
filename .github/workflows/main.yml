@@ -283,12 +283,9 @@ jobs:
           
       - name: Verify intranet backend endpoint
         run: |
-          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/health" || echo "000")"
-          echo "HTTP_CODE=$code"
-          if [ "$code" != "200" ] && [ "$code" != "401" ] && [ "$code" != "403" ]; then
-            echo "Unexpected intranet backend status: $code"
-            exit 1
-          fi
+          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health" || true)"
+          echo "BODY=$body"
+          echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
 
   deploy-frontend:
     name: Deploy Frontend (Angular)
@@ -398,8 +395,8 @@ jobs:
         working-directory: intranet/frontend
         run: |
           npm ci
-          npm run build
-          test -d dist
+          npm run build -- --configuration production
+          test -d dist/front/browser
           
       - name: Upload dist to FTP (delete removed files)
         env:

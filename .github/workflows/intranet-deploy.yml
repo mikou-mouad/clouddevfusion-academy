@@ -31,7 +31,7 @@ jobs:
               - 'intranet/backend/composer.lock'
               - 'intranet/backend/composer.json'
             intranet_frontend:
-              - 'intranet/front/**'
+              - 'intranet/frontend/**'
 
   deploy-intranet-backend:
     name: Deploy Intranet Backend
@@ -136,12 +136,9 @@ jobs:
 
       - name: Verify intranet backend health
         run: |
-          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/health" || echo "000")"
-          echo "HTTP_CODE=$code"
-          if [ "$code" != "200" ]; then
-            echo "Unexpected backend status: $code"
-            exit 1
-          fi
+          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health" || true)"
+          echo "BODY=$body"
+          echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
 
   deploy-intranet-frontend:
     name: Deploy Intranet Frontend
@@ -157,7 +154,7 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: intranet/front/package-lock.json
+          cache-dependency-path: intranet/frontend/package-lock.json
 
       - name: Install lftp + curl
         run: |
@@ -165,7 +162,7 @@ jobs:
           sudo apt-get install -y lftp curl
 
       - name: Install deps + build intranet frontend
-        working-directory: intranet/front
+        working-directory: intranet/frontend
         run: |
           npm ci
           npm run build -- --configuration production
@@ -193,7 +190,7 @@ jobs:
             --exclude-glob='.angular' \
             --exclude-glob='*.map' \
             --exclude-glob='.DS_Store' \
-            intranet/front/dist/front/browser/ ./
+            intranet/frontend/dist/front/browser/ ./
           bye
           "
 
