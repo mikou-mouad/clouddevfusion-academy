@@ -48,17 +48,38 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Email et mot de passe requis.'], 400);
         }
 
-        // Primary authentication source is now PostgreSQL users table.
-        $dbUser = $connection->fetchAssociative(
-            'SELECT u.id, u.first_name, u.last_name, u.email, u.password_hash, r.code AS role_code
-             FROM users u
-             INNER JOIN roles r ON r.id = u.role_id
-             WHERE LOWER(u.email) = :email
-             LIMIT 1',
-            ['email' => $email]
-        );
+        foreach (IntranetData::admins() as $admin) {
+            if (strtolower($admin['email']) === $email && $admin['password'] === $password) {
+                return $this->json([
+                    'token' => $this->buildToken('admin', (int) $admin['id']),
+                    'role' => 'admin',
+                    'profile' => [
+                        'id' => $admin['id'],
+                        'firstName' => $admin['firstName'],
+                        'lastName' => $admin['lastName'],
+                        'email' => $admin['email'],
+                    ],
+                ]);
+            }
+        }
 
-        if (is_array($dbUser) && password_verify($password, (string) ($dbUser['password_hash'] ?? ''))) {
+        // Primary authentication source is PostgreSQL users table (fallback if DB not migrated yet).
+        $dbUser = false;
+        try {
+            $dbUser = $connection->fetchAssociative(
+                'SELECT u.id, u.first_name, u.last_name, u.email, u.password_hash, r.code AS role_code
+                 FROM users u
+                 INNER JOIN roles r ON r.id = u.role_id
+                 WHERE LOWER(u.email) = :email
+                 LIMIT 1',
+                ['email' => $email]
+            );
+        } catch (\Throwable) {
+            $dbUser = false;
+        }
+
+        $passwordHash = is_array($dbUser) ? (string) ($dbUser['password_hash'] ?? '') : '';
+        if (is_array($dbUser) && $passwordHash !== '' && password_verify($password, $passwordHash)) {
             $role = strtolower((string) ($dbUser['role_code'] ?? ''));
             if (!in_array($role, ['admin', 'trainer', 'student'], true)) {
                 $role = 'student';
@@ -74,22 +95,6 @@ final class IntranetController extends AbstractController
                     'email' => (string) ($dbUser['email'] ?? ''),
                 ],
             ]);
-        }
-
-        // Temporary fallback for legacy in-memory fixtures.
-        foreach (IntranetData::admins() as $admin) {
-            if (strtolower($admin['email']) === $email && $admin['password'] === $password) {
-                return $this->json([
-                    'token' => $this->buildToken('admin', (int) $admin['id']),
-                    'role' => 'admin',
-                    'profile' => [
-                        'id' => $admin['id'],
-                        'firstName' => $admin['firstName'],
-                        'lastName' => $admin['lastName'],
-                        'email' => $admin['email'],
-                    ],
-                ]);
-            }
         }
 
         $student = null;
