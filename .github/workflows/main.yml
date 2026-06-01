@@ -7,7 +7,6 @@ on:
       - "backend/**"
       - "frontend/**"
       - "intranet/backend/**"
-      - "intranet/api/**"
       - "intranet/frontend/**"
       - ".htaccess"
       - ".github/workflows/main.yml"
@@ -48,7 +47,6 @@ jobs:
               - '.htaccess'
             intranet_backend:
               - 'intranet/backend/**'
-              - 'intranet/api/**'
               - 'intranet/.htaccess'
               - '.htaccess'
               - '.github/workflows/main.yml'
@@ -260,7 +258,7 @@ jobs:
           bye
           "
 
-      - name: Upload intranet API front controller
+      - name: Remove stale intranet/api front controller on server
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -271,13 +269,9 @@ jobs:
           lftp -c "
           set ftp:ssl-allow no
           set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -p ${INTRANET_BACKEND_REMOTE}/../api
-          lcd intranet/api
           cd ${INTRANET_BACKEND_REMOTE}/../api
-          mirror -R --verbose --exclude-glob='.git*' . ./
+          rm -f index.php .htaccess
           bye
           "
 
@@ -343,12 +337,18 @@ jobs:
             local label="$1" body="$2"
             echo "${label}=${body}"
             if echo "$body" | grep -q '^<?php'; then
-              echo "::error::${label}: PHP not executed (raw source returned). In cPanel PHP Selector choose PHP 8.2+ and remove custom AddHandler blocks from server .htaccess files."
+              echo "::error::${label}: PHP not executed. In cPanel PHP Selector set 8.5, save, then in File Manager edit race8462/.htaccess: remove any ea-php72/ea-php84 lines and keep only alt-php85___lsphp handler from PHP Selector."
               return 1
             fi
             echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
           }
-          ping="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/ping.php")"
+          sleep 5
+          for i in 1 2 3; do
+            ping="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/ping.php")"
+            if ! echo "$ping" | grep -q '^<?php'; then break; fi
+            echo "Retry $i/3: PHP still not executed, waiting..."
+            sleep 10
+          done
           check_json_ok "PING" "$ping"
           body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health")"
           check_json_ok "HEALTH" "$body"
