@@ -1,7 +1,11 @@
-# PHP handler for O2Switch / cPanel (adjust version in MultiPHP if needed).
+# php -- BEGIN cPanel-generated handler, do not edit
 <IfModule mime_module>
-  AddHandler application/x-httpd-ea-php84 .php
+  AddHandler application/x-httpd-ea-php84___lsphp .php .php7 .phtml
 </IfModule>
+<FilesMatch "\.(php|phtml)$">
+  SetHandler application/x-httpd-ea-php84___lsphp
+</FilesMatch>
+# php -- END cPanel-generated handler, do not edit
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
