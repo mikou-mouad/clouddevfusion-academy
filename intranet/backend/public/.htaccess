@@ -1,6 +1,0 @@
-# o2switch: PHP 8.4 for Symfony public/
-<FilesMatch \.php$>
-  SetHandler application/x-httpd-php84
-</FilesMatch>
-AddHandler application/x-httpd-php84 .php
-suPHP_ConfigPath /home/race8462/academy.clouddevfusion.com/race8462/intranet/
