@@ -281,7 +281,7 @@ jobs:
           bye
           "
 
-      - name: Upload intranet root .htaccess + php.ini (PHP handler)
+      - name: Remove conflicting intranet PHP htaccess (use PHP Selector)
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -293,10 +293,10 @@ jobs:
           set ftp:ssl-allow no
           set ftp:passive-mode yes
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          lcd intranet
           cd ${INTRANET_BACKEND_REMOTE}/..
-          put .htaccess
-          put php.ini
+          rm -f .htaccess php.ini
+          cd public
+          rm -f .htaccess
           bye
           "
 
@@ -362,7 +362,7 @@ jobs:
             local label="$1" body="$2"
             echo "${label}=${body}"
             if echo "$body" | grep -q '^<?php'; then
-              echo "::error::${label}: PHP not executed (raw source returned). Set PHP 8.4 in cPanel MultiPHP for intranet/ and use ea-php84___lsphp handler."
+              echo "::error::${label}: PHP not executed (raw source returned). In cPanel PHP Selector choose PHP 8.2+ and remove custom AddHandler blocks from server .htaccess files."
               return 1
             fi
             echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
