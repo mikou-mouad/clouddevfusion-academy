@@ -10,8 +10,10 @@
 
 RewriteEngine On
 
-# ─── INTRANET API → front controller in intranet/api/ ───
-RewriteRule ^intranet/api(?:/.*)?$ intranet/api/index.php [L,QSA]
+# ─── INTRANET API → Symfony (same public/ as ping.php) ───
+RewriteCond %{REQUEST_URI} ^/intranet/api [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^intranet/api(?:/.*)?$ intranet/backend/public/index.php [L,QSA]
 
 # Pass Authorization header to PHP
 RewriteCond %{HTTP:Authorization} .
