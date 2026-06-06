@@ -113,7 +113,7 @@ export class TestimonialsComponent implements OnInit {
         rating: 5
       },
       {
-        quote: 'Formation de qualité, bien structurée. Le financement CPF a rendu l\'accès très simple. Je recommande vivement CloudDev Fusion pour toute personne souhaitant se certifier sur Azure.',
+        quote: 'Formation de qualité, bien structurée. Le financement OPCO a rendu l\'accès très simple. Je recommande vivement CloudDev Fusion pour toute personne souhaitant se certifier sur Azure.',
         author: 'Pierre Durand',
         role: 'IT Manager',
         company: 'InnovateTech',

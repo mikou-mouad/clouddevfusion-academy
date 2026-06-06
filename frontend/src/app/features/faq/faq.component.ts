@@ -65,6 +65,7 @@ export class FaqComponent implements OnInit {
             open: false,
             published: true
           },
+          /*
           {
             id: 2,
             category: 'Financement',
@@ -73,6 +74,7 @@ export class FaqComponent implements OnInit {
             open: false,
             published: true
           },
+          */
           {
             id: 3,
             category: 'Formats',

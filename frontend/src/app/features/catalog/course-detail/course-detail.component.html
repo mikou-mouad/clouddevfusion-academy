@@ -73,7 +73,7 @@
               <div class="price-card">
                 <div class="price-label">Prix de la formation</div>
                 <div class="price-value">{{ getCoursePrice(course) }}€ <span class="price-tax">HT</span></div>
-                <div class="price-note">Financement CPF disponible</div>
+                <div class="price-note">Financement OPCO disponible</div>
               </div>
               <div class="hero-actions">
                 @if (hasPlacementTest && course && course.id) {
@@ -91,6 +91,7 @@
                   </svg>
                   Prendre rendez-vous
                 </a>
+                <!--
                 <a routerLink="/registration" class="btn btn-primary btn-large">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -99,6 +100,7 @@
                   </svg>
                   S'inscrire avec le CPF
                 </a>
+                -->
               </div>
             </div>
           </div>
@@ -277,10 +279,12 @@
                     <line x1="12" y1="22.08" x2="12" y2="12"/>
                   </svg>
                 </div>
+                <!--
                 <div class="funding-content-modern">
                   <strong>CPF</strong>
                   <span>Compte Personnel de Formation</span>
                 </div>
+                -->
               </div>
               <div class="funding-option-modern">
                 <div class="funding-icon">
