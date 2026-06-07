@@ -3087,7 +3087,7 @@ export class App implements OnDestroy {
   trainerSessionResourceOptions = computed(() =>
     this.selectedTrainerSessionAttendanceSessions().map((session) => ({
       id: session.id,
-      label: `${session.date} · ${session.slot}`
+      label: `${this.formatDisplayDate(session.date)} · ${session.slot}`
     }))
   );
   selectedTrainerSessionDocuments = computed(() => {
@@ -4168,7 +4168,6 @@ export class App implements OnDestroy {
       || !this.newTrainerEmail().trim()
       || !this.newTrainerPhone().trim()
       || (needsTrainerCompany && !this.newTrainerCompanyName().trim())
-      || !this.newTrainerMicrosoftTranscriptUrl().trim()
       || !this.newTrainerCvFile()
     ) {
       this.trainerCreateError.set('Tous les champs obligatoires du formateur doivent etre renseignes.');
@@ -4700,7 +4699,7 @@ export class App implements OnDestroy {
 
   attendanceCountdownLabel(session: AttendanceSession): string {
     if (!session.attendanceWindow?.isOpen) {
-      return 'Emargement ferme';
+      return 'Émargement fermé';
     }
     const remaining = this.attendanceRemainingSeconds(session);
     if (remaining <= 0) {
@@ -4745,7 +4744,16 @@ export class App implements OnDestroy {
     const record = session.records.find((item) => item.status === 'present' || item.status === 'late');
     if (record) return 'Presence signee';
     if (session.canSelfSign) return 'Signer ma presence';
-    return 'Emargement ferme';
+    return 'Émargement fermé';
+  }
+
+  formatDisplayDate(value: string): string {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed) {
+      return trimmed;
+    }
+    const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
+    return isoMatch ? isoMatch[1] : trimmed;
   }
 
   private planningAttendanceKey(date: string, slot: string): string {

@@ -48,22 +48,7 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Email et mot de passe requis.'], 400);
         }
 
-        foreach (IntranetData::admins() as $admin) {
-            if (strtolower($admin['email']) === $email && $admin['password'] === $password) {
-                return $this->json([
-                    'token' => $this->buildToken('admin', (int) $admin['id']),
-                    'role' => 'admin',
-                    'profile' => [
-                        'id' => $admin['id'],
-                        'firstName' => $admin['firstName'],
-                        'lastName' => $admin['lastName'],
-                        'email' => $admin['email'],
-                    ],
-                ]);
-            }
-        }
-
-        // Primary authentication source is PostgreSQL users table (fallback if DB not migrated yet).
+        // Prefer PostgreSQL users when available so auth ids match FK constraints.
         $dbUser = false;
         try {
             $dbUser = $connection->fetchAssociative(
@@ -95,6 +80,21 @@ final class IntranetController extends AbstractController
                     'email' => (string) ($dbUser['email'] ?? ''),
                 ],
             ]);
+        }
+
+        foreach (IntranetData::admins() as $admin) {
+            if (strtolower($admin['email']) === $email && $admin['password'] === $password) {
+                return $this->json([
+                    'token' => $this->buildToken('admin', (int) $admin['id']),
+                    'role' => 'admin',
+                    'profile' => [
+                        'id' => $admin['id'],
+                        'firstName' => $admin['firstName'],
+                        'lastName' => $admin['lastName'],
+                        'email' => $admin['email'],
+                    ],
+                ]);
+            }
         }
 
         $student = null;
@@ -946,9 +946,10 @@ final class IntranetController extends AbstractController
                 return $this->json(['message' => 'Pour un freelance/partenaire, la societe doit etre choisie depuis Prestataires.'], 400);
             }
         }
-        if ($microsoftTranscriptUrl === '' || $cvFile === null) {
-            return $this->json(['message' => 'CV et lien transcription Microsoft sont obligatoires.'], 400);
+        if ($cvFile === null) {
+            return $this->json(['message' => 'Le CV est obligatoire.'], 400);
         }
+        $microsoftTranscriptUrl = $microsoftTranscriptUrl !== '' ? $microsoftTranscriptUrl : null;
 
         $cvUploadDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-trainers';
         if (!is_dir($cvUploadDir)) {
@@ -1300,9 +1301,10 @@ final class IntranetController extends AbstractController
             $cvUrl = '/uploads/intranet-trainers/'.$cvFilename;
         }
 
-        if ($microsoftTranscriptUrl === '' || $cvUrl === '') {
-            return $this->json(['message' => 'CV et lien transcription Microsoft sont obligatoires.'], 400);
+        if ($cvUrl === '') {
+            return $this->json(['message' => 'Le CV est obligatoire.'], 400);
         }
+        $microsoftTranscriptUrl = $microsoftTranscriptUrl !== '' ? $microsoftTranscriptUrl : null;
 
         $state['trainers'][$trainerIndex]['firstName'] = $firstName;
         $state['trainers'][$trainerIndex]['lastName'] = $lastName;
@@ -1560,7 +1562,7 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Statut invalide.'], 400);
         }
         if (!$this->isAttendanceWindowOpen($sessionId)) {
-            return $this->json(['message' => 'Emargement ferme pour cette session.'], 400);
+            return $this->json(['message' => 'Émargement fermé pour cette session.'], 400);
         }
 
         self::$attendanceOverrides[$this->attendanceKey($sessionId, $studentId)] = [
@@ -1693,7 +1695,7 @@ final class IntranetController extends AbstractController
                     'uploaded_by_admin_name' => null,
                 ]);
 
-                return $this->json(['message' => 'Ressource envoyee aux apprentis affectes.']);
+                return $this->json(['message' => 'Ressource envoyée aux apprentis affectés.']);
             } catch (\Throwable) {
                 // Keep JSON fallback for environments not migrated yet.
             }
@@ -1715,7 +1717,7 @@ final class IntranetController extends AbstractController
         ];
         $this->saveAdminState($state);
 
-        return $this->json(['message' => 'Ressource envoyee aux apprentis affectes.']);
+        return $this->json(['message' => 'Ressource envoyée aux apprentis affectés.']);
     }
 
     #[Route('/admin/resources/global', name: 'admin_resources_global_create', methods: ['POST'])]
@@ -2934,7 +2936,7 @@ final class IntranetController extends AbstractController
                     ['session_id' => $sessionId]
                 );
 
-                return $this->json(['message' => 'Emargement ferme.']);
+                return $this->json(['message' => 'Émargement fermé.']);
             } catch (\Throwable) {
                 // Keep JSON fallback for environments not migrated yet.
             }
@@ -2948,7 +2950,7 @@ final class IntranetController extends AbstractController
         $state['attendanceWindows'][$sessionId]['closedAt'] = date('Y-m-d H:i:s');
         $this->saveAdminState($state);
 
-        return $this->json(['message' => 'Emargement ferme.']);
+        return $this->json(['message' => 'Émargement fermé.']);
     }
 
     #[Route('/attendance/mark', name: 'attendance_mark', methods: ['POST'])]
@@ -3475,7 +3477,20 @@ final class IntranetController extends AbstractController
     private function sessionId(string $formationId, string $date, string $slot): string
     {
         $slotFingerprint = substr(md5(trim($slot)), 0, 8);
-        return sprintf('%s-%s-%s', $formationId, $date, $slotFingerprint);
+        return sprintf('%s-%s-%s', $formationId, $this->normalizeSessionDate($date), $slotFingerprint);
+    }
+
+    private function normalizeSessionDate(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return $value;
+        }
+        if (preg_match('/(\d{4}-\d{2}-\d{2})/', $value, $matches)) {
+            return $matches[1];
+        }
+
+        return $value;
     }
 
     private function attendanceKey(string $sessionId, int $studentId): string
@@ -3518,7 +3533,7 @@ final class IntranetController extends AbstractController
                     }
                     $planningByFormation[$formationId][] = [
                         'day' => (string) ($session['day_label'] ?? ''),
-                        'date' => (string) ($session['session_date'] ?? ''),
+                        'date' => $this->normalizeSessionDate((string) ($session['session_date'] ?? '')),
                         'slot' => (string) ($session['slot_label'] ?? ''),
                         'topic' => (string) ($session['topic'] ?? ''),
                     ];

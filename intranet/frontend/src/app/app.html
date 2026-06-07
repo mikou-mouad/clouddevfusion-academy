@@ -136,25 +136,25 @@
           } @else if (isTrainer()) {
             <section class="card content-card">
               <h3>Espace formateur</h3>
-              <p class="sub">Vous pouvez gerer les sessions et faire l'emargement en temps reel depuis le menu.</p>
+              <p class="sub">Vous pouvez gérer les sessions et faire l'émargement en temps réel depuis le menu.</p>
               <div class="trainer-actions">
                 @if (nextFormation()?.teamsLink) {
                   <a class="teams-link trainer-teams-link" [href]="nextFormation()!.teamsLink" target="_blank" rel="noopener noreferrer">
                     Ouvrir Teams
                   </a>
                 }
-                <button class="support-btn" type="button" (click)="setSection('emargement')">Acceder a l'emargement</button>
+                <button class="support-btn" type="button" (click)="setSection('emargement')">Accéder à l'émargement</button>
               </div>
             </section>
             <section class="card content-card">
-              <h3>Apprentis affectes (resume)</h3>
+              <h3>Apprentis affectés (résumé)</h3>
               <div class="eval-grid admin-kpis">
-                <article class="kpi"><p class="kpi-label">Formations affectees</p><p class="kpi-value">{{ trainerApprenticeKpis().formations }}</p></article>
-                <article class="kpi"><p class="kpi-label">Apprentis affectes</p><p class="kpi-value">{{ trainerApprenticeKpis().total }}</p></article>
+                <article class="kpi"><p class="kpi-label">Formations affectées</p><p class="kpi-value">{{ trainerApprenticeKpis().formations }}</p></article>
+                <article class="kpi"><p class="kpi-label">Apprentis affectés</p><p class="kpi-value">{{ trainerApprenticeKpis().total }}</p></article>
                 <article class="kpi"><p class="kpi-label">Sessions</p><p class="kpi-value">{{ attendanceSessions().length }}</p></article>
               </div>
               @if (!filteredTrainerAssignedApprentices().length) {
-                <p class="sub">Aucun apprenti affecte pour vos formations.</p>
+                <p class="sub">Aucun apprenti affecté pour vos formations.</p>
               } @else {
                 <div class="planning-table-wrap">
                   <table class="planning-table doc-table admin-table">
@@ -345,7 +345,7 @@
             </div>
 
             @if (!selectedStudentSessionFormation()) {
-              <p class="sub">Aucune formation selectionnee.</p>
+              <p class="sub">Aucune formation sélectionnée.</p>
             } @else {
               <div class="student-session-tabs" role="tablist">
                 <button type="button" class="student-session-tab" [class.active]="studentSessionDetailTab() === 'cours'" (click)="setStudentSessionDetailTab('cours')">Cours</button>
@@ -812,8 +812,8 @@
                 </div>
               }
             } @else {
-              <p class="sub">Retrouvez ici les anciens documents, sessions et elements historises.</p>
-              <p class="sub">Cette section est prete a recevoir vos archives.</p>
+              <p class="sub">Retrouvez ici les anciens documents, sessions et éléments historisés.</p>
+              <p class="sub">Cette section est prête à recevoir vos archives.</p>
             }
           </section>
         }
@@ -833,7 +833,7 @@
         @if (activeSection() === 'support') {
           <section class="card content-card">
             <h3>Support et assistance</h3>
-            <p class="sub">Contactez le support pedagogique et administratif.</p>
+            <p class="sub">Contactez le support pédagogique et administratif.</p>
             <div class="support-panel">
               <p><strong>Email:</strong> support@clouddev.local</p>
               <p><strong>Horaires:</strong> Lun-Ven 09:00-18:00</p>
@@ -847,8 +847,8 @@
             <p class="sub">Vue claire des formations, apprentis et sessions sans scroll infini.</p>
 
             <div class="eval-grid admin-kpis sessions-kpis">
-              <article class="kpi kpi-formation"><p class="kpi-label">Formations affectees</p><p class="kpi-value">{{ trainerApprenticeKpis().formations }}</p></article>
-              <article class="kpi kpi-apprentice"><p class="kpi-label">Apprentis affectes</p><p class="kpi-value">{{ trainerApprenticeKpis().total }}</p></article>
+              <article class="kpi kpi-formation"><p class="kpi-label">Formations affectées</p><p class="kpi-value">{{ trainerApprenticeKpis().formations }}</p></article>
+              <article class="kpi kpi-apprentice"><p class="kpi-label">Apprentis affectés</p><p class="kpi-value">{{ trainerApprenticeKpis().total }}</p></article>
               <article class="kpi kpi-session"><p class="kpi-label">Sessions</p><p class="kpi-value">{{ attendanceSessions().length }}</p></article>
             </div>
 
@@ -887,7 +887,7 @@
                 </article>
               }
             </div>
-            <p class="sub sessions-next-step">Cliquez sur une formation pour passer a la page detaillee (apprentis + planning).</p>
+            <p class="sub sessions-next-step">Cliquez sur une formation pour passer à la page détaillée (apprentis + planning).</p>
           </section>
         }
 
@@ -898,13 +898,13 @@
               @if (selectedTrainerSessionFormation()) {
                 <h3>{{ selectedTrainerSessionFormation()!.title }}</h3>
               } @else {
-                <h3>Details formation</h3>
+                <h3>Détails formation</h3>
               }
               <span class="sessions-detail-spacer" aria-hidden="true"></span>
             </div>
 
             @if (!selectedTrainerSessionFormation()) {
-              <p class="sub">Aucune formation selectionnee.</p>
+              <p class="sub">Aucune formation sélectionnée.</p>
             } @else {
               <div class="eval-grid admin-kpis sessions-kpis">
                 <article class="kpi kpi-formation"><p class="kpi-label">Apprentis</p><p class="kpi-value">{{ trainerSessionKpis().apprentices }}</p></article>
@@ -914,7 +914,7 @@
                   @if (selectedTrainerSessionFormation()!.teamsLink) {
                     <a class="teams-link admin-teams-link" [href]="selectedTrainerSessionFormation()!.teamsLink" target="_blank" rel="noopener noreferrer">Ouvrir Teams</a>
                   } @else {
-                    <p class="kpi-value small">Non renseigne</p>
+                    <p class="kpi-value small">Non renseigné</p>
                   }
                 </article>
               </div>
@@ -922,7 +922,7 @@
               <div class="sessions-sections-grid">
                 <section class="sessions-block sessions-block-apprentices">
                   <div class="sessions-block-head">
-                    <h5>Apprentis affectes</h5>
+                    <h5>Apprentis affectés</h5>
                     <p class="sub">{{ selectedTrainerSessionApprentices().length }} apprenti(s) sur cette formation.</p>
                   </div>
                   <div class="sessions-toolbar">
@@ -939,14 +939,14 @@
                     <div class="table-pagination">
                       <p class="sub">Page {{ trainerSessionApprenticePage() }} / {{ trainerSessionApprenticeTotalPages() }}</p>
                       <div class="table-pagination-actions">
-                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionApprenticePage()" [disabled]="trainerSessionApprenticePage() <= 1">Precedent</button>
+                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionApprenticePage()" [disabled]="trainerSessionApprenticePage() <= 1">Précédent</button>
                         <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextTrainerSessionApprenticePage()" [disabled]="trainerSessionApprenticePage() >= trainerSessionApprenticeTotalPages()">Suivant</button>
                       </div>
                     </div>
                   </div>
 
                   @if (!filteredTrainerSessionApprentices().length) {
-                    <p class="sub">Aucun apprenti affecte pour cette formation.</p>
+                    <p class="sub">Aucun apprenti affecté pour cette formation.</p>
                   } @else {
                     <div class="planning-table-wrap">
                       <table class="planning-table doc-table admin-table">
@@ -973,19 +973,19 @@
                   <section class="sessions-block sessions-block-planning">
                     <div class="sessions-block-head">
                       <h5>Planning des sessions</h5>
-                      <p class="sub">Aucune session planifiee pour cette formation.</p>
+                      <p class="sub">Aucune session planifiée pour cette formation.</p>
                     </div>
                   </section>
                 } @else {
                   <section class="sessions-block sessions-block-planning">
                     <div class="sessions-block-head">
                       <h5>Planning des sessions</h5>
-                      <p class="sub">Vue carte, lisible et rapide a parcourir.</p>
+                      <p class="sub">Vue carte, lisible et rapide à parcourir.</p>
                     </div>
                     <div class="table-pagination">
                       <p class="sub">Page {{ trainerSessionPlanningPage() }} / {{ trainerSessionPlanningTotalPages() }}</p>
                       <div class="table-pagination-actions">
-                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionPlanningPage()" [disabled]="trainerSessionPlanningPage() <= 1">Precedent</button>
+                        <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionPlanningPage()" [disabled]="trainerSessionPlanningPage() <= 1">Précédent</button>
                         <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextTrainerSessionPlanningPage()" [disabled]="trainerSessionPlanningPage() >= trainerSessionPlanningTotalPages()">Suivant</button>
                       </div>
                     </div>
@@ -997,7 +997,7 @@
                             <p class="session-row-topic">{{ session.topic }}</p>
                           </div>
                           <div class="session-row-meta-stack">
-                            <span class="session-badge session-badge-date">{{ session.date }}</span>
+                            <span class="session-badge session-badge-date">{{ formatDisplayDate(session.date) }}</span>
                             <span class="session-badge session-badge-slot">{{ session.slot }}</span>
                           </div>
                           <p class="session-row-count">{{ session.records.length }} participant(s)</p>
@@ -1011,7 +1011,7 @@
               <section class="sessions-block sessions-block-apprentices">
                 <div class="sessions-block-head">
                   <h5>Ressources de session</h5>
-                  <p class="sub">Ajoutez une ressource liee a une session precise de cette formation.</p>
+                  <p class="sub">Ajoutez une ressource liée à une session précise de cette formation.</p>
                 </div>
                 <div class="session-resources-layout">
                   <form class="admin-create-form session-resource-form" (submit)="createTrainerResource($event)">
@@ -1072,7 +1072,7 @@
                             <tr>
                               <th>Titre</th>
                               <th>Type</th>
-                              <th>Mise a jour</th>
+                              <th>Mise à jour</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1085,7 +1085,7 @@
                                   }
                                 </td>
                                 <td>{{ doc.type }}</td>
-                                <td>{{ doc.updatedAt }}</td>
+                                <td>{{ formatDisplayDate(doc.updatedAt) }}</td>
                               </tr>
                             }
                           </tbody>
@@ -1094,7 +1094,7 @@
                       <div class="table-pagination">
                         <p class="sub">Page {{ trainerSessionResourcePage() }} / {{ trainerSessionResourceTotalPages() }}</p>
                         <div class="table-pagination-actions">
-                          <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionResourcePage()" [disabled]="trainerSessionResourcePage() <= 1">Precedent</button>
+                          <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerSessionResourcePage()" [disabled]="trainerSessionResourcePage() <= 1">Précédent</button>
                           <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextTrainerSessionResourcePage()" [disabled]="trainerSessionResourcePage() >= trainerSessionResourceTotalPages()">Suivant</button>
                         </div>
                       </div>
@@ -1109,7 +1109,7 @@
         @if (activeSection() === 'planning' && isTrainer()) {
           <section class="card content-card">
             <h3>Planning formateur</h3>
-            <p class="sub">Consultez le planning detaille de la formation selectionnee.</p>
+            <p class="sub">Consultez le planning détaillé de la formation sélectionnée.</p>
 
             @if (planningFormationOptions().length > 1) {
               <div class="planning-toolbar">
@@ -1155,7 +1155,7 @@
                     @for (slot of selectedPlanningFormation()!.planning; track slot.day + slot.date + slot.slot) {
                       <tr>
                         <td>{{ slot.day }}</td>
-                        <td>{{ slot.date }}</td>
+                        <td>{{ formatDisplayDate(slot.date) }}</td>
                         <td>{{ slot.slot }}</td>
                         <td>{{ slot.topic }}</td>
                       </tr>
@@ -1170,7 +1170,7 @@
         @if (activeSection() === 'mes-apprentis' && isTrainer()) {
           <section class="card content-card">
             <h3>Mes apprentis</h3>
-            <p class="sub">Selectionnez une formation pour afficher les apprentis associes.</p>
+            <p class="sub">Sélectionnez une formation pour afficher les apprentis associés.</p>
 
             <div class="planning-toolbar">
               <label>
@@ -1201,7 +1201,7 @@
             </div>
 
             @if (!filteredTrainerApprenticesForSelectedFormation().length) {
-              <p class="sub">Aucun apprenti trouve pour cette selection.</p>
+              <p class="sub">Aucun apprenti trouvé pour cette sélection.</p>
             } @else {
               <div class="planning-table-wrap">
                 <table class="planning-table doc-table admin-table">
@@ -1226,7 +1226,7 @@
               <div class="table-pagination">
                 <p class="sub">Page {{ trainerApprenticeListPage() }} / {{ trainerApprenticeListTotalPages() }}</p>
                 <div class="table-pagination-actions">
-                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerApprenticeListPage()" [disabled]="trainerApprenticeListPage() <= 1">Precedent</button>
+                  <button type="button" class="ghost-btn dark-ghost-btn" (click)="previousTrainerApprenticeListPage()" [disabled]="trainerApprenticeListPage() <= 1">Précédent</button>
                   <button type="button" class="ghost-btn dark-ghost-btn" (click)="nextTrainerApprenticeListPage()" [disabled]="trainerApprenticeListPage() >= trainerApprenticeListTotalPages()">Suivant</button>
                 </div>
               </div>
@@ -1644,9 +1644,6 @@
             @if (selectedAdminFormation()) {
               <div class="admin-form-actions">
                 <button type="button" class="ghost-btn dark-ghost-btn" (click)="startEditSelectedFormation()">Modifier</button>
-                <button type="button" class="archive-btn" (click)="deleteSelectedFormation()" [disabled]="deletingFormationId() === selectedAdminFormation()!.id">
-                  {{ deletingFormationId() === selectedAdminFormation()!.id ? 'Suppression...' : 'Supprimer' }}
-                </button>
               </div>
               @if (formationActionNotice()) {
                 <p class="success">{{ formationActionNotice() }}</p>
@@ -2540,8 +2537,8 @@
                   </label>
                 }
                 <label>
-                  <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                  <input type="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" required />
+                  <span class="label-field-line">Lien transcription Microsoft <span class="sub">(facultatif)</span></span>
+                  <input type="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" />
                 </label>
                 <label>
                   <span class="label-field-line">CV (document) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -2867,8 +2864,8 @@
                     </label>
                   }
                   <label>
-                    <span class="label-field-line">Lien transcription Microsoft <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                    <input type="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" required />
+                    <span class="label-field-line">Lien transcription Microsoft <span class="sub">(facultatif)</span></span>
+                    <input type="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" />
                   </label>
                   <label>
                     CV (remplacer)
@@ -3383,7 +3380,7 @@
           <div class="info-grid">
             <div class="info-item">
               <p class="info-label">Support</p>
-              <p class="info-value">Reponse sous 24h</p>
+              <p class="info-value">Réponse sous 24h</p>
             </div>
             <div class="info-item">
               <p class="info-label">Horaires</p>
@@ -3395,7 +3392,7 @@
             </div>
           </div>
           <button type="button" class="support-btn" (click)="setSection(isAdmin() ? 'emargement' : (isTrainer() ? 'sessions' : 'support'))">
-            @if (isAdmin()) { Ouvrir emargement } @else if (isTrainer()) { Ouvrir sessions } @else { Ouvrir un ticket }
+            @if (isAdmin()) { Ouvrir émargement } @else if (isTrainer()) { Ouvrir sessions } @else { Ouvrir un ticket }
           </button>
         </article>
       </aside>
