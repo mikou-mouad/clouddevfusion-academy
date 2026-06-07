@@ -1018,7 +1018,7 @@ final class IntranetController extends AbstractController
 
                 if (count($formationIds) > 0) {
                     $this->db()->executeStatement(
-                        'UPDATE formations SET trainer_id = :trainer_id, updated_at = NOW() WHERE id = ANY(:formation_ids)',
+                        'UPDATE formations SET trainer_id = :trainer_id, updated_at = NOW() WHERE id IN (:formation_ids)',
                         [
                             'trainer_id' => $trainerId,
                             'formation_ids' => $formationIds,
@@ -1028,7 +1028,7 @@ final class IntranetController extends AbstractController
                         ]
                     );
                     $this->db()->executeStatement(
-                        'UPDATE classes SET trainer_id = :trainer_id WHERE formation_id = ANY(:formation_ids)',
+                        'UPDATE classes SET trainer_id = :trainer_id WHERE formation_id IN (:formation_ids)',
                         [
                             'trainer_id' => $trainerId,
                             'formation_ids' => $formationIds,
