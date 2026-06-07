@@ -184,11 +184,13 @@ export class HomeComponent implements OnInit, OnDestroy {
       title: 'Certifié Microsoft',
       description: 'Membre du programme Microsoft Training Partners, formations alignées sur les standards officiels Microsoft et accès aux ressources MS Learn.'
     },
+    /*
     {
       icon: 'flexible',
       title: 'Financement CPF',
       description: 'Éligible au financement CPF, OPCO et autres dispositifs, directement ou à travers nos partenaires, pour faciliter votre accès à la formation.'
     },
+    */
     {
       icon: 'expert',
       title: 'Formateurs Experts MCT',
@@ -274,7 +276,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       step: 2,
       title: 'Inscription & Financement',
-      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (CPF, OPCO, entreprise). Directement ou à travers nos partenaires.',
+      description: 'Inscrivez-vous facilement en ligne. Nous vous accompagnons dans vos démarches de financement (OPCO, entreprise, ..). Directement ou à travers nos partenaires.',
       icon: 'financement',
       color: 'secondary'
     },
@@ -328,7 +330,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           {
             id: 1,
             question: 'Comment financer ma formation ?',
-            answer: 'Direct ou à travers un partenaire, nos formations sont éligibles au CPF, aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
+            answer: 'Direct ou à travers un partenaire, nos formations sont éligibles aux financements OPCO, aux plans de développement des compétences et aux budgets formation entreprise. Nous vous accompagnons dans toutes vos démarches.',
             category: 'Financement',
             published: true
           },
@@ -573,7 +575,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             rating: 5
           },
           {
-            quote: 'Formation de qualité, bien structurée. Le financement CPF a rendu l\'accès très simple. Je recommande vivement CloudDev Fusion pour toute personne souhaitant se certifier sur Azure.',
+            quote: 'Formation de qualité, bien structurée. Le financement OPCO a rendu l\'accès très simple. Je recommande vivement CloudDev Fusion pour toute personne souhaitant se certifier sur Azure.',
             author: 'Pierre Durand',
             role: 'IT Manager',
             company: 'InnovateTech',
