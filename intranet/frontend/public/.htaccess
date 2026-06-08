@@ -1,14 +1,17 @@
 RewriteEngine On
 RewriteBase /intranet/
 
-# Route API calls to intranet Symfony backend (avoid rewrite loops).
-RewriteCond %{REQUEST_URI} !^/intranet/api/public/ [NC]
-RewriteRule ^api/(.*)$ api/public/index.php/api/$1 [QSA,L]
+# Pass Authorization header to Symfony
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Keep existing files/directories as-is.
+# API → Symfony backend (PATH_INFO = /intranet/api/...)
+RewriteRule ^api(?:/(.*))?$ backend/public/index.php/intranet/api/$1 [L,QSA]
+
+# Keep existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# SPA fallback
+# SPA fallback (HTML5 routes only)
 RewriteRule ^ index.html [L]
