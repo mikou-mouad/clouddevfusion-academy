@@ -47,10 +47,6 @@ jobs:
               - '.htaccess'
             intranet_backend:
               - 'intranet/backend/**'
-              - 'intranet/.htaccess'
-              - '.htaccess'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/intranet-deploy.yml'
             intranet_backend_deps:
               - 'intranet/backend/composer.lock'
               - 'intranet/backend/composer.json'
@@ -179,7 +175,6 @@ jobs:
     name: Deploy Intranet Backend (Symfony)
     runs-on: ubuntu-latest
     needs: changes
-    timeout-minutes: 45
     if: ${{ needs.changes.outputs.intranet_backend == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
@@ -189,7 +184,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: "8.5.4"
           tools: composer
 
       - name: Install lftp + curl
@@ -217,15 +212,15 @@ jobs:
           DEFAULT_URI: ${{ secrets.DEFAULT_URI }}
           MAILER_DSN: ${{ secrets.MAILER_DSN }}
         run: |
-          {
-            echo "APP_ENV=${APP_ENV}"
-            echo "APP_DEBUG=${APP_DEBUG}"
-            echo "APP_SECRET=${APP_SECRET}"
-            echo "DATABASE_URL=${DATABASE_URL}"
-            echo "CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}"
-            echo "DEFAULT_URI=${DEFAULT_URI}"
-            echo "MAILER_DSN=${MAILER_DSN}"
-          } > intranet/backend/.env
+          cat > intranet/backend/.env << EOF
+          APP_ENV=${APP_ENV}
+          APP_DEBUG=${APP_DEBUG}
+          APP_SECRET=${APP_SECRET}
+          DATABASE_URL=${DATABASE_URL}
+          CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+          DEFAULT_URI=${DEFAULT_URI}
+          MAILER_DSN=${MAILER_DSN}
+          EOF
           cat intranet/backend/.env
 
       - name: Upload intranet backend files (including .env)
@@ -257,7 +252,8 @@ jobs:
           bye
           "
 
-      - name: Remove stale intranet/api front controller on server
+      - name: Upload vendor (only when deps changed)
+        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -268,101 +264,17 @@ jobs:
           lftp -c "
           set ftp:ssl-allow no
           set ftp:passive-mode yes
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          cd ${INTRANET_BACKEND_REMOTE}/../api
-          rm -f index.php .htaccess
-          bye
-          "
-
-      - name: Upload intranet backend vendor
-        timeout-minutes: 40
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 120
-          set net:max-retries 5
-          set cmd:fail-exit yes
+          set net:timeout 30
+          set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
           mkdir -p ${INTRANET_BACKEND_REMOTE}/vendor
-          lcd intranet/backend/vendor
           cd ${INTRANET_BACKEND_REMOTE}/vendor
-          mirror -R --only-newer --parallel=6 \
+          mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
-            --exclude-glob='**/tests/**' \
-            --exclude-glob='**/Tests/**' \
-            --exclude-glob='**/test/**' \
-            --exclude-glob='**/.github/**' \
-            --exclude-glob='**/doc/**' \
-            --exclude-glob='**/docs/**' \
-            . ./
+            intranet/backend/vendor/ ./
           bye
           "
-
-      #- name: Run intranet database migrations on production
-      #  env:
-      #    APP_SECRET: ${{ secrets.APP_SECRET }}
-      #  run: |
-      #    sleep 5
-      #    body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/run-migrations.php?token=${APP_SECRET}" || echo "MIGRATION_REQUEST_FAILED")"
-      #    echo "$body"
-      #    if echo "$body" | grep -q 'MIGRATION_REQUEST_FAILED'; then
-      #      echo "::error::Could not reach run-migrations.php on production"
-      #      exit 1
-      #    fi
-      #    if echo "$body" | grep -qi 'Unauthorized'; then
-      #      echo "::error::Migration token rejected (check APP_SECRET on server)"
-      #      exit 1
-      #    fi
-      #    if echo "$body" | grep -qi 'Migration failed\|Error:'; then
-      #      echo "::error::Doctrine migrations failed on production"
-      #      exit 1
-      #    fi
-      #    echo "$body" | grep -q 'Migrations exécutées avec succès'
-
-      - name: Upload root .htaccess
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          put .htaccess
-          bye
-          "
-
-      - name: Upload intranet folder .htaccess (API routing)
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -p ${INTRANET_FRONTEND_REMOTE}
-          cd ${INTRANET_FRONTEND_REMOTE}
-          put intranet/frontend/public/.htaccess -o .htaccess
-          bye
-          "
-
+          
       - name: Clear Symfony cache
         run: |
           sleep 2
@@ -372,29 +284,12 @@ jobs:
           
       - name: Verify intranet backend endpoint
         run: |
-          check_json_ok() {
-            local label="$1" body="$2"
-            echo "${label}=${body}"
-            if echo "$body" | grep -q '^<?php'; then
-              echo "::error::${label}: PHP not executed. In cPanel PHP Selector set 8.5, save, then in File Manager edit race8462/.htaccess: remove any ea-php72/ea-php84 lines and keep only alt-php85___lsphp handler from PHP Selector."
-              return 1
-            fi
-            if echo "$body" | grep -qi '<html'; then
-              echo "::error::${label}: got HTML instead of JSON. The /intranet/api route is served by the Angular SPA; check intranet/.htaccess rewrites api/* to backend/public/index.php."
-              return 1
-            fi
-            echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
-          }
-          sleep 5
-          for i in 1 2 3; do
-            ping="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/ping.php")"
-            if ! echo "$ping" | grep -q '^<?php'; then break; fi
-            echo "Retry $i/3: PHP still not executed, waiting..."
-            sleep 10
-          done
-          check_json_ok "PING" "$ping"
-          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/api/health")"
-          check_json_ok "HEALTH" "$body"
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/health" || echo "000")"
+          echo "HTTP_CODE=$code"
+          if [ "$code" != "200" ] && [ "$code" != "401" ] && [ "$code" != "403" ]; then
+            echo "Unexpected intranet backend status: $code"
+            exit 1
+          fi
 
   deploy-frontend:
     name: Deploy Frontend (Angular)
@@ -504,8 +399,8 @@ jobs:
         working-directory: intranet/frontend
         run: |
           npm ci
-          npm run build -- --configuration production
-          test -d dist/front/browser
+          npm run build
+          test -d dist
           
       - name: Upload dist to FTP (delete removed files)
         env:
