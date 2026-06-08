@@ -305,26 +305,26 @@ jobs:
           bye
           "
 
-      - name: Run intranet database migrations on production
-        env:
-          APP_SECRET: ${{ secrets.APP_SECRET }}
-        run: |
-          sleep 5
-          body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/run-migrations.php?token=${APP_SECRET}" || echo "MIGRATION_REQUEST_FAILED")"
-          echo "$body"
-          if echo "$body" | grep -q 'MIGRATION_REQUEST_FAILED'; then
-            echo "::error::Could not reach run-migrations.php on production"
-            exit 1
-          fi
-          if echo "$body" | grep -qi 'Unauthorized'; then
-            echo "::error::Migration token rejected (check APP_SECRET on server)"
-            exit 1
-          fi
-          if echo "$body" | grep -qi 'Migration failed\|Error:'; then
-            echo "::error::Doctrine migrations failed on production"
-            exit 1
-          fi
-          echo "$body" | grep -q 'Migrations exécutées avec succès'
+      #- name: Run intranet database migrations on production
+      #  env:
+      #    APP_SECRET: ${{ secrets.APP_SECRET }}
+      #  run: |
+      #    sleep 5
+      #    body="$(curl -fsS "https://academy.clouddevfusion.com/intranet/backend/public/run-migrations.php?token=${APP_SECRET}" || echo "MIGRATION_REQUEST_FAILED")"
+      #    echo "$body"
+      #    if echo "$body" | grep -q 'MIGRATION_REQUEST_FAILED'; then
+      #      echo "::error::Could not reach run-migrations.php on production"
+      #      exit 1
+      #    fi
+      #    if echo "$body" | grep -qi 'Unauthorized'; then
+      #      echo "::error::Migration token rejected (check APP_SECRET on server)"
+      #      exit 1
+      #    fi
+      #    if echo "$body" | grep -qi 'Migration failed\|Error:'; then
+      #      echo "::error::Doctrine migrations failed on production"
+      #      exit 1
+      #    fi
+      #    echo "$body" | grep -q 'Migrations exécutées avec succès'
 
       - name: Upload root .htaccess
         env:
