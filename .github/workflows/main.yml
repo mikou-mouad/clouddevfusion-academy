@@ -489,3 +489,12 @@ jobs:
       - name: Verify upload
         run: |
           echo "Global .htaccess files deployed successfully"
+
+  check-php-version:
+    name: Check Server PHP Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch PHP version from server
+        run: |
+          VERSION=$(curl -s "https://academy.clouddevfusion.com/backend/public/version.php")
+          echo "Server PHP version: $VERSION"
