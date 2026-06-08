@@ -493,6 +493,8 @@ jobs:
   check-php-version:
     name: Check Server PHP Version
     runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-intranet-backend, deploy-frontend, deploy-intranet-frontend, deploy-htaccess]
+    if: always()
     steps:
       - name: Fetch PHP version from server
         run: |
