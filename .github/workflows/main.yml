@@ -197,17 +197,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lftp curl
 
-      - name: Composer install (prod, no scripts)
-        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
-        working-directory: intranet/backend
-        run: |
-          composer install \
-            --no-dev \
-            --prefer-dist \
-            --no-interaction \
-            --optimize-autoloader \
-            --no-scripts
-
       - name: Prepare .env for deployment
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -228,6 +217,17 @@ jobs:
             echo "MAILER_DSN=${MAILER_DSN}"
           } > intranet/backend/.env
           cat intranet/backend/.env
+
+      - name: Run intranet database migrations
+        working-directory: intranet/backend
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --optimize-autoloader \
+            --no-scripts
+          php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
       - name: Upload intranet backend files (including .env)
         env:
@@ -276,7 +276,6 @@ jobs:
           "
 
       - name: Upload intranet backend vendor
-        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
         timeout-minutes: 40
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -324,6 +323,26 @@ jobs:
           bye
           "
 
+      - name: Upload intranet folder .htaccess (API routing)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_FRONTEND_REMOTE}
+          cd ${INTRANET_FRONTEND_REMOTE}
+          put intranet/frontend/public/.htaccess -o .htaccess
+          bye
+          "
+
       - name: Clear Symfony cache
         run: |
           sleep 2
@@ -338,6 +357,10 @@ jobs:
             echo "${label}=${body}"
             if echo "$body" | grep -q '^<?php'; then
               echo "::error::${label}: PHP not executed. In cPanel PHP Selector set 8.5, save, then in File Manager edit race8462/.htaccess: remove any ea-php72/ea-php84 lines and keep only alt-php85___lsphp handler from PHP Selector."
+              return 1
+            fi
+            if echo "$body" | grep -qi '<html'; then
+              echo "::error::${label}: got HTML instead of JSON. The /intranet/api route is served by the Angular SPA; check intranet/.htaccess rewrites api/* to backend/public/index.php."
               return 1
             fi
             echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
