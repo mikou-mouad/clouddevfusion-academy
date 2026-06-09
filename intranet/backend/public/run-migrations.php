@@ -6,7 +6,16 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+header('Content-Type: text/plain; charset=utf-8');
+
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!is_file($autoload)) {
+    http_response_code(503);
+    echo "Vendor not ready\n";
+    exit(1);
+}
+
+require_once $autoload;
 
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -22,12 +31,11 @@ $providedToken = (string) ($_GET['token'] ?? '');
 
 if ($expectedToken === '' || !hash_equals($expectedToken, $providedToken)) {
     http_response_code(401);
-    header('Content-Type: text/plain; charset=utf-8');
     echo "Unauthorized\n";
     exit(1);
 }
 
-header('Content-Type: text/plain; charset=utf-8');
+set_time_limit(300);
 
 try {
     $kernel = new App\Kernel($_ENV['APP_ENV'] ?? 'prod', (bool) ($_ENV['APP_DEBUG'] ?? false));

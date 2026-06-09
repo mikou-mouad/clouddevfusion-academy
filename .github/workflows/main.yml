@@ -252,8 +252,8 @@ jobs:
           bye
           "
 
-      - name: Upload vendor (only when deps changed)
-        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
+      - name: Upload intranet backend vendor
+        timeout-minutes: 40
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -264,23 +264,117 @@ jobs:
           lftp -c "
           set ftp:ssl-allow no
           set ftp:passive-mode yes
+          set net:timeout 120
+          set net:max-retries 5
+          set cmd:fail-exit yes
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -fp ${INTRANET_BACKEND_REMOTE}/vendor
+          lcd intranet/backend/vendor
+          cd ${INTRANET_BACKEND_REMOTE}/vendor
+          mirror -R --only-newer --parallel=6 \
+            --exclude-glob='.git*' \
+            --exclude-glob='**/tests/**' \
+            --exclude-glob='**/Tests/**' \
+            . ./
+          bye
+          "
+
+      - name: Upload root .htaccess
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -fp ${INTRANET_BACKEND_REMOTE}/vendor
-          cd ${INTRANET_BACKEND_REMOTE}/vendor
-          mirror -R --only-newer --verbose \
-            --exclude-glob='.git*' \
-            intranet/backend/vendor/ ./
+          put .htaccess
           bye
           "
-          
+
+      - name: Upload intranet folder .htaccess (API routing)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
+        run: |
+          lftp -c "
+          set ftp:ssl-allow no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
+          mkdir -p ${INTRANET_FRONTEND_REMOTE}
+          cd ${INTRANET_FRONTEND_REMOTE}
+          put intranet/frontend/public/.htaccess -o .htaccess
+          bye
+          "
+
       - name: Clear Symfony cache
         run: |
           sleep 2
           code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/backend/public/clear-cache-complete.php" || echo "000")"
           echo "Cache clear HTTP code: $code"
           sleep 2
+
+      - name: Run intranet database migrations on production
+        env:
+          APP_SECRET: ${{ secrets.APP_SECRET }}
+        run: |
+          MIGRATION_URL="https://academy.clouddevfusion.com/intranet/backend/public/run-migrations.php"
+          PING_URL="https://academy.clouddevfusion.com/intranet/backend/public/ping.php"
+
+          echo "Waiting for production PHP endpoint..."
+          for i in $(seq 1 12); do
+            code="$(curl -s -o /dev/null -w "%{http_code}" "$PING_URL" || echo "000")"
+            echo "ping attempt $i/12: HTTP $code"
+            if [ "$code" = "200" ]; then break; fi
+            sleep 10
+          done
+          if [ "$code" != "200" ]; then
+            echo "::error::ping.php not reachable before migrations (last HTTP $code)"
+            exit 1
+          fi
+
+          echo "Running migrations on production..."
+          for i in $(seq 1 6); do
+            response="$(curl -sS -w "\n__HTTP_CODE__:%{http_code}" -G "$MIGRATION_URL" --data-urlencode "token=${APP_SECRET}" || true)"
+            code="${response##*__HTTP_CODE__:}"
+            body="${response%__HTTP_CODE__:*}"
+            echo "migration attempt $i/6: HTTP $code"
+            echo "$body"
+
+            if [ "$code" = "503" ] || [ "$code" = "000" ]; then
+              echo "Server not ready, retrying in 15s..."
+              sleep 15
+              continue
+            fi
+            if [ "$code" = "401" ]; then
+              echo "::error::Migration token rejected (check APP_SECRET matches server .env)"
+              exit 1
+            fi
+            if [ "$code" != "200" ]; then
+              echo "::error::Unexpected HTTP $code from run-migrations.php"
+              exit 1
+            fi
+            if echo "$body" | grep -qi 'Migration failed\|Error:'; then
+              echo "::error::Doctrine migrations failed on production"
+              exit 1
+            fi
+            if echo "$body" | grep -q 'Migrations exécutées avec succès'; then
+              echo "Migrations OK"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Migrations did not complete after retries"
+          exit 1
           
       - name: Verify intranet backend endpoint
         run: |
