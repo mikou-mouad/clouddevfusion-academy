@@ -56,7 +56,58 @@ php bin/console app:intranet:import-state --file=var/intranet-admin-state.PROD.j
 
 The import also creates/updates `users` accounts (hashed passwords) for students and trainers found in the JSON.
 
-## 7) Production import (after deploy)
+## 7) Migrate local PostgreSQL to production (recommended)
+
+This copies the real SQL tables (users, formations, students, trainers, etc.).
+
+### Step A — dump local database
+
+```bash
+cd intranet/backend
+chmod +x scripts/dump-local-db.sh scripts/push-db-to-prod.sh
+./scripts/dump-local-db.sh
+```
+
+Creates `var/intranet_db_dump.sql.gz` (~90 KB).
+
+### Step B — upload + import on O2Switch
+
+Option 1 — one command (needs FTP secrets):
+
+```bash
+export FTP_HOST=...
+export FTP_PORT=21
+export FTP_USER=...
+export FTP_PASS=...
+export INTRANET_BACKEND_REMOTE=...
+export APP_SECRET=...
+./scripts/push-db-to-prod.sh
+```
+
+Option 2 — manual:
+
+1. Upload `var/intranet_db_dump.sql.gz` via FTP to `intranet/backend/var/` on the server.
+2. Deploy backend code (includes `public/import-database.php`).
+3. Open once in browser or curl:
+
+```bash
+curl -G "https://academy.clouddevfusion.com/intranet/backend/public/import-database.php" \
+  --data-urlencode "token=YOUR_APP_SECRET"
+```
+
+Option 3 — SSH on server if available:
+
+```bash
+php bin/console app:intranet:import-database
+```
+
+### Notes
+
+- The dump uses `--clean --if-exists`: production intranet tables are replaced.
+- Upload `public/uploads/` too if documents/PDFs must work.
+- Do not commit `var/intranet_db_dump.sql.gz` (contains passwords).
+
+## 8) Production import from JSON (alternative)
 
 1. Upload `intranet-admin-state.PROD.json` to `var/` on the server (do not commit this file).
 2. Upload `public/uploads/` assets if resources use local files.
