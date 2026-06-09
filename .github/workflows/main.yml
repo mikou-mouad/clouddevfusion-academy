@@ -348,10 +348,16 @@ jobs:
 
       - name: Verify intranet backend endpoint
         run: |
-          HEALTH_URL="https://academy.clouddevfusion.com/intranet/backend/public/index.php/intranet/api/health"
+          HEALTH_URL="https://academy.clouddevfusion.com/intranet/api/health"
+          FALLBACK_URL="https://academy.clouddevfusion.com/intranet/backend/public/index.php/intranet/api/health"
           for i in $(seq 1 10); do
             body="$(curl -fsS "$HEALTH_URL" 2>/dev/null || echo "FAIL")"
             echo "health attempt $i/10: $body"
+            if echo "$body" | grep -qi '<html'; then
+              echo "API rewrite not ready, trying direct Symfony URL..."
+              body="$(curl -fsS "$FALLBACK_URL" 2>/dev/null || echo "FAIL")"
+              echo "fallback: $body"
+            fi
             if echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
               echo "Intranet backend OK (pending migrations run on first Symfony boot)"
               exit 0
