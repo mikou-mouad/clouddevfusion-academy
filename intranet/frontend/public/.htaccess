@@ -1,8 +1,8 @@
 RewriteEngine On
 RewriteBase /intranet/
 
-# API → Symfony backend
-RewriteRule ^api(?:/(.*))?$ backend/public/index.php/intranet/api/$1 [L,QSA]
+# API → Symfony backend (absolute path for LiteSpeed/O2Switch)
+RewriteRule ^api(?:/(.*))?$ /intranet/backend/public/index.php/intranet/api/$1 [L,QSA]
 
 # Leave real files/directories unchanged (backend/public, assets, etc.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]

@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://academy.clouddevfusion.com/intranet/api'
+  // O2Switch rewrite for /intranet/api is unreliable; Symfony front controller path is stable.
+  apiBaseUrl: '/intranet/backend/public/index.php/intranet/api',
 };

@@ -44,6 +44,7 @@ final class CorsSubscriber implements EventSubscriberInterface
             'http://127.0.0.1:4200',
             'http://localhost:8000',
             'http://127.0.0.1:8000',
+            'https://academy.clouddevfusion.com',
         ];
 
         $response = $event->getResponse();
@@ -61,6 +62,8 @@ final class CorsSubscriber implements EventSubscriberInterface
 
     private function isApiRequest(Request $request): bool
     {
-        return str_starts_with($request->getPathInfo(), '/api/');
+        $path = $request->getPathInfo();
+
+        return str_starts_with($path, '/api/') || str_starts_with($path, '/intranet/api/');
     }
 }
