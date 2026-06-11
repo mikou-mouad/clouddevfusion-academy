@@ -610,7 +610,7 @@ final class ImportIntranetStateCommand extends Command
     private function resolveUserIdByEmail(string $email): ?int
     {
         $userId = $this->connection->fetchOne(
-            'SELECT id FROM users WHERE LOWER(email) = :email',
+            'SELECT id FROM intranet_users WHERE LOWER(email) = :email',
             ['email' => strtolower($email)]
         );
 
@@ -762,12 +762,12 @@ final class ImportIntranetStateCommand extends Command
 
         $email = strtolower($email);
         $existingUserId = $this->connection->fetchOne(
-            'SELECT id FROM users WHERE LOWER(email) = :email',
+            'SELECT id FROM intranet_users WHERE LOWER(email) = :email',
             ['email' => $email]
         );
 
         if ($existingUserId === false) {
-            $this->connection->insert('users', [
+            $this->connection->insert('intranet_users', [
                 'role_id' => $roleId,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -782,7 +782,7 @@ final class ImportIntranetStateCommand extends Command
         }
 
         $this->connection->update(
-            'users',
+            'intranet_users',
             [
                 'role_id' => $roleId,
                 'first_name' => $firstName,

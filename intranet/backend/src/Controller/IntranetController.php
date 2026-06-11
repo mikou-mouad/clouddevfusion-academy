@@ -53,7 +53,7 @@ final class IntranetController extends AbstractController
         try {
             $dbUser = $connection->fetchAssociative(
                 'SELECT u.id, u.first_name, u.last_name, u.email, u.password_hash, r.code AS role_code
-                 FROM users u
+                 FROM intranet_users u
                  INNER JOIN roles r ON r.id = u.role_id
                  WHERE LOWER(u.email) = :email
                  LIMIT 1',
@@ -664,7 +664,7 @@ final class IntranetController extends AbstractController
 
                 $plainPassword = $this->generatePassword();
                 $this->upsertAuthUser($connection, 'student', $firstName, $lastName, $email, $plainPassword);
-                $userId = $connection->fetchOne('SELECT id FROM users WHERE LOWER(email) = :email', ['email' => $email]);
+                $userId = $connection->fetchOne('SELECT id FROM intranet_users WHERE LOWER(email) = :email', ['email' => $email]);
                 if ($userId === false) {
                     continue;
                 }
@@ -969,7 +969,7 @@ final class IntranetController extends AbstractController
             try {
                 $plainPassword = $password !== '' ? $password : $this->generatePassword();
                 $this->upsertAuthUser($connection, 'trainer', $firstName, $lastName, $email, $plainPassword);
-                $userId = $connection->fetchOne('SELECT id FROM users WHERE LOWER(email) = :email', ['email' => $email]);
+                $userId = $connection->fetchOne('SELECT id FROM intranet_users WHERE LOWER(email) = :email', ['email' => $email]);
                 $providerId = null;
                 if ($companyName !== '') {
                     $providerId = $this->db()->fetchOne(
@@ -4652,12 +4652,12 @@ final class IntranetController extends AbstractController
         }
 
         $existingUserId = $connection->fetchOne(
-            'SELECT id FROM users WHERE LOWER(email) = :email',
+            'SELECT id FROM intranet_users WHERE LOWER(email) = :email',
             ['email' => strtolower($email)]
         );
 
         if ($existingUserId === false) {
-            $connection->insert('users', [
+            $connection->insert('intranet_users', [
                 'role_id' => $roleId,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -4670,7 +4670,7 @@ final class IntranetController extends AbstractController
         }
 
         $connection->update(
-            'users',
+            'intranet_users',
             [
                 'role_id' => $roleId,
                 'first_name' => $firstName,

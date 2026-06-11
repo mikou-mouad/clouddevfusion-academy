@@ -61,12 +61,12 @@ final class SeedIntranetAdminCommand extends Command
                 throw new \RuntimeException('Unable to hash password.');
             }
 
-            $userId = $this->connection->fetchOne('SELECT id FROM users WHERE email = :email', [
+            $userId = $this->connection->fetchOne('SELECT id FROM intranet_users WHERE email = :email', [
                 'email' => $email,
             ]);
 
             if ($userId === false) {
-                $this->connection->insert('users', [
+                $this->connection->insert('intranet_users', [
                     'role_id' => (int) $roleId,
                     'first_name' => 'Admin',
                     'last_name' => 'CloudDev',
@@ -77,7 +77,7 @@ final class SeedIntranetAdminCommand extends Command
                 $io->success(sprintf('Admin account created: %s', $email));
             } else {
                 $this->connection->update(
-                    'users',
+                    'intranet_users',
                     [
                         'role_id' => (int) $roleId,
                         'password_hash' => $passwordHash,
