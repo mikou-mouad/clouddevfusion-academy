@@ -4786,6 +4786,17 @@ export class App implements OnDestroy {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
+  private loadAdminProviders(): void {
+    if (!this.token()) return;
+
+    this.http
+      .get<{ providers: ProviderRecord[] }>(`${this.apiBaseUrl}/admin/providers`, { headers: this.authHeaders() })
+      .subscribe({
+        next: (response) => this.providers.set(response.providers ?? []),
+        error: () => this.providers.set([])
+      });
+  }
+
   private loadDashboard(): void {
     if (!this.token()) return;
 
@@ -4808,6 +4819,9 @@ export class App implements OnDestroy {
         this.adminStudents.set(response.students ?? []);
         this.adminTrainers.set(response.trainers ?? []);
         this.providers.set(response.providers ?? []);
+        if (response.role === 'admin') {
+          this.loadAdminProviders();
+        }
         this.documents.set(response.documents ?? []);
         this.adminSessionDocuments.set(response.adminSessionDocuments ?? { genericDocuments: [], studentDocuments: [] });
         this.adminSessionValidationResults.set(response.adminSessionValidationResults ?? []);
