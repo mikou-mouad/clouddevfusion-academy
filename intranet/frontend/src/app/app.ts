@@ -664,7 +664,7 @@ export class App implements OnDestroy {
   });
 
   private readonly adminFormationDocMatrixColumnDefs: ReadonlyArray<AdminFormationDocMatrixColumn> = [
-    { key: 'reglement', label: 'Reglement interieur', shortLabel: 'Regl.', category: 'inscription', documentType: 'reglement_interieur', scope: 'generic', keywords: ['reglement', 'interieur'], mandatoryGeneric: true },
+    { key: 'reglement', label: 'Règlement intérieur', shortLabel: 'Règl.', category: 'inscription', documentType: 'reglement_interieur', scope: 'generic', keywords: ['reglement', 'interieur'], mandatoryGeneric: true },
     { key: 'cgv', label: 'CGV', shortLabel: 'CGV', category: 'inscription', documentType: 'cgv', scope: 'generic', keywords: ['cgv'], mandatoryGeneric: true },
     { key: 'test_positionnement', label: 'Test positionnement', shortLabel: 'Posit.', category: 'pre-inscription', documentType: 'test_positionnement', scope: 'student', keywords: ['positionnement'] },
     { key: 'contrat', label: 'Contrat', shortLabel: 'Contrat', category: 'inscription', documentType: 'contrat', scope: 'student', keywords: ['contrat'] },
@@ -672,7 +672,7 @@ export class App implements OnDestroy {
     { key: 'fiche', label: 'Fiche renseignement', shortLabel: 'Fiche', category: 'inscription', documentType: 'fiche_renseignement', scope: 'student', keywords: ['fiche', 'renseignement'] },
     { key: 'supports', label: 'Supports de cours', shortLabel: 'Support', category: 'en-formation', documentType: 'supports_cours', scope: 'generic', keywords: ['support', 'cours'] },
     { key: 'recordings', label: 'Recordings seances', shortLabel: 'Replay', category: 'en-formation', documentType: 'recording_seance', scope: 'generic', keywords: ['recording', 'video', 'seance'] },
-    { key: 'attestation', label: 'Attestation reussite', shortLabel: 'Attest.', category: 'cloture', documentType: 'attestation_reussite', scope: 'student', keywords: ['attestation', 'reussite'] },
+    { key: 'attestation', label: 'Attestation de réussite', shortLabel: 'Attest.', category: 'cloture', documentType: 'attestation_reussite', scope: 'student', keywords: ['attestation', 'reussite'] },
     { key: 'satisfaction', label: 'Satisfaction', shortLabel: 'Satisf.', category: 'cloture', documentType: 'formulaire_satisfaction', scope: 'student', keywords: ['satisfaction'] },
     { key: 'enrollement', label: 'Enrollement', shortLabel: 'Enrol.', category: 'cloture', documentType: 'enrollement', scope: 'student', keywords: ['enrol', 'enroll'] },
     { key: 'test_validation', label: 'Test validation', shortLabel: 'Valid.', category: 'cloture', documentType: 'test_validation', scope: 'student', keywords: ['test', 'validation'] }
@@ -1327,13 +1327,13 @@ export class App implements OnDestroy {
       linkOnly?: boolean;
       excludeTrainerSatisfaction?: boolean;
     }[] = [
-      { key: 'reglement_interieur', label: 'Reglement interieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
+      { key: 'reglement_interieur', label: 'Règlement intérieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
       { key: 'cgv', label: 'CGV', keywords: ['cgv'], category: 'inscription' },
       { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription' },
       { key: 'contrat', label: 'Contrat', keywords: ['contrat'], category: 'inscription', signable: true },
       { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription' },
       { key: 'fiche_renseignement', label: 'Fiche de renseignement', keywords: ['fiche', 'renseignement'], category: 'inscription', signable: true },
-      { key: 'attestation_reussite', label: 'Attestation de reussite', keywords: ['attestation', 'reussite'], category: 'cloture' },
+      { key: 'attestation_reussite', label: 'Attestation de réussite', keywords: ['attestation', 'reussite'], category: 'cloture' },
       {
         key: 'formulaire_satisfaction',
         label: 'Formulaire de satisfaction',

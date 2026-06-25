@@ -2538,7 +2538,7 @@
                 }
                 <label>
                   <span class="label-field-line">Lien transcription Microsoft <span class="sub">(facultatif)</span></span>
-                  <input type="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" />
+                  <input type="text" inputmode="url" [ngModel]="newTrainerMicrosoftTranscriptUrl()" (ngModelChange)="newTrainerMicrosoftTranscriptUrl.set($event)" name="newTrainerMicrosoftTranscriptUrl" placeholder="https://..." />
                 </label>
                 <label>
                   <span class="label-field-line">CV (document) <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -2865,7 +2865,7 @@
                   }
                   <label>
                     <span class="label-field-line">Lien transcription Microsoft <span class="sub">(facultatif)</span></span>
-                    <input type="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" />
+                    <input type="text" inputmode="url" [ngModel]="trainerEditMicrosoftTranscriptUrl()" (ngModelChange)="trainerEditMicrosoftTranscriptUrl.set($event)" name="trainerEditMicrosoftTranscriptUrl" placeholder="https://..." />
                   </label>
                   <label>
                     CV (remplacer)
