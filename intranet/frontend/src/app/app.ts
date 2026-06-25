@@ -3756,10 +3756,16 @@ export class App implements OnDestroy {
     if (/^https?:\/\//i.test(raw)) {
       return raw;
     }
+    if (raw.startsWith('/uploads/intranet-')) {
+      return `${this.intranetPublicBaseUrl()}${raw}`;
+    }
     if (raw.startsWith('/')) {
       try {
-        const apiOrigin = new URL(this.apiBaseUrl).origin;
-        return `${apiOrigin}${raw}`;
+        const baseOrigin = window.location.origin;
+        const apiBase = this.apiBaseUrl.startsWith('http')
+          ? this.apiBaseUrl
+          : new URL(this.apiBaseUrl, baseOrigin).href;
+        return `${new URL(apiBase).origin}${raw}`;
       } catch {
         return raw;
       }
@@ -3771,6 +3777,14 @@ export class App implements OnDestroy {
       return `https://${raw}`;
     }
     return raw;
+  }
+
+  private intranetPublicBaseUrl(): string {
+    const baseOrigin = window.location.origin;
+    if (this.apiBaseUrl.includes('/intranet/backend/public/')) {
+      return `${baseOrigin}/intranet/backend/public`;
+    }
+    return baseOrigin;
   }
 
   availableStudentsForSelector = computed(() =>
