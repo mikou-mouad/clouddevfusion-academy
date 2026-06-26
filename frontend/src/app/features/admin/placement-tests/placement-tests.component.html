@@ -21,7 +21,7 @@
       <div class="test-header">
         <div class="test-info">
           <h3>{{ test.title }}</h3>
-          <span class="test-course" *ngIf="test.course">{{ test.course.title }}</span>
+          <span class="test-course" *ngIf="getCourseTitle(test)">{{ getCourseTitle(test) }}</span>
           <div class="test-meta">
             <span>Score minimum: {{ test.passingScore }}%</span>
             <span>Durée: {{ test.timeLimit }} min</span>
@@ -132,9 +132,12 @@
         <div class="form-group">
           <label>Formation *</label>
           <select [(ngModel)]="testForm.course" name="course" required>
-            <option [value]="null">Sélectionner une formation</option>
-            <option *ngFor="let course of courses" [ngValue]="course">{{ course.title }}</option>
+            <option [ngValue]="null">Sélectionner une formation</option>
+            <option *ngFor="let course of coursesForTestForm()" [ngValue]="course">{{ course.title }}</option>
           </select>
+          <p class="form-hint" *ngIf="!editingTest && coursesForTestForm().length === 0">
+            Toutes les formations ont déjà un test de positionnement.
+          </p>
         </div>
         <div class="form-group">
           <label>Titre *</label>

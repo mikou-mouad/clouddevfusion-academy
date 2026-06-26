@@ -183,20 +183,81 @@ export class PlacementTestsComponent implements OnInit {
 
   editTest(test: PlacementTest) {
     this.editingTest = test;
-    this.testForm = { ...test };
+    this.testForm = {
+      title: test.title,
+      description: test.description,
+      passingScore: test.passingScore,
+      timeLimit: test.timeLimit,
+      isActive: test.isActive,
+      course: this.resolveCourseReference(test.course) ?? test.course ?? undefined,
+      questions: []
+    };
     this.showTestModal = true;
   }
 
+  getCourseTitle(test: PlacementTest): string {
+    const course = test.course;
+    if (!course) return '';
+    if (typeof course === 'object' && course.title) {
+      return course.title;
+    }
+    const courseId = this.extractCourseId(course);
+    if (courseId == null) return '';
+    return this.courses.find(c => c.id === courseId)?.title ?? '';
+  }
+
+  coursesForTestForm(): Course[] {
+    if (this.editingTest) {
+      return this.courses;
+    }
+    const usedCourseIds = new Set(
+      this.tests
+        .map(t => this.extractCourseId(t.course))
+        .filter((id): id is number => id != null)
+    );
+    return this.courses.filter(c => c.id != null && !usedCourseIds.has(c.id));
+  }
+
+  private extractCourseId(course: Course | string | undefined): number | null {
+    if (!course) return null;
+    if (typeof course === 'string') {
+      const match = course.match(/\/(\d+)$/);
+      return match ? parseInt(match[1], 10) : null;
+    }
+    return course.id ?? null;
+  }
+
+  private resolveCourseReference(course: Course | string | undefined): Course | null {
+    const courseId = this.extractCourseId(course);
+    if (courseId == null) return null;
+    return this.courses.find(c => c.id === courseId) ?? null;
+  }
+
+  private courseToIri(course: Course | string | undefined): string | null {
+    if (!course) return null;
+    if (typeof course === 'string' && course.startsWith('/api/')) {
+      return course;
+    }
+    const courseId = this.extractCourseId(course);
+    return courseId != null ? `/api/courses/${courseId}` : null;
+  }
+
   saveTest() {
-    if (!this.testForm.course || !this.testForm.title) {
+    this.error = null;
+    const courseIri = this.courseToIri(this.testForm.course);
+    if (!courseIri || !this.testForm.title?.trim()) {
       this.error = 'Veuillez remplir tous les champs obligatoires';
       return;
     }
 
     this.loading = true;
-    const testData: any = {
-      ...this.testForm,
-      course: `/api/courses/${this.testForm.course.id}`
+    const testData = {
+      title: this.testForm.title.trim(),
+      description: this.testForm.description ?? '',
+      passingScore: this.testForm.passingScore ?? 70,
+      timeLimit: this.testForm.timeLimit ?? 30,
+      isActive: this.testForm.isActive ?? true,
+      course: courseIri
     };
 
     const operation = this.editingTest
@@ -212,7 +273,10 @@ export class PlacementTestsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error saving test:', err);
-        this.error = 'Erreur lors de l\'enregistrement du test';
+        const detail = err.error?.detail || err.error?.message || err.error?.hydra?.description;
+        this.error = detail
+          ? `Erreur lors de l'enregistrement du test: ${detail}`
+          : 'Erreur lors de l\'enregistrement du test';
         this.loading = false;
       }
     });

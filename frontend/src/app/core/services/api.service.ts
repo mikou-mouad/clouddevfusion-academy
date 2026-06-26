@@ -65,7 +65,7 @@ export interface PlacementQuestion {
 
 export interface PlacementTest {
   id?: number;
-  course?: Course;
+  course?: Course | string;
   title: string;
   description?: string;
   passingScore: number;
