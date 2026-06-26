@@ -597,14 +597,14 @@ export class ApiService {
     );
   }
 
-  createPlacementTest(test: PlacementTest): Observable<PlacementTest> {
+  createPlacementTest(test: Partial<PlacementTest>): Observable<PlacementTest> {
     return this.http.post<PlacementTest>(`${this.apiUrl}/placement_tests`, test, { 
       headers: this.getHeaders(),
       withCredentials: true
     });
   }
 
-  updatePlacementTest(id: number, test: PlacementTest): Observable<PlacementTest> {
+  updatePlacementTest(id: number, test: Partial<PlacementTest>): Observable<PlacementTest> {
     return this.http.put<PlacementTest>(`${this.apiUrl}/placement_tests/${id}`, test, { 
       headers: this.getHeaders(),
       withCredentials: true
