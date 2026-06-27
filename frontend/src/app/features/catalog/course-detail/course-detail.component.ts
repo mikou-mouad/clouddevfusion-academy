@@ -21,33 +21,48 @@ export class CourseDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const courseId = this.route.snapshot.paramMap.get('id');
-    if (courseId) {
-      this.loadCourse(parseInt(courseId, 10));
+    const courseCode = this.route.snapshot.paramMap.get('code');
+    if (courseCode) {
+      this.loadCourseByCode(courseCode);
     } else {
-      this.error = 'ID de formation non trouvé';
+      this.error = 'Code de formation non trouvé';
     }
   }
 
-  loadCourse(id: number) {
+  loadCourseByCode(code: string) {
     this.loading = true;
     this.error = null;
     this.hasPlacementTest = false;
-    this.apiService.getCourse(id).subscribe({
-      next: (course) => {
+    this.apiService.getCourses().subscribe({
+      next: (courses) => {
+        const normalizedCode = code.trim().toLowerCase();
+        let course = courses.find((item) => item.code.trim().toLowerCase() === normalizedCode);
+
+        if (!course && /^[0-9]+$/.test(normalizedCode)) {
+          const numericId = Number(normalizedCode);
+          course = courses.find((item) => item.id === numericId);
+        }
+
+        if (!course) {
+          this.error = 'Formation introuvable';
+          this.loading = false;
+          return;
+        }
+
         this.course = course;
         this.loading = false;
+
         if (course.placementTest != null) {
           this.hasPlacementTest = true;
-        } else {
-          this.apiService.getPlacementTestByCourse(id).subscribe({
+        } else if (course.id != null) {
+          this.apiService.getPlacementTestByCourse(course.id).subscribe({
             next: (test) => { this.hasPlacementTest = test != null; },
             error: () => {}
           });
         }
       },
       error: (err) => {
-        console.error('Error loading course:', err);
+        console.error('Error loading courses:', err);
         this.error = 'Erreur lors du chargement de la formation';
         this.loading = false;
       }

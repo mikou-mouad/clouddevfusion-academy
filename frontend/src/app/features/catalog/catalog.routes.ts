@@ -6,7 +6,7 @@ export const CATALOG_ROUTES: Routes = [
     loadComponent: () => import('./catalog-list/catalog-list.component').then(m => m.CatalogListComponent)
   },
   {
-    path: ':id',
+    path: ':code',
     loadComponent: () => import('./course-detail/course-detail.component').then(m => m.CourseDetailComponent)
   }
 ];
