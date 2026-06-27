@@ -429,9 +429,12 @@ jobs:
         run: |
           set -e
 
-          URL="https://academy.clouddevfusion.com"
-          MAX_RETRIES=10
-          SLEEP_SECONDS=6
+          URL="https://academy.clouddevfusion.com/home"
+          MAX_RETRIES=20
+          SLEEP_SECONDS=8
+
+          echo "Waiting 15s before first frontend check..."
+          sleep 15
 
           for i in $(seq 1 $MAX_RETRIES); do
             code="$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")"
