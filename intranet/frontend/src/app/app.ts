@@ -367,6 +367,9 @@ export class App implements OnDestroy {
     return slots;
   });
   activeAdminFormations = computed(() => this.formations().filter((formation) => !formation.archived));
+  editFormationRequiresTrainer = computed(() =>
+    this.formationHasStarted(this.editFormationStartDate(), this.editPlanningRows())
+  );
   archivedAdminFormations = computed(() => this.formations().filter((formation) => formation.archived));
   selectedArchivedFormation = computed(() => {
     const formations = this.archivedAdminFormations();
@@ -2560,7 +2563,7 @@ export class App implements OnDestroy {
     this.editFormationId.set(formation.id);
     this.editFormationTitle.set(formation.title);
     this.editFormationMode.set(formation.mode || 'En ligne');
-    this.editFormationTrainerId.set(formation.trainerId ?? this.adminTrainers()[0]?.id ?? null);
+    this.editFormationTrainerId.set(formation.trainerId ?? null);
     this.editFormationStartDate.set(formation.startDate);
     this.editFormationEndDate.set(formation.endDate);
     this.editFormationTeamsLink.set(formation.teamsLink ?? '');
@@ -2586,8 +2589,12 @@ export class App implements OnDestroy {
     event.preventDefault();
     const formationId = this.editFormationId().trim();
     const trainerId = this.editFormationTrainerId();
-    if (!formationId || !trainerId) {
-      this.formationActionError.set('Formation ou formateur invalide.');
+    if (!formationId) {
+      this.formationActionError.set('Formation invalide.');
+      return;
+    }
+    if (this.editFormationRequiresTrainer() && !trainerId) {
+      this.formationActionError.set('Un formateur est obligatoire pour une session deja demarree.');
       return;
     }
 
@@ -2601,7 +2608,7 @@ export class App implements OnDestroy {
         {
           title: this.editFormationTitle().trim(),
           mode: this.editFormationMode().trim() || 'En ligne',
-          trainerId,
+          trainerId: trainerId ?? 0,
           startDate: this.editFormationStartDate().trim(),
           endDate: this.editFormationEndDate().trim(),
           teamsLink: this.editFormationTeamsLink().trim(),
@@ -3918,11 +3925,6 @@ export class App implements OnDestroy {
       return;
     }
 
-    if (!this.newFormationTrainerId()) {
-      this.adminCreateError.set('Selectionnez un formateur.');
-      return;
-    }
-
     const selectedCatalogFormation = this.catalogFormations().find(
       (item) => item.id === this.newFormationCatalogCourseId()
     );
@@ -3940,7 +3942,7 @@ export class App implements OnDestroy {
           catalogCourseTitle: selectedCatalogFormation.title,
           title: selectedCatalogFormation.title,
           mode: this.newFormationMode().trim() || 'En ligne',
-          trainerId: this.newFormationTrainerId(),
+          trainerId: this.newFormationTrainerId() ?? 0,
           startDate: this.newFormationStartDate().trim(),
           endDate: this.newFormationEndDate().trim(),
           teamsLink: this.newFormationTeamsLink().trim(),
@@ -4875,9 +4877,6 @@ export class App implements OnDestroy {
         if (response.role === 'admin' && !this.selectedAttendanceFormation() && this.adminAttendanceFormationOptions().length) {
           this.selectedAttendanceFormation.set(this.adminAttendanceFormationOptions()[0]);
         }
-        if (response.role === 'admin' && !this.newFormationTrainerId() && (response.trainers?.length ?? 0) > 0) {
-          this.newFormationTrainerId.set(response.trainers![0].id);
-        }
         if (!response.attendanceSessions?.length) {
           this.attendanceNotice.set('');
           this.attendanceError.set('');
@@ -4957,6 +4956,26 @@ export class App implements OnDestroy {
     return new Date(`${date}T${match[1]}:00`).getTime();
   }
 
+  setNewFormationTrainerId(value: number | null): void {
+    this.newFormationTrainerId.set(value);
+  }
+
+  setEditFormationTrainerId(value: number | null): void {
+    this.editFormationTrainerId.set(value);
+  }
+
+  private formationHasStarted(startDate: string, planning: PlanningInput[]): boolean {
+    const today = this.toIsoDate(new Date());
+    const normalizedStart = startDate.trim().slice(0, 10);
+    if (normalizedStart && normalizedStart <= today) {
+      return true;
+    }
+    return planning.some((slot) => {
+      const sessionDate = slot.date.trim().slice(0, 10);
+      return sessionDate !== '' && sessionDate <= today;
+    });
+  }
+
   private sessionCatalogFormationNameStrict(formation: FormationDashboard): string {
     const direct = (formation.catalogCourseTitle ?? '').trim();
     if (direct) return direct;
@@ -4976,7 +4995,7 @@ export class App implements OnDestroy {
     this.newFormationTitle.set('');
     this.newFormationCatalogCourseId.set(this.catalogFormations()[0]?.id ?? '');
     this.newFormationMode.set('En ligne');
-    this.newFormationTrainerId.set(this.adminTrainers()[0]?.id ?? null);
+    this.newFormationTrainerId.set(null);
     this.newFormationStartDate.set('');
     this.newFormationEndDate.set('');
     this.newFormationTeamsLink.set('');

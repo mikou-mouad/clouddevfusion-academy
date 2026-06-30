@@ -278,6 +278,8 @@ final class IntranetController extends AbstractController
                     'is_archived' => false,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
+                ], [
+                    'is_archived' => ParameterType::BOOLEAN,
                 ]);
 
                 $classId = 'grp-'.$formationId;
@@ -321,8 +323,13 @@ final class IntranetController extends AbstractController
                 $this->db()->commit();
 
                 return $this->json(['message' => 'Formation creee avec succes.']);
-            } catch (\Throwable) {
-                $this->db()->rollBack();
+            } catch (\Throwable $exception) {
+                try {
+                    $this->db()->rollBack();
+                } catch (\Throwable) {
+                }
+
+                return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
             }
         }
 
@@ -439,13 +446,8 @@ final class IntranetController extends AbstractController
         $teamsLink = trim((string) ($payload['teamsLink'] ?? ''));
         $planningPayload = (array) ($payload['planning'] ?? []);
 
-        if ($title === '' || $trainerId <= 0 || $startDate === '' || $endDate === '') {
+        if ($title === '' || $startDate === '' || $endDate === '') {
             return $this->json(['message' => 'Champs requis manquants.'], 400);
-        }
-
-        $trainer = $this->trainerById($trainerId);
-        if ($trainer === null) {
-            return $this->json(['message' => 'Formateur introuvable.'], 400);
         }
 
         $planning = [];
@@ -465,6 +467,15 @@ final class IntranetController extends AbstractController
         }
         if (count($planning) === 0) {
             return $this->json(['message' => 'Ajoutez au moins un slot de planning.'], 400);
+        }
+
+        if ($this->formationHasStarted($startDate, $planning) && $trainerId <= 0) {
+            return $this->json(['message' => 'Un formateur est obligatoire pour une session deja demarree.'], 400);
+        }
+
+        $trainer = $trainerId > 0 ? $this->trainerById($trainerId) : null;
+        if ($trainerId > 0 && $trainer === null) {
+            return $this->json(['message' => 'Formateur introuvable.'], 400);
         }
 
         if ($this->isSqlIntranetSchemaAvailable()) {
@@ -527,7 +538,7 @@ final class IntranetController extends AbstractController
             $formation['mode'] = $mode;
             $formation['teamsLink'] = $teamsLink;
             $formation['trainerId'] = $trainerId;
-            $formation['trainer'] = $trainer['firstName'].' '.$trainer['lastName'];
+            $formation['trainer'] = $trainer !== null ? $trainer['firstName'].' '.$trainer['lastName'] : 'Non assigné';
             $formation['startDate'] = $startDate;
             $formation['endDate'] = $endDate;
             $formation['planning'] = $planning;
@@ -1968,56 +1979,8 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Unauthorized'], 401);
         }
 
-        if ($this->isSqlIntranetSchemaAvailable()) {
-            try {
-                $providers = $this->db()->fetchAllAssociative(
-                    'SELECT id, company_name, siret, address, phone, activity_declaration_number, created_at
-                     FROM providers
-                     ORDER BY id DESC'
-                );
-                $docs = $this->db()->fetchAllAssociative(
-                    'SELECT provider_id, document_type, label, url, uploaded_at
-                     FROM provider_documents'
-                );
-                $docsByProvider = [];
-                foreach ($docs as $doc) {
-                    $providerId = (int) ($doc['provider_id'] ?? 0);
-                    if ($providerId <= 0) {
-                        continue;
-                    }
-                    $docsByProvider[$providerId][(string) ($doc['document_type'] ?? 'doc')] = [
-                        'label' => (string) ($doc['label'] ?? ''),
-                        'url' => (string) ($doc['url'] ?? ''),
-                        'uploadedAt' => substr((string) ($doc['uploaded_at'] ?? date('Y-m-d H:i:s')), 0, 16),
-                    ];
-                }
-                $payload = array_map(
-                    static function (array $provider) use ($docsByProvider): array {
-                        $providerId = (int) ($provider['id'] ?? 0);
-                        return [
-                            'id' => 'provider-'.$providerId,
-                            'companyName' => (string) ($provider['company_name'] ?? ''),
-                            'siret' => (string) ($provider['siret'] ?? ''),
-                            'address' => (string) ($provider['address'] ?? ''),
-                            'phone' => (string) ($provider['phone'] ?? ''),
-                            'activityDeclarationNumber' => (string) ($provider['activity_declaration_number'] ?? ''),
-                            'documents' => $docsByProvider[$providerId] ?? [],
-                            'createdAt' => substr((string) ($provider['created_at'] ?? date('Y-m-d H:i:s')), 0, 16),
-                        ];
-                    },
-                    $providers
-                );
-
-                return $this->json(['providers' => $payload]);
-            } catch (\Throwable) {
-                // Keep JSON fallback for environments not migrated yet.
-            }
-        }
-
-        $state = $this->loadAdminState();
-
         return $this->json([
-            'providers' => array_values((array) ($state['providers'] ?? [])),
+            'providers' => $this->providers(),
         ]);
     }
 
@@ -3194,7 +3157,7 @@ final class IntranetController extends AbstractController
             'adminSessionDocuments' => $this->adminSessionDocuments(),
             'adminSessionValidationResults' => $this->adminSessionValidationResults(),
             'adminValidationTests' => $this->adminValidationTestsList(null),
-            'providers' => array_values((array) ($this->loadAdminState()['providers'] ?? [])),
+            'providers' => $this->providers(),
         ]);
     }
 
@@ -3491,6 +3454,27 @@ final class IntranetController extends AbstractController
         }
 
         return $value;
+    }
+
+    private function formationHasStarted(string $startDate, array $planning): bool
+    {
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
+        $normalizedStart = $this->normalizeSessionDate($startDate);
+        if ($normalizedStart !== '' && $normalizedStart <= $today) {
+            return true;
+        }
+
+        foreach ($planning as $slot) {
+            if (!is_array($slot)) {
+                continue;
+            }
+            $sessionDate = $this->normalizeSessionDate((string) ($slot['date'] ?? ''));
+            if ($sessionDate !== '' && $sessionDate <= $today) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function attendanceKey(string $sessionId, int $studentId): string
@@ -3924,20 +3908,62 @@ final class IntranetController extends AbstractController
         return [...IntranetData::trainers(), ...$state['trainers']];
     }
 
-    private function providerCompanyNames(): array
+    private function providers(): array
     {
         if ($this->isSqlIntranetSchemaAvailable()) {
             try {
-                $rows = $this->db()->fetchFirstColumn('SELECT LOWER(company_name) FROM providers');
-                return array_values(array_filter(array_map('strval', $rows)));
+                $providers = $this->db()->fetchAllAssociative(
+                    'SELECT id, company_name, siret, address, phone, activity_declaration_number, created_at
+                     FROM providers
+                     ORDER BY id DESC'
+                );
+                $docs = $this->db()->fetchAllAssociative(
+                    'SELECT provider_id, document_type, label, url, uploaded_at
+                     FROM provider_documents'
+                );
+                $docsByProvider = [];
+                foreach ($docs as $doc) {
+                    $providerId = (int) ($doc['provider_id'] ?? 0);
+                    if ($providerId <= 0) {
+                        continue;
+                    }
+                    $docsByProvider[$providerId][(string) ($doc['document_type'] ?? 'doc')] = [
+                        'label' => (string) ($doc['label'] ?? ''),
+                        'url' => (string) ($doc['url'] ?? ''),
+                        'uploadedAt' => substr((string) ($doc['uploaded_at'] ?? date('Y-m-d H:i:s')), 0, 16),
+                    ];
+                }
+
+                return array_map(
+                    static function (array $provider) use ($docsByProvider): array {
+                        $providerId = (int) ($provider['id'] ?? 0);
+
+                        return [
+                            'id' => 'provider-'.$providerId,
+                            'companyName' => (string) ($provider['company_name'] ?? ''),
+                            'siret' => (string) ($provider['siret'] ?? ''),
+                            'address' => (string) ($provider['address'] ?? ''),
+                            'phone' => (string) ($provider['phone'] ?? ''),
+                            'activityDeclarationNumber' => (string) ($provider['activity_declaration_number'] ?? ''),
+                            'documents' => $docsByProvider[$providerId] ?? [],
+                            'createdAt' => substr((string) ($provider['created_at'] ?? date('Y-m-d H:i:s')), 0, 16),
+                        ];
+                    },
+                    $providers
+                );
             } catch (\Throwable) {
                 // Keep JSON fallback for environments not migrated yet.
             }
         }
 
+        return array_values((array) ($this->loadAdminState()['providers'] ?? []));
+    }
+
+    private function providerCompanyNames(): array
+    {
         return array_map(
             static fn(array $provider): string => strtolower(trim((string) ($provider['companyName'] ?? ''))),
-            array_values((array) ($this->loadAdminState()['providers'] ?? []))
+            $this->providers()
         );
     }
 
@@ -3954,6 +3980,7 @@ final class IntranetController extends AbstractController
 
         try {
             $this->db()->executeQuery('SELECT 1 FROM formations LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM formation_sessions LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM trainers LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM students LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM classes LIMIT 1');

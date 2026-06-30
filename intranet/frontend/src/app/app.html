@@ -1266,10 +1266,15 @@
                     <input type="text" [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode" />
                   </label>
                   <label>
-                    <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId" required>
+                    Formateur
+                    <select
+                      [ngModel]="newFormationTrainerId()"
+                      (ngModelChange)="setNewFormationTrainerId($event)"
+                      name="newFormationTrainerId"
+                    >
+                      <option [ngValue]="null">Aucun formateur</option>
                       @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                        <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
+                        <option [ngValue]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                       }
                     </select>
                   </label>
@@ -1665,10 +1670,20 @@
                       <input type="text" [ngModel]="editFormationMode()" (ngModelChange)="editFormationMode.set($event)" name="editFormationMode" />
                     </label>
                     <label>
-                      <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                      <select [ngModel]="editFormationTrainerId()" (ngModelChange)="editFormationTrainerId.set(+$event)" name="editFormationTrainerId" required>
+                      @if (editFormationRequiresTrainer()) {
+                        <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      } @else {
+                        Formateur
+                      }
+                      <select
+                        [ngModel]="editFormationTrainerId()"
+                        (ngModelChange)="setEditFormationTrainerId($event)"
+                        name="editFormationTrainerId"
+                        [required]="editFormationRequiresTrainer()"
+                      >
+                        <option [ngValue]="null">Aucun formateur</option>
                         @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                          <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
+                          <option [ngValue]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                         }
                       </select>
                     </label>
