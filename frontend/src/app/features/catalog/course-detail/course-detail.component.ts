@@ -52,11 +52,11 @@ export class CourseDetailComponent implements OnInit {
         this.course = course;
         this.loading = false;
 
-        if (course.placementTest != null) {
+        if (course.placementTest != null && (course.placementTest.isActive ?? (course.placementTest as any).active)) {
           this.hasPlacementTest = true;
         } else if (course.id != null) {
           this.apiService.getPlacementTestByCourse(course.id).subscribe({
-            next: (test) => { this.hasPlacementTest = test != null; },
+            next: (test) => { this.hasPlacementTest = test != null && !!test.isActive; },
             error: () => {}
           });
         }

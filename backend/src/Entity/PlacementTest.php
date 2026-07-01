@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -13,10 +15,12 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'placement_tests')]
+#[ApiFilter(SearchFilter::class, properties: ['course' => 'exact'])]
 #[ApiResource(
     operations: [
         new GetCollection(normalizationContext: ['groups' => ['placement_test:read']]),
@@ -58,6 +62,7 @@ class PlacementTest
     private int $timeLimit = 30; // en minutes
 
     #[ORM\OneToMany(targetEntity: PlacementQuestion::class, mappedBy: 'placementTest', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['orderIndex' => 'ASC'])]
     #[Groups(['placement_test:read', 'placement_test:write'])]
     private Collection $questions;
 
@@ -70,7 +75,6 @@ class PlacementTest
     private ?\DateTimeInterface $updatedAt = null;
 
     #[ORM\Column(type: Types::BOOLEAN)]
-    #[Groups(['placement_test:read', 'placement_test:write'])]
     private bool $isActive = true;
 
     public function __construct()
@@ -188,6 +192,8 @@ class PlacementTest
         return $this;
     }
 
+    #[Groups(['placement_test:read', 'placement_test:write'])]
+    #[SerializedName('isActive')]
     public function isActive(): bool
     {
         return $this->isActive;

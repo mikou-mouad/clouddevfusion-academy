@@ -50,7 +50,7 @@ class PlacementQuestion
     private ?string $explanation = null;
 
     #[ORM\Column(type: Types::INTEGER)]
-    #[Groups(['placement_question:read', 'placement_question:write'])]
+    #[Groups(['placement_question:read', 'placement_question:write', 'placement_test:read'])]
     private int $orderIndex = 0;
 
     #[ORM\OneToMany(targetEntity: PlacementAnswer::class, mappedBy: 'question', cascade: ['persist', 'remove'], orphanRemoval: true)]

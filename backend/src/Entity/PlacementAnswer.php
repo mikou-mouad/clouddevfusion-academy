@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Delete;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
@@ -49,6 +50,7 @@ class PlacementAnswer
 
     #[ORM\Column(type: Types::BOOLEAN)]
     #[Groups(['placement_answer:read', 'placement_answer:write', 'placement_question:read', 'placement_test:read'])]
+    #[SerializedName('isCorrect')]
     private bool $isCorrect = false;
 
     #[ORM\Column(type: Types::INTEGER)]

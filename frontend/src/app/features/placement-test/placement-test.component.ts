@@ -48,7 +48,7 @@ export class PlacementTestComponent implements OnInit {
     this.loading = true;
     this.apiService.getPlacementTestByCourse(courseId).subscribe({
       next: (test) => {
-        if (!test) {
+        if (!test || !test.isActive) {
           this.error = 'Aucun test de positionnement disponible pour cette formation';
           this.loading = false;
           return;
@@ -142,25 +142,8 @@ export class PlacementTestComponent implements OnInit {
 
     if (!this.test) return;
 
-    // Calculer le score
-    let totalScore = 0;
-    let correctAnswers = 0;
+    const { finalScore, correctAnswers, answeredQuestions } = this.calculateTestScore();
     const totalQuestions = this.test.questions?.length || 0;
-
-    this.test.questions?.forEach(question => {
-      const selectedAnswerId = this.answers[question.id!];
-      if (selectedAnswerId) {
-        const selectedAnswer = question.answers?.find(a => a.id === selectedAnswerId);
-        if (selectedAnswer) {
-          totalScore += parseFloat(selectedAnswer.score.toString());
-          if (selectedAnswer.isCorrect) {
-            correctAnswers++;
-          }
-        }
-      }
-    });
-
-    const finalScore = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
     const passed = finalScore >= this.getPassingScore();
 
     const userName = `${this.userFirstName.trim()} ${this.userLastName.trim()}`;
@@ -171,7 +154,7 @@ export class PlacementTestComponent implements OnInit {
       userName,
       userEmail: this.userEmail.trim(),
       userPhone: this.userPhone?.trim() || undefined,
-      score: finalScore.toFixed(2), // string pour l'entité backend (DECIMAL)
+      score: finalScore.toFixed(2), // string pour l'entité backend (DECIMAL 0-100)
       totalQuestions,
       correctAnswers,
       passed,
@@ -186,6 +169,7 @@ export class PlacementTestComponent implements OnInit {
       score: finalScore,
       totalQuestions,
       correctAnswers,
+      answeredQuestions,
       passed,
       answers: this.answers
     };
@@ -195,19 +179,73 @@ export class PlacementTestComponent implements OnInit {
     this.loading = true;
     this.apiService.submitPlacementTestResult(payload as unknown as PlacementTestResult).subscribe({
       next: (savedResult) => {
-        this.result = savedResult;
+        this.result = { ...result, ...savedResult, answeredQuestions };
         this.testCompleted = true;
         this.loading = false;
         this.saveSuccess = true;
       },
       error: (err) => {
         console.error('Error submitting result:', err);
-        this.saveError = err.error?.message || err.message || 'Le résultat n\'a pas pu être enregistré.';
+        this.saveError = err.error?.detail || err.error?.message || err.message || 'Le résultat n\'a pas pu être enregistré.';
         this.result = result;
         this.testCompleted = true;
         this.loading = false;
       }
     });
+  }
+
+  private calculateTestScore(): { finalScore: number; correctAnswers: number; answeredQuestions: number } {
+    let earnedScore = 0;
+    let maxScore = 0;
+    let correctAnswers = 0;
+    let answeredQuestions = 0;
+
+    this.test?.questions?.forEach((question) => {
+      const answers = question.answers ?? [];
+      const questionMax = answers.reduce((max, answer) => {
+        const value = parseFloat(String(answer.score));
+        return Number.isFinite(value) ? Math.max(max, value) : max;
+      }, 0);
+      maxScore += questionMax;
+
+      const selectedAnswerId = this.answers[question.id!];
+      if (!selectedAnswerId) {
+        return;
+      }
+
+      answeredQuestions++;
+      const selectedAnswer = answers.find((answer) => answer.id === selectedAnswerId);
+      if (!selectedAnswer) {
+        return;
+      }
+
+      const selectedScore = parseFloat(String(selectedAnswer.score));
+      if (Number.isFinite(selectedScore)) {
+        earnedScore += selectedScore;
+      }
+
+      const isCorrect = selectedAnswer.isCorrect
+        || (questionMax > 0 && Number.isFinite(selectedScore) && selectedScore >= questionMax);
+      if (isCorrect) {
+        correctAnswers++;
+      }
+    });
+
+    const finalScore = maxScore > 0
+      ? Math.min(100, Math.max(0, (earnedScore / maxScore) * 100))
+      : 0;
+
+    return { finalScore, correctAnswers, answeredQuestions };
+  }
+
+  getAnsweredQuestionsCount(): number {
+    if (this.result?.answeredQuestions !== undefined) {
+      return this.result.answeredQuestions;
+    }
+    if (!this.result?.answers) {
+      return 0;
+    }
+    return Object.keys(this.result.answers).length;
   }
 
   getResultScore(): string {

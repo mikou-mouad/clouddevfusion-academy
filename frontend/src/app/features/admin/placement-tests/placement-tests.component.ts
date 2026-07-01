@@ -317,26 +317,40 @@ export class PlacementTestsComponent implements OnInit {
     this.showQuestionModal = true;
   }
 
-  editQuestion(question: PlacementQuestion) {
+  editQuestion(question: PlacementQuestion, test: PlacementTest) {
     this.editingQuestion = question;
-    this.questionForm = { ...question };
+    this.selectedTest = test;
+    this.questionForm = {
+      question: question.question,
+      explanation: question.explanation ?? '',
+      orderIndex: question.orderIndex ?? 0,
+      answers: []
+    };
     this.showQuestionModal = true;
   }
 
   saveQuestion() {
-    if (!this.selectedTest || !this.questionForm.question) {
+    if (!this.questionForm.question?.trim()) {
       this.error = 'Veuillez remplir la question';
       return;
     }
 
+    const parentTest = this.selectedTest ?? this.findTestForQuestion(this.editingQuestion);
+    if (!parentTest?.id) {
+      this.error = 'Test parent introuvable';
+      return;
+    }
+
     this.loading = true;
-    const questionData: any = {
-      ...this.questionForm,
-      placementTest: `/api/placement_tests/${this.selectedTest.id}`
+    const questionData = {
+      question: this.questionForm.question.trim(),
+      explanation: this.questionForm.explanation ?? '',
+      orderIndex: Number(this.questionForm.orderIndex ?? 0),
+      placementTest: `/api/placement_tests/${parentTest.id}`
     };
 
-    const operation = this.editingQuestion
-      ? this.apiService.updatePlacementQuestion(this.editingQuestion.id!, questionData)
+    const operation = this.editingQuestion?.id
+      ? this.apiService.updatePlacementQuestion(this.editingQuestion.id, questionData)
       : this.apiService.createPlacementQuestion(questionData);
 
     operation.subscribe({
@@ -348,10 +362,27 @@ export class PlacementTestsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error saving question:', err);
-        this.error = 'Erreur lors de l\'enregistrement de la question';
+        const detail = err.error?.detail || err.error?.message || err.error?.hydra?.description;
+        this.error = detail
+          ? `Erreur lors de l'enregistrement de la question: ${detail}`
+          : 'Erreur lors de l\'enregistrement de la question';
         this.loading = false;
       }
     });
+  }
+
+  private findTestForQuestion(question: PlacementQuestion | null): PlacementTest | null {
+    if (!question?.id) return null;
+    return this.tests.find(test =>
+      test.questions?.some(q => typeof q === 'object' && q.id === question.id)
+    ) ?? null;
+  }
+
+  getSortedQuestions(test: PlacementTest): PlacementQuestion[] {
+    if (!test.questions?.length) return [];
+    return [...test.questions]
+      .filter((question): question is PlacementQuestion => typeof question === 'object')
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }
 
   deleteQuestion(question: PlacementQuestion) {
