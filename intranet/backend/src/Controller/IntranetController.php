@@ -420,6 +420,54 @@ final class IntranetController extends AbstractController
         return $this->json(['message' => 'Formation archivee avec succes.']);
     }
 
+    #[Route('/admin/formations/{formationId}/unarchive', name: 'admin_unarchive_formation', methods: ['POST'])]
+    public function unarchiveFormation(Request $request, string $formationId): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $targetId = trim($formationId);
+        if ($targetId === '') {
+            return $this->json(['message' => 'Formation invalide.'], 400);
+        }
+
+        $exists = false;
+        foreach ($this->formations(true) as $formation) {
+            if ((string) ($formation['id'] ?? '') === $targetId) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            return $this->json(['message' => 'Formation introuvable.'], 404);
+        }
+
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $this->db()->executeStatement(
+                    'UPDATE formations SET is_archived = FALSE, updated_at = NOW() WHERE id = :id',
+                    ['id' => $targetId]
+                );
+
+                return $this->json(['message' => 'Formation desarchivee avec succes.']);
+            } catch (\Throwable) {
+                // Keep JSON fallback for environments not migrated yet.
+            }
+        }
+
+        $state = $this->loadAdminState();
+        $archived = array_values(array_unique(array_filter(array_map('strval', (array) ($state['archivedFormationIds'] ?? [])))));
+        $state['archivedFormationIds'] = array_values(array_filter(
+            $archived,
+            static fn(string $id): bool => $id !== $targetId
+        ));
+        $this->saveAdminState($state);
+
+        return $this->json(['message' => 'Formation desarchivee avec succes.']);
+    }
+
     #[Route('/admin/formations/{formationId}', name: 'admin_update_formation', methods: ['PUT'])]
     public function updateFormation(Request $request, string $formationId): JsonResponse
     {
@@ -2628,6 +2676,85 @@ final class IntranetController extends AbstractController
         return $this->json(['message' => 'Document signe et recharge avec succes.']);
     }
 
+    #[Route('/student/session-documents/{documentId}/submit', name: 'student_submit_document', methods: ['POST'])]
+    public function studentSubmitDocument(int $documentId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'student') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+        if ($documentId <= 0) {
+            return $this->json(['message' => 'Document invalide.'], 400);
+        }
+
+        $existing = $this->db()->fetchAssociative(
+            'SELECT id, student_id, document_type, title, url FROM student_documents WHERE id = :id LIMIT 1',
+            ['id' => $documentId]
+        );
+        if (!is_array($existing)) {
+            return $this->json(['message' => 'Document introuvable.'], 404);
+        }
+        if ((int) ($existing['student_id'] ?? 0) !== $studentId) {
+            return $this->json(['message' => 'Document non autorise pour cet etudiant.'], 403);
+        }
+        if (!$this->isStudentSubmittableDocumentType(
+            (string) ($existing['document_type'] ?? ''),
+            (string) ($existing['title'] ?? '')
+        )) {
+            return $this->json(['message' => 'Ce document ne peut pas etre renvoye par l etudiant.'], 400);
+        }
+
+        $updateData = [
+            'signature_status' => 'signed',
+            'signed_at' => date('Y-m-d H:i:s'),
+            'signed_by_user_id' => (int) $auth['id'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        /** @var UploadedFile|null $uploadedFile */
+        $uploadedFile = $request->files->get('file');
+        if (!is_string($uploadedFile) && $uploadedFile !== null) {
+            $uploadDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-student-signed-documents';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0775, true);
+            }
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+            $safeName = trim((string) $safeName, '-');
+            if ($safeName === '') {
+                $safeName = 'submitted-document';
+            }
+            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+            $uploadedFile->move($uploadDir, $filename);
+            $submittedUrl = '/uploads/intranet-student-signed-documents/'.$filename;
+            if (!$this->shouldPreserveDocumentUrlOnSubmit(
+                (string) ($existing['document_type'] ?? ''),
+                (string) ($existing['title'] ?? '')
+            )) {
+                $updateData['url'] = $submittedUrl;
+                $updateData['source'] = 'student';
+            }
+        }
+
+        $updated = $this->db()->update('student_documents', $updateData, ['id' => $documentId]);
+        if ($updated <= 0) {
+            return $this->json(['message' => 'Mise a jour document impossible.'], 500);
+        }
+
+        $message = $this->isConvocationDocumentType(
+            (string) ($existing['document_type'] ?? ''),
+            (string) ($existing['title'] ?? '')
+        )
+            ? 'Reception de la convocation confirmee.'
+            : 'Test renvoye avec succes.';
+
+        return $this->json(['message' => $message]);
+    }
+
     #[Route('/admin/session-validations/sync-by-email', name: 'admin_sync_session_validation_scores_by_email', methods: ['POST'])]
     public function syncAdminSessionValidationScoresByEmail(Request $request): JsonResponse
     {
@@ -3227,6 +3354,8 @@ final class IntranetController extends AbstractController
             }
         }
 
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
+
         return $sessions;
     }
 
@@ -3276,6 +3405,8 @@ final class IntranetController extends AbstractController
                 ];
             }
         }
+
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
 
         return $sessions;
     }
@@ -3337,7 +3468,47 @@ final class IntranetController extends AbstractController
             }
         }
 
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
+
         return $sessions;
+    }
+
+    /**
+     * End-of-day automation: once a day is over, any "pending" attendance becomes "absent".
+     * This runs lazily on API reads (dashboard) to avoid a dedicated cron requirement.
+     *
+     * @param array<int, array{
+     *   id: string,
+     *   date: string,
+     *   records: array<int, array{studentId:int, status:string}>
+     * }> $sessions
+     */
+    private function autoMarkPendingAttendanceAsAbsent(array &$sessions): void
+    {
+        $today = date('Y-m-d');
+        foreach ($sessions as &$session) {
+            $date = (string) ($session['date'] ?? '');
+            if ($date === '' || $date >= $today) {
+                continue;
+            }
+            $sessionId = (string) ($session['id'] ?? '');
+            if ($sessionId === '') {
+                continue;
+            }
+            foreach ((array) ($session['records'] ?? []) as $idx => $record) {
+                $status = (string) ($record['status'] ?? 'pending');
+                if ($status !== 'pending') {
+                    continue;
+                }
+                $studentId = (int) ($record['studentId'] ?? 0);
+                if ($studentId <= 0) {
+                    continue;
+                }
+                // Persist and reflect immediately in the returned payload.
+                $this->persistAttendanceOverride($sessionId, $studentId, 'absent');
+                $session['records'][$idx]['status'] = 'absent';
+            }
+        }
     }
 
     private function attendanceMap(): array
@@ -4010,6 +4181,32 @@ final class IntranetController extends AbstractController
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function isPlacementTestDocumentType(string $documentType, string $title): bool
+    {
+        $haystack = strtolower(trim($documentType.' '.$title));
+
+        return str_contains($haystack, 'positionnement');
+    }
+
+    private function isConvocationDocumentType(string $documentType, string $title): bool
+    {
+        $haystack = strtolower(trim($documentType.' '.$title));
+
+        return str_contains($haystack, 'convocation');
+    }
+
+    private function isStudentSubmittableDocumentType(string $documentType, string $title): bool
+    {
+        return $this->isPlacementTestDocumentType($documentType, $title)
+            || $this->isConvocationDocumentType($documentType, $title);
+    }
+
+    private function shouldPreserveDocumentUrlOnSubmit(string $documentType, string $title): bool
+    {
+        return $this->isPlacementTestDocumentType($documentType, $title)
+            || $this->isConvocationDocumentType($documentType, $title);
     }
 
     private function adminSessionDocuments(?string $formationId = null): array

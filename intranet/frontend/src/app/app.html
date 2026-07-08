@@ -495,7 +495,7 @@
                 <section class="sessions-block student-session-detail-card student-docs-panel">
                   <header class="student-docs-panel-head">
                     <h5>Documents</h5>
-                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document.</p>
+                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document. Pour le test de positionnement et la convocation : ouvrez le document, puis confirmez une fois termine.</p>
                   </header>
                   @if (studentDocumentNotice()) { <p class="success">{{ studentDocumentNotice() }}</p> }
                   @if (studentDocumentError()) { <p class="error">{{ studentDocumentError() }}</p> }
@@ -504,11 +504,11 @@
                       <thead><tr><th>Document</th><th>Statut</th><th>Action</th></tr></thead>
                       <tbody>
                         @for (row of filteredStudentRequiredDocumentRowsForSelectedFormation(); track row.key) {
-                          <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row)">
+                          <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row) || studentDocumentNeedsSubmission(row)">
                             <td class="student-doc-name">{{ row.label }}</td>
                             <td>
-                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable)">
-                                {{ studentDocumentStatusLabel(row.status, row.available, row.signable) }}
+                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable, row.submittable)">
+                                {{ studentDocumentStatusLabel(row.status, row.available, row.signable, row.submittable, row.key) }}
                               </span>
                             </td>
                             <td class="student-doc-actions">
@@ -534,6 +534,30 @@
                                     (click)="submitStudentSignedDocument(row.sourceDocumentId!)"
                                   >
                                     {{ uploadingStudentDocumentId() === row.sourceDocumentId ? 'Envoi...' : 'Renvoyer signe' }}
+                                  </button>
+                                </div>
+                              } @else if (studentDocumentNeedsSubmission(row) || studentDocumentCanResubmit(row)) {
+                                <div class="student-doc-sign-flow">
+                                  <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">{{ studentDocumentSubmissionOpenLabel(row.key) }}</a>
+                                  <label class="student-doc-sign-upload">
+                                    <span class="student-doc-sign-upload-label">{{ studentDocumentSubmissionUploadLabel(row.key) }}</span>
+                                    <input
+                                      type="file"
+                                      class="student-doc-sign-file"
+                                      accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
+                                      (change)="onStudentSignedDocumentSelected(row.sourceDocumentId!, $event)"
+                                    />
+                                    <span class="student-doc-sign-file-name">
+                                      {{ studentSignedUploadFiles()[row.sourceDocumentId!]?.name || 'Ajouter un fichier (optionnel)' }}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    class="support-btn student-doc-sign-submit"
+                                    [disabled]="uploadingStudentDocumentId() === row.sourceDocumentId"
+                                    (click)="submitStudentDocument(row.sourceDocumentId!)"
+                                  >
+                                    {{ studentDocumentSubmissionButtonLabel(row.key, row.status, uploadingStudentDocumentId() === row.sourceDocumentId) }}
                                   </button>
                                 </div>
                               } @else if (row.key === 'test_validation' && row.available) {
@@ -710,14 +734,14 @@
           <section class="card content-card">
             <h3>Espace archives</h3>
             @if (isAdmin()) {
-              <p class="sub">Sessions archivees. Elles ne sont plus visibles dans les espaces etudiant et formateur.</p>
+              <p class="sub">Sessions archivées. Elles ne sont plus visibles dans les espaces étudiant et formateur.</p>
               @if (!archivedAdminFormations().length) {
                 <p class="sub">Aucune session archivee.</p>
               } @else {
                 <div class="sessions-sections-grid">
                   <section class="sessions-block sessions-block-apprentices">
                     <div class="sessions-block-head">
-                      <h5>Sessions archivees</h5>
+                      <h5>Sessions archivées</h5>
                       <p class="sub">Cliquez sur une session pour voir ses informations.</p>
                     </div>
                     <div class="formation-cards-grid">
@@ -734,6 +758,16 @@
                             </div>
                           </div>
                           <p class="sub formation-session-meta">{{ formation.startDate }} au {{ formation.endDate }} · {{ formation.mode }}</p>
+                          <div class="formation-session-actions">
+                            <button
+                              type="button"
+                              class="ghost-btn dark-ghost-btn"
+                              [disabled]="archivingFormationId() === formation.id"
+                              (click)="unarchiveFormation(formation.id, $event)"
+                            >
+                              {{ archivingFormationId() === formation.id ? 'Desarchivage...' : 'Desarchiver' }}
+                            </button>
+                          </div>
                         </article>
                       }
                     </div>
@@ -744,7 +778,7 @@
                       <p class="sub">Aucune session archivee selectionnee.</p>
                     } @else {
                       <div class="sessions-block-head">
-                        <h5>Details de la session archivee</h5>
+                        <h5>Détails de la session archivée</h5>
                       </div>
                       <p class="sub">
                         <strong>{{ selectedArchivedFormation()!.title }}</strong> ·
@@ -1007,6 +1041,63 @@
                   </section>
                 }
               </div>
+
+              @if (selectedTrainerSessionEmargementMatrix(); as tGrid) {
+                <div class="admin-doc-matrix-wrap admin-emargement-matrix-wrap">
+                  <div class="sessions-block-head admin-doc-matrix-intro">
+                    <h5>Emargement en temps reel</h5>
+                    <p class="sub">Statut par séance : Present / Absent / En attente. Donnees limitees aux sessions de ce formateur.</p>
+                  </div>
+                  @if (!tGrid.sessions.length) {
+                    <p class="sub">Aucune seance d'emargement pour cette formation.</p>
+                  } @else if (!tGrid.rows.length) {
+                    <p class="sub">Aucun apprenti affecte a cette formation.</p>
+                  } @else {
+                    <div class="admin-doc-matrix-scroll admin-doc-matrix-scroll--emargement">
+                      <table class="admin-doc-matrix-table admin-emargement-matrix-table">
+                        <thead>
+                          <tr>
+                            <th class="admin-doc-matrix-sticky-col admin-doc-matrix-corner" scope="col">Apprenti</th>
+                            @for (session of tGrid.sessions; track session.id) {
+                              <th
+                                class="admin-doc-matrix-th-doc admin-emargement-matrix-th"
+                                scope="col"
+                                [attr.title]="session.date + ' · ' + session.slot + ' — ' + session.topic"
+                              >
+                                <span class="admin-doc-matrix-th-title">{{ session.date }}</span>
+                                <span class="admin-doc-matrix-th-tag admin-emargement-matrix-th-slot">{{ session.slot }}</span>
+                              </th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (erow of tGrid.rows; track erow.studentId) {
+                            <tr class="admin-doc-matrix-body-row">
+                              <th class="admin-doc-matrix-sticky-col admin-doc-matrix-row-head" scope="row">
+                                <span class="admin-doc-matrix-person-name">{{ erow.studentName }}</span>
+                                <span class="admin-doc-matrix-detail">{{ erow.studentEmail }}</span>
+                                <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                              </th>
+                              @for (cell of erow.cells; track cell.sessionId) {
+                                <td class="admin-doc-matrix-cell admin-emargement-matrix-cell">
+                                  <span
+                                    class="attendance-status-chip"
+                                    [class.present]="cell.status === 'present' || cell.status === 'late'"
+                                    [class.absent]="cell.status === 'absent'"
+                                    [class.pending]="cell.status === 'pending'"
+                                  >
+                                    {{ trainerEmargementStatusLabel(cell.status) }}
+                                  </span>
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </div>
+              }
 
               <section class="sessions-block sessions-block-apprentices">
                 <div class="sessions-block-head">

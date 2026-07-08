@@ -892,6 +892,25 @@ export class App implements OnDestroy {
           isNa: false
         };
       }
+      if (col.key === 'test_positionnement' || col.key === 'convocation') {
+        const statusLabel =
+          doc.signatureStatus === 'signed'
+            ? col.key === 'convocation'
+              ? 'Reçu'
+              : 'Envoyé'
+            : 'En attente';
+        const statusVariant: AdminFormationDocMatrixCell['statusVariant'] =
+          doc.signatureStatus === 'signed' ? 'ok' : 'warn';
+        return {
+          status: statusLabel,
+          statusVariant,
+          url: doc.url,
+          docId: doc.id,
+          signatureStatus: doc.signatureStatus,
+          canUpload: true,
+          isNa: false
+        };
+      }
       let statusLabel = 'En attente de signature';
       let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
       if (doc.signatureStatus === 'signed') {
@@ -1327,14 +1346,15 @@ export class App implements OnDestroy {
       keywords: string[];
       category: string;
       signable?: boolean;
+      submittable?: boolean;
       linkOnly?: boolean;
       excludeTrainerSatisfaction?: boolean;
     }[] = [
       { key: 'reglement_interieur', label: 'Règlement intérieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
       { key: 'cgv', label: 'CGV', keywords: ['cgv'], category: 'inscription' },
-      { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription' },
+      { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription', submittable: true },
       { key: 'contrat', label: 'Contrat', keywords: ['contrat'], category: 'inscription', signable: true },
-      { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription' },
+      { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription', submittable: true },
       { key: 'fiche_renseignement', label: 'Fiche de renseignement', keywords: ['fiche', 'renseignement'], category: 'inscription', signable: true },
       { key: 'attestation_reussite', label: 'Attestation de réussite', keywords: ['attestation', 'reussite'], category: 'cloture' },
       {
@@ -1424,6 +1444,7 @@ export class App implements OnDestroy {
         label: entry.label,
         category: entry.category,
         signable: !!entry.signable && !entry.linkOnly,
+        submittable: !!entry.submittable && !entry.linkOnly,
         linkOnly: !!entry.linkOnly,
         available,
         status,
@@ -1678,6 +1699,20 @@ export class App implements OnDestroy {
         return 'En attente';
       default:
         return '—';
+    }
+  }
+
+  trainerEmargementStatusLabel(status: AttendanceStatus): string {
+    // Trainer view is simplified: present / absent / pending (late treated as present).
+    switch (status) {
+      case 'present':
+      case 'late':
+        return 'Present';
+      case 'absent':
+        return 'Absent';
+      case 'pending':
+      default:
+        return 'En attente';
     }
   }
 
@@ -2198,9 +2233,13 @@ export class App implements OnDestroy {
     }
   }
 
-  studentDocumentStatusLabel(status: string, available = true, signable = false): string {
+  studentDocumentStatusLabel(status: string, available = true, signable = false, submittable = false, documentKey = ''): string {
     if (!available) return 'Non disponible';
     if (signable && status === 'pending') return 'A signer';
+    if (submittable && status === 'signed') {
+      return documentKey === 'convocation' ? 'Recu' : 'Envoye';
+    }
+    if (submittable && status === 'pending') return 'En attente';
     switch (status) {
       case 'signed':
         return 'Signe';
@@ -2217,9 +2256,11 @@ export class App implements OnDestroy {
     }
   }
 
-  studentDocumentStatusVariant(status: string, available = true, signable = false): string {
+  studentDocumentStatusVariant(status: string, available = true, signable = false, submittable = false): string {
     if (!available) return 'na';
     if (signable && status === 'pending') return 'warn';
+    if (submittable && status === 'signed') return 'ok';
+    if (submittable && status === 'pending') return 'warn';
     switch (status) {
       case 'signed':
       case 'envoye':
@@ -2237,6 +2278,40 @@ export class App implements OnDestroy {
 
   studentDocumentNeedsSignature(row: { signable: boolean; available: boolean; status: string; sourceDocumentId: number | null }): boolean {
     return !!row.signable && row.available && row.status === 'pending' && row.sourceDocumentId !== null;
+  }
+
+  studentDocumentNeedsSubmission(row: {
+    submittable: boolean;
+    available: boolean;
+    status: string;
+    sourceDocumentId: number | null;
+  }): boolean {
+    return !!row.submittable && row.available && row.status === 'pending' && row.sourceDocumentId !== null;
+  }
+
+  studentDocumentCanResubmit(row: {
+    submittable: boolean;
+    available: boolean;
+    status: string;
+    sourceDocumentId: number | null;
+  }): boolean {
+    return !!row.submittable && row.available && row.status === 'signed' && row.sourceDocumentId !== null;
+  }
+
+  studentDocumentSubmissionOpenLabel(documentKey: string): string {
+    return documentKey === 'convocation' ? 'Ouvrir la convocation' : 'Ouvrir le test';
+  }
+
+  studentDocumentSubmissionUploadLabel(documentKey: string): string {
+    return documentKey === 'convocation' ? 'Convocation signee (optionnel)' : 'Justificatif (optionnel)';
+  }
+
+  studentDocumentSubmissionButtonLabel(documentKey: string, status: string, uploading: boolean): string {
+    if (uploading) return 'Envoi...';
+    if (documentKey === 'convocation') {
+      return status === 'signed' ? 'Renvoyer' : 'Accuser reception';
+    }
+    return status === 'signed' ? 'Renvoyer' : 'Renvoyer le test';
   }
 
   setAdminFormationDetailTab(
@@ -2684,6 +2759,33 @@ export class App implements OnDestroy {
       });
   }
 
+  unarchiveFormation(formationId: string, event?: Event): void {
+    event?.stopPropagation();
+    if (!formationId || this.archivingFormationId()) return;
+
+    this.archiveFormationNotice.set('');
+    this.archiveFormationError.set('');
+    this.archivingFormationId.set(formationId);
+
+    this.http
+      .post<{ message: string }>(
+        `${this.apiBaseUrl}/admin/formations/${encodeURIComponent(formationId)}/unarchive`,
+        {},
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.archivingFormationId.set('');
+          this.archiveFormationNotice.set(response.message);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.archivingFormationId.set('');
+          this.archiveFormationError.set(err?.error?.message ?? 'Desarchivage impossible.');
+        }
+      });
+  }
+
   selectArchivedFormation(formationId: string): void {
     this.selectedArchivedFormationId.set(formationId);
   }
@@ -2762,6 +2864,36 @@ export class App implements OnDestroy {
       error: (err) => {
         this.uploadingStudentDocumentId.set(null);
         this.studentDocumentError.set(err?.error?.message ?? 'Upload document signe impossible.');
+      }
+    });
+  }
+
+  submitStudentDocument(documentId: number): void {
+    this.studentDocumentNotice.set('');
+    this.studentDocumentError.set('');
+    this.uploadingStudentDocumentId.set(documentId);
+    const formData = new FormData();
+    const file = this.studentSignedUploadFiles()[documentId];
+    if (file) {
+      formData.append('file', file);
+    }
+    this.http.post<{ message: string }>(
+      `${this.apiBaseUrl}/student/session-documents/${documentId}/submit`,
+      formData,
+      { headers: this.authHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.uploadingStudentDocumentId.set(null);
+        this.studentDocumentNotice.set(response.message);
+        this.studentSignedUploadFiles.set({
+          ...this.studentSignedUploadFiles(),
+          [documentId]: null
+        });
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.uploadingStudentDocumentId.set(null);
+        this.studentDocumentError.set(err?.error?.message ?? 'Envoi du test impossible.');
       }
     });
   }
@@ -2856,6 +2988,14 @@ export class App implements OnDestroy {
     }
     if (cell.status === 'En attente de signature') {
       issues.push({ ...base, status: 'pending_signature', statusLabel: 'En attente de signature' });
+      return;
+    }
+    if (cell.status === 'En attente' && (col.key === 'test_positionnement' || col.key === 'convocation')) {
+      issues.push({
+        ...base,
+        status: 'pending_signature',
+        statusLabel: col.key === 'convocation' ? 'En attente de reception' : 'En attente de renvoi'
+      });
       return;
     }
     if (cell.status === 'Refusé') {
@@ -3090,6 +3230,24 @@ export class App implements OnDestroy {
     const formation = this.selectedTrainerSessionFormation();
     if (!formation) return [];
     return this.attendanceSessions().filter((session) => session.formationTitle === formation.title);
+  });
+  /** Matrice emargement formateur : une ligne par apprenti, une colonne par seance. */
+  selectedTrainerSessionEmargementMatrix = computed(() => {
+    const sessions = this.selectedTrainerSessionAttendanceSessions();
+    const students = [...this.selectedTrainerSessionApprentices()].sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
+    const rows = students.map((student) => ({
+      studentId: student.id,
+      studentName: student.name,
+      studentEmail: student.email,
+      cells: sessions.map((session) => {
+        const record = session.records.find((r) => r.studentId === student.id);
+        const status = (record?.status ?? 'pending') as AttendanceStatus;
+        return { sessionId: session.id, status };
+      })
+    }));
+    return { sessions, rows };
   });
   trainerSessionResourceOptions = computed(() =>
     this.selectedTrainerSessionAttendanceSessions().map((session) => ({
