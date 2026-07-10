@@ -527,10 +527,12 @@ export class PlacementTestsComponent implements OnInit {
     this.error = null;
     
     // Préparer les données avec le format correct pour l'API
+    const score = Number(this.answerForm.score ?? 0);
+    const isCorrect = !!this.answerForm.isCorrect;
     const answerData: any = {
       text: typeof textValue === 'string' ? textValue.trim() : '',
-      score: (this.answerForm.score || 0).toString(),
-      isCorrect: this.answerForm.isCorrect || false,
+      score: (isCorrect && score <= 0 ? 1 : score).toString(),
+      isCorrect,
       orderIndex: this.answerForm.orderIndex || 0,
       question: `/api/placement_questions/${this.editingQuestion.id}`
     };

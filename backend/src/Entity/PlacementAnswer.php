@@ -49,8 +49,6 @@ class PlacementAnswer
     private string $score = '0.00';
 
     #[ORM\Column(type: Types::BOOLEAN)]
-    #[Groups(['placement_answer:read', 'placement_answer:write', 'placement_question:read', 'placement_test:read'])]
-    #[SerializedName('isCorrect')]
     private bool $isCorrect = false;
 
     #[ORM\Column(type: Types::INTEGER)]
@@ -106,6 +104,13 @@ class PlacementAnswer
     {
         $this->score = $score;
         return $this;
+    }
+
+    #[Groups(['placement_answer:read', 'placement_answer:write', 'placement_question:read', 'placement_test:read'])]
+    #[SerializedName('isCorrect')]
+    public function getIsCorrect(): bool
+    {
+        return $this->isCorrect;
     }
 
     public function isCorrect(): bool

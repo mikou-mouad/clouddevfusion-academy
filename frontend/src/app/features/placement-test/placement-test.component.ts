@@ -115,7 +115,7 @@ export class PlacementTestComponent implements OnInit {
   }
 
   selectAnswer(questionId: number, answerId: number) {
-    this.answers[questionId] = answerId;
+    this.answers[Number(questionId)] = Number(answerId);
   }
 
   getCurrentQuestion(): PlacementQuestion | null {
@@ -208,13 +208,13 @@ export class PlacementTestComponent implements OnInit {
       }, 0);
       maxScore += questionMax;
 
-      const selectedAnswerId = this.answers[question.id!];
-      if (!selectedAnswerId) {
+      const selectedAnswerId = Number(this.answers[question.id!]);
+      if (!Number.isFinite(selectedAnswerId)) {
         return;
       }
 
       answeredQuestions++;
-      const selectedAnswer = answers.find((answer) => answer.id === selectedAnswerId);
+      const selectedAnswer = answers.find((answer) => Number(answer.id) === selectedAnswerId);
       if (!selectedAnswer) {
         return;
       }
