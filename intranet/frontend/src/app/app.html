@@ -75,7 +75,7 @@
           </div>
           <div class="global-actions">
             <button class="ghost-btn">Notifications</button>
-            <button class="logout-btn" (click)="logout()">Deconnexion</button>
+            <button class="logout-btn" (click)="logout()">Déconnexion</button>
           </div>
         </div>
       </header>
@@ -101,7 +101,7 @@
               <p class="kpi-value">{{ formations().length }}</p>
             </article>
             <article class="kpi">
-              <p class="kpi-label">Sessions planifiees</p>
+              <p class="kpi-label">Sessions planifiées</p>
               <p class="kpi-value">{{ totalSessions() }}</p>
             </article>
             <article class="kpi">
@@ -182,7 +182,7 @@
           } @else {
             <section class="card content-card">
               <h3>Espace administration</h3>
-              <p class="sub">Gerez formateurs, classes, planning, affectations et emargement centralise.</p>
+              <p class="sub">Gérez formateurs, classes, planning, affectations et émargement centralisé.</p>
               <button class="support-btn" type="button" (click)="setSection('formations')">Ouvrir les sessions</button>
             </section>
             <section class="card content-card admin-workspace">
@@ -370,8 +370,8 @@
                   @if (attendanceError()) { <p class="error student-course-flash">{{ attendanceError() }}</p> }
 
                   <header class="student-course-section-head">
-                    <h5>Planning & emargement</h5>
-                    <p class="sub">Signez votre presence ou votre absence pendant la fenetre d emargement.</p>
+                    <h5>Planning & émargement</h5>
+                    <p class="sub">Signez votre présence ou votre absence pendant la fenêtre d'émargement.</p>
                   </header>
 
                   <div class="planning-table-wrap student-planning-wrap">
@@ -429,7 +429,7 @@
                   </div>
 
                   <div class="student-course-resources">
-                    <h5 class="student-course-resources-title">Ressources pedagogiques</h5>
+                    <h5 class="student-course-resources-title">Ressources pédagogiques</h5>
                     <div class="student-course-resources-grid">
                       <article class="student-course-resource-card supports">
                         <header>
@@ -1328,15 +1328,15 @@
         @if (activeSection() === 'formations' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Sessions</h3>
-            <p class="sub">Cree une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
+            <p class="sub">Créez une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
             <div class="admin-form-actions">
               <button type="button" class="support-btn create-session-btn" (click)="toggleAdminFormationCreateForm()">
-                {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Creer une session' }}
+                {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Créer une session' }}
               </button>
             </div>
             @if (showAdminFormationCreateForm()) {
               <form class="admin-create-form" (submit)="createFormation($event)">
-                <h4>Creer une session</h4>
+                <h4>Créer une session</h4>
                 <div class="admin-form-grid">
                   <label>
                     <span class="label-field-line">Formation catalogue <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -1561,14 +1561,14 @@
             }
             <div class="eval-grid admin-kpis">
               <article class="kpi"><p class="kpi-label">Formateurs</p><p class="kpi-value">{{ adminTrainers().length }}</p></article>
-              <article class="kpi"><p class="kpi-label">Etudiants</p><p class="kpi-value">{{ adminStudents().length }}</p></article>
+              <article class="kpi"><p class="kpi-label">Étudiants</p><p class="kpi-value">{{ adminStudents().length }}</p></article>
               <article class="kpi"><p class="kpi-label">Classes</p><p class="kpi-value">{{ adminClasses().length }}</p></article>
             </div>
 
             <div class="sessions-block sessions-block-apprentices">
               <div class="sessions-block-head">
                 <h5>Liste des sessions</h5>
-                <p class="sub">Cliquez sur une session pour ouvrir sa page dediee, ou archivez-la.</p>
+                <p class="sub">Cliquez sur une session pour ouvrir sa page dédiée, ou archivez-la.</p>
               </div>
               <div class="apprentice-selector-row">
                 <label>
@@ -1585,7 +1585,7 @@
                   </select>
                 </label>
               </div>
-              <p class="sub">{{ filteredAdminSessionCards().length }} session(s) trouvee(s).</p>
+              <p class="sub">{{ filteredAdminSessionCards().length }} session(s) trouvée(s).</p>
               @if (archiveFormationNotice()) {
                 <p class="success">{{ archiveFormationNotice() }}</p>
               }
@@ -2000,8 +2000,8 @@
                             <label class="admin-unified-doc-field admin-unified-doc-field--file">
                               <span>Fichier</span>
                               <div class="admin-unified-doc-file-wrap">
-                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" />
-                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, image...' }}</span>
+                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.pps,.ppsx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.gif,.zip,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, PowerPoint (.ppt, .pptx), Excel, image…' }}</span>
                               </div>
                             </label>
                           </div>
@@ -2513,16 +2513,16 @@
             <p class="sub">Ajoute plusieurs apprentis d'un coup (nom, prenom, date de naissance, email).</p>
             <div class="eval-grid admin-kpis">
               <article class="kpi"><p class="kpi-label">Total apprentis</p><p class="kpi-value">{{ apprenticeKpis().total }}</p></article>
-              <article class="kpi"><p class="kpi-label">Affectes</p><p class="kpi-value">{{ apprenticeKpis().assigned }}</p></article>
-              <article class="kpi"><p class="kpi-label">Non affectes</p><p class="kpi-value">{{ apprenticeKpis().unassigned }}</p></article>
+              <article class="kpi"><p class="kpi-label">Affectés</p><p class="kpi-value">{{ apprenticeKpis().assigned }}</p></article>
+              <article class="kpi"><p class="kpi-label">Non affectés</p><p class="kpi-value">{{ apprenticeKpis().unassigned }}</p></article>
             </div>
             <form class="admin-create-form" (submit)="createApprentices($event)">
               <div class="admin-planning-head">
-                <h4>Creer des apprentis</h4>
+                <h4>Créer des apprentis</h4>
                 <button type="button" class="ghost-btn dark-ghost-btn" (click)="addApprenticeRow()">Ajouter un apprenti</button>
               </div>
               <div class="apprentice-row apprentice-row--head" aria-hidden="true">
-                <span>Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Prénom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                 <span>Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                 <span>Date naissance</span>
                 <span>Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -2530,7 +2530,7 @@
               </div>
               @for (row of apprenticeRows(); track $index) {
                 <div class="apprentice-row">
-                  <input type="text" [ngModel]="row.firstName" (ngModelChange)="updateApprenticeRow($index, 'firstName', $event)" [name]="'apprenticeFirstName' + $index" placeholder="Prenom" required />
+                  <input type="text" [ngModel]="row.firstName" (ngModelChange)="updateApprenticeRow($index, 'firstName', $event)" [name]="'apprenticeFirstName' + $index" placeholder="Prénom" required />
                   <input type="text" [ngModel]="row.lastName" (ngModelChange)="updateApprenticeRow($index, 'lastName', $event)" [name]="'apprenticeLastName' + $index" placeholder="Nom" required />
                   <input type="date" [ngModel]="row.birthDate" (ngModelChange)="updateApprenticeRow($index, 'birthDate', $event)" [name]="'apprenticeBirthDate' + $index" />
                   <input type="email" [ngModel]="row.email" (ngModelChange)="updateApprenticeRow($index, 'email', $event)" [name]="'apprenticeEmail' + $index" placeholder="email@domaine.com" required />
@@ -2545,7 +2545,7 @@
               }
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingApprentices()">
-                  {{ creatingApprentices() ? 'Creation en cours...' : 'Creer les apprentis' }}
+                  {{ creatingApprentices() ? 'Creation en cours...' : 'Créer les apprentis' }}
                 </button>
               </div>
             </form>
@@ -3053,7 +3053,7 @@
         @if (activeSection() === 'prestataires' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Prestataires</h3>
-            <p class="sub">Creation de prestataires avec champs et documents obligatoires.</p>
+            <p class="sub">Création de prestataires avec champs et documents obligatoires.</p>
 
             <form class="admin-create-form" (submit)="createProvider($event)">
               <div class="admin-form-grid">
@@ -3070,11 +3070,11 @@
                   <input type="text" [ngModel]="providerAddress()" (ngModelChange)="providerAddress.set($event)" name="providerAddress" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Numero de telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Numéro de téléphone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="providerPhone()" (ngModelChange)="providerPhone.set($event)" name="providerPhone" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Numero declaration d'activite <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Numéro déclaration d'activité <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="providerActivityDeclarationNumber()" (ngModelChange)="providerActivityDeclarationNumber.set($event)" name="providerActivityDeclarationNumber" required />
                 </label>
                 <label>
@@ -3090,7 +3090,7 @@
                   <input type="file" (change)="onProviderFileSelected($event, 'vigilanceCertificate')" name="providerVigilanceCertificateFile" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Attestation responsabilite civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Attestation responsabilité civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="file" (change)="onProviderFileSelected($event, 'liabilityInsurance')" name="providerLiabilityInsuranceFile" required />
                 </label>
               </div>
@@ -3104,7 +3104,7 @@
 
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingProvider()">
-                  {{ creatingProvider() ? 'Creation en cours...' : 'Creer le prestataire' }}
+                  {{ creatingProvider() ? 'Creation en cours...' : 'Créer le prestataire' }}
                 </button>
               </div>
             </form>
@@ -3145,10 +3145,10 @@
                       <th>SIRET</th>
                     }
                     @if (isProviderColumnVisible('phone')) {
-                      <th>Telephone</th>
+                      <th>Téléphone</th>
                     }
                     @if (isProviderColumnVisible('createdAt')) {
-                      <th>Date creation</th>
+                      <th>Date création</th>
                     }
                     @if (isProviderColumnVisible('address')) {
                       <th>Adresse</th>
@@ -3221,7 +3221,7 @@
         @if (activeSection() === 'ressources' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Ressources globales</h3>
-            <p class="sub">Envoyez un document a tous les apprentis et tous les formateurs.</p>
+            <p class="sub">Envoyez un document à tous les apprentis et tous les formateurs.</p>
 
             <form class="admin-create-form session-resource-form" (submit)="createAdminGlobalResource($event)">
               <div class="admin-form-grid">
@@ -3258,18 +3258,18 @@
               }
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingAdminGlobalResource()">
-                  {{ creatingAdminGlobalResource() ? 'Envoi en cours...' : 'Envoyer a tous' }}
+                  {{ creatingAdminGlobalResource() ? 'Envoi en cours...' : 'Envoyer à tous' }}
                 </button>
               </div>
             </form>
 
             <div class="sessions-block sessions-block-apprentices">
               <div class="sessions-block-head">
-                <h5>Ressources envoyees</h5>
+                <h5>Ressources envoyées</h5>
                 <p class="sub">Historique des envois globaux.</p>
               </div>
               @if (!documents().length) {
-                <p class="sub">Aucune ressource globale envoyee.</p>
+                <p class="sub">Aucune ressource globale envoyée.</p>
               } @else {
                 <div class="planning-table-wrap">
                   <table class="planning-table doc-table admin-table">
@@ -3444,15 +3444,15 @@
         <article class="card side-card">
           <div class="side-head">
             <p class="side-kicker">Learning Hub</p>
-            <h3>Ressources pedagogiques</h3>
+            <h3>Ressources pédagogiques</h3>
           </div>
           <ul class="resource-list">
             @if (!documents().length) {
               <li>
                 <span class="resource-dot"></span>
                 <div>
-                  <p class="resource-title">Aucune ressource recu</p>
-                  <p class="resource-meta">Les documents envoyes par le formateur apparaitront ici.</p>
+                  <p class="resource-title">Aucune ressource reçue</p>
+                  <p class="resource-meta">Les documents envoyés par le formateur apparaîtront ici.</p>
                 </div>
                 <span class="resource-tag">N/A</span>
               </li>

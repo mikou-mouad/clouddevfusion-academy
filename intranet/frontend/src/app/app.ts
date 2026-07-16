@@ -1995,7 +1995,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.creatingAdminWorkflowItem.set(false);
-        this.adminWorkflowError.set(err?.error?.message ?? 'Ajout document generique impossible.');
+        this.adminWorkflowError.set(this.adminUploadErrorMessage(err, 'Ajout document generique impossible.'));
       }
     });
   }
@@ -2131,7 +2131,7 @@ export class App implements OnDestroy {
           },
           error: (err) => {
             clearBusy();
-            this.adminWorkflowError.set(err?.error?.message ?? 'Envoi document generique impossible.');
+            this.adminWorkflowError.set(this.adminUploadErrorMessage(err, 'Envoi document generique impossible.'));
           }
         });
       return;
@@ -5147,6 +5147,24 @@ export class App implements OnDestroy {
     return new HttpHeaders({
       Authorization: `Bearer ${this.token()}`
     });
+  }
+
+  private adminUploadErrorMessage(err: any, fallback: string): string {
+    const fromJson = err?.error?.message;
+    if (typeof fromJson === 'string' && fromJson.trim() !== '') {
+      return fromJson;
+    }
+    if (typeof err?.error === 'string' && err.error.trim() !== '') {
+      return err.error;
+    }
+    const status = Number(err?.status ?? 0);
+    if (status === 413) {
+      return 'Fichier trop volumineux pour le serveur. Limite actuelle : 32 Mo (PDF, PPTX, etc.).';
+    }
+    if (status === 0) {
+      return 'Connexion interrompue pendant l\'upload (fichier trop lourd ou reseau). Reessayez avec un fichier plus leger.';
+    }
+    return fallback;
   }
 
   private resetAdminCreationForm(): void {

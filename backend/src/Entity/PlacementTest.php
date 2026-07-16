@@ -192,7 +192,7 @@ class PlacementTest
         return $this;
     }
 
-    #[Groups(['placement_test:read', 'placement_test:write'])]
+    #[Groups(['placement_test:read', 'placement_test:write', 'course:read'])]
     #[SerializedName('isActive')]
     public function isActive(): bool
     {

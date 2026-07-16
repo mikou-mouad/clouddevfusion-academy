@@ -51,15 +51,7 @@ export class CourseDetailComponent implements OnInit {
 
         this.course = course;
         this.loading = false;
-
-        if (course.placementTest != null && (course.placementTest.isActive ?? (course.placementTest as any).active)) {
-          this.hasPlacementTest = true;
-        } else if (course.id != null) {
-          this.apiService.getPlacementTestByCourse(course.id).subscribe({
-            next: (test) => { this.hasPlacementTest = test != null && !!test.isActive; },
-            error: () => {}
-          });
-        }
+        this.resolvePlacementTestAvailability(course);
       },
       error: (err) => {
         console.error('Error loading courses:', err);
@@ -91,6 +83,33 @@ export class CourseDetailComponent implements OnInit {
       month: months[date.getMonth()],
       year: date.getFullYear().toString()
     };
+  }
+
+  private resolvePlacementTestAvailability(course: Course): void {
+    if (course.id == null) {
+      this.hasPlacementTest = false;
+      return;
+    }
+
+    const embedded = course.placementTest;
+    const embeddedActive = embedded?.isActive ?? (embedded as { active?: boolean } | undefined)?.active;
+    if (embedded?.id && embeddedActive === true) {
+      this.hasPlacementTest = true;
+      return;
+    }
+    if (embedded?.id && embeddedActive === false) {
+      this.hasPlacementTest = false;
+      return;
+    }
+
+    this.apiService.getPlacementTestByCourse(course.id).subscribe({
+      next: (test) => {
+        this.hasPlacementTest = test != null && test.isActive !== false;
+      },
+      error: () => {
+        this.hasPlacementTest = false;
+      }
+    });
   }
 }
 

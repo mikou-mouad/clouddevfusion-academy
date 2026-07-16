@@ -553,22 +553,7 @@ final class IntranetController extends AbstractController
                         'formation_id' => $targetId,
                     ]
                 );
-                $this->db()->executeStatement(
-                    'DELETE FROM formation_sessions WHERE formation_id = :formation_id',
-                    ['formation_id' => $targetId]
-                );
-                foreach ($planning as $slot) {
-                    $sessionId = $this->sessionId($targetId, (string) ($slot['date'] ?? ''), (string) ($slot['slot'] ?? ''));
-                    $this->db()->insert('formation_sessions', [
-                        'id' => $sessionId,
-                        'formation_id' => $targetId,
-                        'day_label' => (string) ($slot['day'] ?? ''),
-                        'session_date' => (string) ($slot['date'] ?? ''),
-                        'slot_label' => (string) ($slot['slot'] ?? ''),
-                        'topic' => (string) ($slot['topic'] ?? ''),
-                        'created_at' => date('Y-m-d H:i:s'),
-                    ]);
-                }
+                $this->syncFormationSessions($targetId, $planning);
 
                 return $this->json(['message' => 'Formation modifiee avec succes.']);
             } catch (\Throwable) {
@@ -1716,7 +1701,7 @@ final class IntranetController extends AbstractController
             if ($safeName === '') {
                 $safeName = 'resource';
             }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $extension = $this->resolveUploadExtension($uploadedFile);
             $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
 
             $uploadedFile->move($resourcesDir, $filename);
@@ -1727,7 +1712,7 @@ final class IntranetController extends AbstractController
                 'doc', 'docx', 'txt', 'rtf' => 'DOC',
                 'mp4', 'avi', 'mov', 'mkv', 'webm' => 'VID',
                 'xls', 'xlsx', 'csv' => 'XLS',
-                'ppt', 'pptx' => 'PPT',
+                'ppt', 'pptx', 'pps', 'ppsx' => 'PPT',
                 default => $type,
             };
             $type = $typeFromExtension;
@@ -1825,7 +1810,7 @@ final class IntranetController extends AbstractController
             if ($safeName === '') {
                 $safeName = 'resource';
             }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $extension = $this->resolveUploadExtension($uploadedFile);
             $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
 
             $uploadedFile->move($resourcesDir, $filename);
@@ -1836,7 +1821,7 @@ final class IntranetController extends AbstractController
                 'doc', 'docx', 'txt', 'rtf' => 'DOC',
                 'mp4', 'avi', 'mov', 'mkv', 'webm' => 'VID',
                 'xls', 'xlsx', 'csv' => 'XLS',
-                'ppt', 'pptx' => 'PPT',
+                'ppt', 'pptx', 'pps', 'ppsx' => 'PPT',
                 default => $type,
             };
             $type = $typeFromExtension;
@@ -2095,20 +2080,13 @@ final class IntranetController extends AbstractController
         }
 
         if ($uploadedFile !== null) {
-            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
-            if (!is_dir($resourcesDir)) {
-                mkdir($resourcesDir, 0775, true);
+            try {
+                $url = $this->storeSessionDocumentUpload($uploadedFile, 'session-document');
+            } catch (\InvalidArgumentException $exception) {
+                return $this->json(['message' => $exception->getMessage()], 400);
+            } catch (\Throwable $exception) {
+                return $this->json(['message' => sprintf('Upload fichier impossible: %s', $exception->getMessage())], 500);
             }
-
-            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
-            $safeName = trim((string) $safeName, '-');
-            if ($safeName === '') {
-                $safeName = 'session-document';
-            }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
-            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
-            $uploadedFile->move($resourcesDir, $filename);
-            $url = '/uploads/intranet-session-documents/'.$filename;
         }
 
         try {
@@ -2176,20 +2154,13 @@ final class IntranetController extends AbstractController
         }
 
         if ($uploadedFile !== null) {
-            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
-            if (!is_dir($resourcesDir)) {
-                mkdir($resourcesDir, 0775, true);
+            try {
+                $url = $this->storeSessionDocumentUpload($uploadedFile, 'student-document');
+            } catch (\InvalidArgumentException $exception) {
+                return $this->json(['message' => $exception->getMessage()], 400);
+            } catch (\Throwable $exception) {
+                return $this->json(['message' => sprintf('Upload fichier impossible: %s', $exception->getMessage())], 500);
             }
-
-            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
-            $safeName = trim((string) $safeName, '-');
-            if ($safeName === '') {
-                $safeName = 'student-document';
-            }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
-            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
-            $uploadedFile->move($resourcesDir, $filename);
-            $url = '/uploads/intranet-session-documents/'.$filename;
         }
 
         $studentIds = [];
@@ -3330,9 +3301,13 @@ final class IntranetController extends AbstractController
 
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
-                $key = $this->attendanceKey($sessionId, $studentId);
-                $record = $attendanceMap[$key] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                $record = $this->resolveAttendanceRecord(
+                    (string) $formation['id'],
+                    (string) $slot['date'],
+                    (string) ($slot['slot'] ?? ''),
+                    $studentId,
+                    $attendanceMap
+                );
 
                 $sessions[] = [
                     'id' => $sessionId,
@@ -3377,14 +3352,19 @@ final class IntranetController extends AbstractController
 
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
                 $records = [];
                 foreach ($studentIds as $studentId) {
                     $student = $studentsById[$studentId] ?? null;
                     if ($student === null) {
                         continue;
                     }
-                    $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                    $record = $this->resolveAttendanceRecord(
+                        (string) $formation['id'],
+                        (string) $slot['date'],
+                        (string) ($slot['slot'] ?? ''),
+                        $studentId,
+                        $attendanceMap
+                    );
                     $records[] = [
                         'studentId' => $studentId,
                         'studentName' => $student['firstName'].' '.$student['lastName'],
@@ -3439,14 +3419,19 @@ final class IntranetController extends AbstractController
             $studentIds = $classStudents[$classGroup['id']] ?? [];
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
                 $records = [];
                 foreach ($studentIds as $studentId) {
                     $student = $studentsById[$studentId] ?? null;
                     if ($student === null) {
                         continue;
                     }
-                    $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                    $record = $this->resolveAttendanceRecord(
+                        (string) $formation['id'],
+                        (string) $slot['date'],
+                        (string) ($slot['slot'] ?? ''),
+                        $studentId,
+                        $attendanceMap
+                    );
                     $records[] = [
                         'studentId' => $studentId,
                         'studentName' => $student['firstName'].' '.$student['lastName'],
@@ -3476,6 +3461,7 @@ final class IntranetController extends AbstractController
     /**
      * End-of-day automation: once a day is over, any "pending" attendance becomes "absent".
      * This runs lazily on API reads (dashboard) to avoid a dedicated cron requirement.
+     * Already validated records (present, late, absent, excused) are never overwritten.
      *
      * @param array<int, array{
      *   id: string,
@@ -3485,6 +3471,7 @@ final class IntranetController extends AbstractController
      */
     private function autoMarkPendingAttendanceAsAbsent(array &$sessions): void
     {
+        $attendanceMap = $this->attendanceMap();
         $today = date('Y-m-d');
         foreach ($sessions as &$session) {
             $date = (string) ($session['date'] ?? '');
@@ -3495,6 +3482,7 @@ final class IntranetController extends AbstractController
             if ($sessionId === '') {
                 continue;
             }
+            $formationId = $this->formationIdFromSessionId($sessionId);
             foreach ((array) ($session['records'] ?? []) as $idx => $record) {
                 $status = (string) ($record['status'] ?? 'pending');
                 if ($status !== 'pending') {
@@ -3504,7 +3492,23 @@ final class IntranetController extends AbstractController
                 if ($studentId <= 0) {
                     continue;
                 }
-                // Persist and reflect immediately in the returned payload.
+
+                // Recover previously validated records that may have been orphaned by session ID changes.
+                if ($formationId !== '') {
+                    $stored = $this->resolveAttendanceRecord($formationId, $date, '', $studentId, $attendanceMap);
+                    if ($stored !== null && (string) ($stored['status'] ?? 'pending') !== 'pending') {
+                        $storedSessionId = (string) ($stored['sessionId'] ?? $sessionId);
+                        $storedStatus = (string) $stored['status'];
+                        if ($storedSessionId !== $sessionId) {
+                            $this->relinkAttendanceRecord($storedSessionId, $sessionId, $studentId, $storedStatus);
+                        }
+                        $session['records'][$idx]['status'] = $storedStatus;
+                        $session['records'][$idx]['updatedAt'] = $stored['updatedAt'] ?? null;
+                        continue;
+                    }
+                }
+
+                // Only auto-mark sessions that never had a validated attendance record.
                 $this->persistAttendanceOverride($sessionId, $studentId, 'absent');
                 $session['records'][$idx]['status'] = 'absent';
             }
@@ -3612,6 +3616,296 @@ final class IntranetController extends AbstractController
     {
         $slotFingerprint = substr(md5(trim($slot)), 0, 8);
         return sprintf('%s-%s-%s', $formationId, $this->normalizeSessionDate($date), $slotFingerprint);
+    }
+
+    /**
+     * Store an uploaded session/workflow document and return its public URL.
+     * Explicitly supports Office formats including .ppt / .pptx (often detected as zip).
+     *
+     * @throws \InvalidArgumentException when the upload is invalid or the extension is not allowed
+     */
+    private function storeSessionDocumentUpload(UploadedFile $uploadedFile, string $fallbackName): string
+    {
+        if (!$uploadedFile->isValid()) {
+            throw new \InvalidArgumentException($this->describeUploadError($uploadedFile));
+        }
+
+        $extension = $this->resolveUploadExtension($uploadedFile);
+        $allowedExtensions = [
+            'pdf', 'doc', 'docx', 'rtf', 'txt',
+            'ppt', 'pptx', 'pps', 'ppsx',
+            'xls', 'xlsx', 'csv',
+            'png', 'jpg', 'jpeg', 'webp', 'gif',
+            'zip', 'mp4', 'webm',
+        ];
+        if (!in_array($extension, $allowedExtensions, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Format .%s non accepte. Formats autorises : PDF, Word, PowerPoint (.ppt, .pptx), Excel, images, ZIP.',
+                    $extension
+                )
+            );
+        }
+
+        $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
+        if (!is_dir($resourcesDir) && !mkdir($resourcesDir, 0775, true) && !is_dir($resourcesDir)) {
+            throw new \RuntimeException('Impossible de creer le dossier d\'upload.');
+        }
+
+        $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+        $safeName = trim((string) $safeName, '-');
+        if ($safeName === '') {
+            $safeName = $fallbackName;
+        }
+
+        $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+        $uploadedFile->move($resourcesDir, $filename);
+
+        return '/uploads/intranet-session-documents/'.$filename;
+    }
+
+    private function resolveUploadExtension(UploadedFile $uploadedFile): string
+    {
+        $clientExtension = strtolower($uploadedFile->getClientOriginalExtension() ?: '');
+        $guessedExtension = strtolower((string) ($uploadedFile->guessExtension() ?: ''));
+
+        // OpenXML Office files (pptx/docx/xlsx) are ZIP containers; prefer the original extension.
+        $officeExtensions = ['ppt', 'pptx', 'pps', 'ppsx', 'doc', 'docx', 'xls', 'xlsx'];
+        if (in_array($clientExtension, $officeExtensions, true)) {
+            return $clientExtension;
+        }
+
+        if ($guessedExtension !== '' && $guessedExtension !== 'bin') {
+            return $guessedExtension;
+        }
+
+        if ($clientExtension !== '') {
+            return $clientExtension;
+        }
+
+        return 'bin';
+    }
+
+    private function describeUploadError(UploadedFile $uploadedFile): string
+    {
+        $maxUpload = ini_get('upload_max_filesize') ?: '2M';
+        $maxPost = ini_get('post_max_size') ?: '8M';
+
+        return match ($uploadedFile->getError()) {
+            \UPLOAD_ERR_INI_SIZE, \UPLOAD_ERR_FORM_SIZE => sprintf(
+                'Fichier trop volumineux (limite serveur %s / POST %s). Compressez le PPTX ou augmentez la limite.',
+                $maxUpload,
+                $maxPost
+            ),
+            \UPLOAD_ERR_PARTIAL => 'Upload incomplete. Reessayez.',
+            \UPLOAD_ERR_NO_FILE => 'Aucun fichier recu.',
+            \UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire serveur manquant.',
+            \UPLOAD_ERR_CANT_WRITE => 'Ecriture disque impossible sur le serveur.',
+            \UPLOAD_ERR_EXTENSION => 'Upload bloque par une extension PHP.',
+            default => 'Fichier invalide ou upload echoue.',
+        };
+    }
+
+    /**
+     * Upsert planning sessions without deleting attendance records for unchanged slots.
+     *
+     * @param array<int, array{day?:string, date?:string, slot?:string, topic?:string}> $planning
+     */
+    private function syncFormationSessions(string $formationId, array $planning): void
+    {
+        $newSessionIds = [];
+        foreach ($planning as $slot) {
+            $sessionId = $this->sessionId($formationId, (string) ($slot['date'] ?? ''), (string) ($slot['slot'] ?? ''));
+            $newSessionIds[] = $sessionId;
+            $this->db()->executeStatement(
+                'INSERT INTO formation_sessions (id, formation_id, day_label, session_date, slot_label, topic, created_at)
+                 VALUES (:id, :formation_id, :day_label, :session_date, :slot_label, :topic, NOW())
+                 ON CONFLICT (id) DO UPDATE
+                 SET day_label = EXCLUDED.day_label,
+                     session_date = EXCLUDED.session_date,
+                     slot_label = EXCLUDED.slot_label,
+                     topic = EXCLUDED.topic',
+                [
+                    'id' => $sessionId,
+                    'formation_id' => $formationId,
+                    'day_label' => (string) ($slot['day'] ?? ''),
+                    'session_date' => (string) ($slot['date'] ?? ''),
+                    'slot_label' => (string) ($slot['slot'] ?? ''),
+                    'topic' => (string) ($slot['topic'] ?? ''),
+                ]
+            );
+        }
+
+        if ($newSessionIds === []) {
+            return;
+        }
+
+        $this->relinkOrphanedAttendanceRecords($formationId, $newSessionIds);
+
+        $placeholders = implode(', ', array_fill(0, count($newSessionIds), '?'));
+        $params = array_merge([$formationId], $newSessionIds);
+        $this->db()->executeStatement(
+            "DELETE FROM formation_sessions WHERE formation_id = ? AND id NOT IN ($placeholders)",
+            $params
+        );
+    }
+
+    /**
+     * @param array<int, string> $currentSessionIds
+     */
+    private function relinkOrphanedAttendanceRecords(string $formationId, array $currentSessionIds): void
+    {
+        $sessionsByDate = [];
+        foreach ($currentSessionIds as $sessionId) {
+            $date = $this->sessionDateFromSessionId($sessionId);
+            if ($date !== '') {
+                $sessionsByDate[$date] = $sessionId;
+            }
+        }
+
+        if ($sessionsByDate === []) {
+            return;
+        }
+
+        try {
+            $orphans = $this->db()->fetchAllAssociative(
+                'SELECT ar.session_id, ar.student_id, ar.status
+                 FROM attendance_records ar
+                 WHERE ar.session_id LIKE :prefix
+                   AND NOT EXISTS (
+                       SELECT 1 FROM formation_sessions fs WHERE fs.id = ar.session_id
+                   )',
+                ['prefix' => $formationId.'-%']
+            );
+        } catch (\Throwable) {
+            return;
+        }
+
+        foreach ($orphans as $orphan) {
+            $oldSessionId = (string) ($orphan['session_id'] ?? '');
+            $studentId = (int) ($orphan['student_id'] ?? 0);
+            $status = (string) ($orphan['status'] ?? 'absent');
+            if ($oldSessionId === '' || $studentId <= 0) {
+                continue;
+            }
+            $date = $this->sessionDateFromSessionId($oldSessionId);
+            $newSessionId = $sessionsByDate[$date] ?? null;
+            if ($newSessionId === null || $newSessionId === $oldSessionId) {
+                continue;
+            }
+            $this->relinkAttendanceRecord($oldSessionId, $newSessionId, $studentId, $status);
+        }
+    }
+
+    private function relinkAttendanceRecord(string $oldSessionId, string $newSessionId, int $studentId, string $status): void
+    {
+        if ($oldSessionId === $newSessionId) {
+            return;
+        }
+
+        if (!$this->isSqlIntranetSchemaAvailable()) {
+            return;
+        }
+
+        try {
+            $this->db()->executeStatement(
+                'INSERT INTO attendance_records (session_id, student_id, status, updated_at)
+                 VALUES (:session_id, :student_id, :status, NOW())
+                 ON CONFLICT (session_id, student_id) DO UPDATE
+                 SET status = EXCLUDED.status, updated_at = NOW()',
+                [
+                    'session_id' => $newSessionId,
+                    'student_id' => $studentId,
+                    'status' => $status,
+                ]
+            );
+            $this->db()->executeStatement(
+                'DELETE FROM attendance_records WHERE session_id = :session_id AND student_id = :student_id',
+                [
+                    'session_id' => $oldSessionId,
+                    'student_id' => $studentId,
+                ]
+            );
+        } catch (\Throwable) {
+            // Keep existing records if relink fails.
+        }
+    }
+
+    /**
+     * @param array<string, array{sessionId:string, studentId:int, status:string, updatedAt:?string}> $attendanceMap
+     *
+     * @return array{sessionId:string, studentId:int, status:string, updatedAt:?string}|null
+     */
+    private function resolveAttendanceRecord(
+        string $formationId,
+        string $date,
+        string $slot,
+        int $studentId,
+        array $attendanceMap
+    ): ?array {
+        $sessionId = $slot !== ''
+            ? $this->sessionId($formationId, $date, $slot)
+            : '';
+        $legacySessionId = sprintf('%s-%s-am', $formationId, $this->normalizeSessionDate($date));
+
+        if ($sessionId !== '') {
+            $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? null;
+            if ($record !== null) {
+                return $record;
+            }
+        }
+
+        $record = $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+        if ($record !== null) {
+            return $record;
+        }
+
+        $normalizedDate = $this->normalizeSessionDate($date);
+        $prefix = $formationId.'-'.$normalizedDate.'-';
+        $best = null;
+        foreach ($attendanceMap as $candidate) {
+            if ((int) ($candidate['studentId'] ?? 0) !== $studentId) {
+                continue;
+            }
+            $candidateSessionId = (string) ($candidate['sessionId'] ?? '');
+            if ($candidateSessionId !== $legacySessionId && !str_starts_with($candidateSessionId, $prefix)) {
+                continue;
+            }
+            if ($best === null || $this->attendanceStatusPriority((string) $candidate['status']) > $this->attendanceStatusPriority((string) ($best['status'] ?? 'pending'))) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    private function attendanceStatusPriority(string $status): int
+    {
+        return match ($status) {
+            'present' => 4,
+            'late' => 3,
+            'excused' => 2,
+            'absent' => 1,
+            default => 0,
+        };
+    }
+
+    private function formationIdFromSessionId(string $sessionId): string
+    {
+        if (preg_match('/^(.+)-(\d{4}-\d{2}-\d{2})-(?:[a-f0-9]{8}|am)$/', $sessionId, $matches)) {
+            return (string) $matches[1];
+        }
+
+        return '';
+    }
+
+    private function sessionDateFromSessionId(string $sessionId): string
+    {
+        if (preg_match('/-(\d{4}-\d{2}-\d{2})-(?:[a-f0-9]{8}|am)$/', $sessionId, $matches)) {
+            return (string) $matches[1];
+        }
+
+        return '';
     }
 
     private function normalizeSessionDate(string $value): string
