@@ -670,6 +670,7 @@ export class App implements OnDestroy {
     { key: 'reglement', label: 'Règlement intérieur', shortLabel: 'Règl.', category: 'inscription', documentType: 'reglement_interieur', scope: 'generic', keywords: ['reglement', 'interieur'], mandatoryGeneric: true },
     { key: 'cgv', label: 'CGV', shortLabel: 'CGV', category: 'inscription', documentType: 'cgv', scope: 'generic', keywords: ['cgv'], mandatoryGeneric: true },
     { key: 'test_positionnement', label: 'Test positionnement', shortLabel: 'Posit.', category: 'pre-inscription', documentType: 'test_positionnement', scope: 'student', keywords: ['positionnement'] },
+    { key: 'compte_rendu_entretien', label: 'Compte rendu entretien', shortLabel: 'CR entr.', category: 'inscription', documentType: 'compte_rendu_entretien', scope: 'student', keywords: ['compte', 'rendu', 'entretien'] },
     { key: 'contrat', label: 'Contrat', shortLabel: 'Contrat', category: 'inscription', documentType: 'contrat', scope: 'student', keywords: ['contrat'] },
     { key: 'convocation', label: 'Convocation', shortLabel: 'Convoc.', category: 'inscription', documentType: 'convocation', scope: 'student', keywords: ['convocation'] },
     { key: 'fiche', label: 'Fiche renseignement', shortLabel: 'Fiche', category: 'inscription', documentType: 'fiche_renseignement', scope: 'student', keywords: ['fiche', 'renseignement'] },
@@ -892,8 +893,8 @@ export class App implements OnDestroy {
           isNa: false
         };
       }
-      if (col.key === 'convocation') {
-        // One-way document: once sent by admin, status is Envoyé (no apprentice return required).
+      if (col.key === 'convocation' || col.key === 'compte_rendu_entretien') {
+        // One-way documents: once sent by admin, status is Envoyé (no apprentice return required).
         return {
           status: 'Envoyé',
           statusVariant: 'ok',
@@ -1360,6 +1361,7 @@ export class App implements OnDestroy {
       { key: 'reglement_interieur', label: 'Règlement intérieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
       { key: 'cgv', label: 'CGV', keywords: ['cgv'], category: 'inscription' },
       { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription', submittable: true },
+      { key: 'compte_rendu_entretien', label: 'Compte rendu entretien', keywords: ['compte', 'rendu', 'entretien'], category: 'inscription' },
       { key: 'contrat', label: 'Contrat', keywords: ['contrat'], category: 'inscription', signable: true },
       { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription', submittable: true },
       { key: 'fiche_renseignement', label: 'Fiche de renseignement', keywords: ['fiche', 'renseignement'], category: 'inscription', signable: true },
