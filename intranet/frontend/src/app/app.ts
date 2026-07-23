@@ -892,13 +892,20 @@ export class App implements OnDestroy {
           isNa: false
         };
       }
-      if (col.key === 'test_positionnement' || col.key === 'convocation') {
-        const statusLabel =
-          doc.signatureStatus === 'signed'
-            ? col.key === 'convocation'
-              ? 'Reçu'
-              : 'Envoyé'
-            : 'En attente';
+      if (col.key === 'convocation') {
+        // One-way document: once sent by admin, status is Envoyé (no apprentice return required).
+        return {
+          status: 'Envoyé',
+          statusVariant: 'ok',
+          url: doc.url,
+          docId: doc.id,
+          signatureStatus: doc.signatureStatus,
+          canUpload: true,
+          isNa: false
+        };
+      }
+      if (col.key === 'test_positionnement') {
+        const statusLabel = doc.signatureStatus === 'signed' ? 'Envoyé' : 'En attente';
         const statusVariant: AdminFormationDocMatrixCell['statusVariant'] =
           doc.signatureStatus === 'signed' ? 'ok' : 'warn';
         return {
@@ -2990,11 +2997,11 @@ export class App implements OnDestroy {
       issues.push({ ...base, status: 'pending_signature', statusLabel: 'En attente de signature' });
       return;
     }
-    if (cell.status === 'En attente' && (col.key === 'test_positionnement' || col.key === 'convocation')) {
+    if (cell.status === 'En attente' && col.key === 'test_positionnement') {
       issues.push({
         ...base,
         status: 'pending_signature',
-        statusLabel: col.key === 'convocation' ? 'En attente de reception' : 'En attente de renvoi'
+        statusLabel: 'En attente de renvoi'
       });
       return;
     }
