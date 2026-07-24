@@ -2417,6 +2417,34 @@ final class IntranetController extends AbstractController
         return $this->json($detail);
     }
 
+    #[Route('/trainer/session-validations/tests/{testId}', name: 'trainer_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
+    public function getTrainerValidationTest(int $testId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'trainer') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible.'], 400);
+        }
+        if ($testId <= 0) {
+            return $this->json(['message' => 'Test invalide.'], 400);
+        }
+
+        $detail = $this->adminValidationTestDetail($testId);
+        if ($detail === null) {
+            return $this->json(['message' => 'Test introuvable.'], 404);
+        }
+
+        $formationId = (string) ($detail['test']['formationId'] ?? '');
+        $trainerFormationIds = $this->formationIdsForTrainer((int) $auth['id']);
+        if ($formationId === '' || !in_array($formationId, $trainerFormationIds, true)) {
+            return $this->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return $this->json($detail);
+    }
+
     #[Route('/student/validation-tests/{testId}', name: 'student_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
     public function getStudentValidationTest(int $testId, Request $request): JsonResponse
     {
@@ -3154,6 +3182,7 @@ final class IntranetController extends AbstractController
             'formations' => $formations,
             'attendanceSessions' => $this->buildAttendanceSessionsForTrainer($trainerId),
             'documents' => $this->documentsForTrainer($trainerId),
+            'adminValidationTests' => $this->adminValidationTestsForTrainer($trainerId),
         ]);
     }
 
@@ -5361,6 +5390,39 @@ final class IntranetController extends AbstractController
             'completedCount' => (int) ($row['completed_count'] ?? 0),
             'createdAt' => (string) ($row['created_at'] ?? ''),
         ], $rows);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function formationIdsForTrainer(int $trainerId): array
+    {
+        $ids = [];
+        foreach ($this->formations() as $formation) {
+            if ((int) ($formation['trainerId'] ?? 0) === $trainerId) {
+                $ids[] = (string) $formation['id'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function adminValidationTestsForTrainer(int $trainerId): array
+    {
+        $formationIds = $this->formationIdsForTrainer($trainerId);
+        if ($formationIds === []) {
+            return [];
+        }
+
+        $all = $this->adminValidationTestsList(null);
+
+        return array_values(array_filter(
+            $all,
+            static fn(array $test): bool => in_array((string) ($test['formationId'] ?? ''), $formationIds, true)
+        ));
     }
 
     /**

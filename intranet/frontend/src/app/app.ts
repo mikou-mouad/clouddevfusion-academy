@@ -238,6 +238,8 @@ export class App implements OnDestroy {
   adminFormationDetailTab = signal<
     'resume' | 'emargement' | 'planning' | 'suivi' | 'validation'
   >('resume');
+  /** Onglets detail session formateur (sessions-detail). */
+  trainerSessionDetailTab = signal<'overview' | 'tests'>('overview');
   creatingAdminWorkflowItem = signal(false);
   adminMatrixPendingFiles = signal<Record<string, File | null>>({});
   adminMatrixUploadingKey = signal<string | null>(null);
@@ -487,6 +489,11 @@ export class App implements OnDestroy {
   });
   selectedAdminFormationValidationTests = computed(() => {
     const formation = this.selectedAdminFormation();
+    if (!formation) return [];
+    return this.adminValidationTests().filter((t) => t.formationId === formation.id);
+  });
+  selectedTrainerFormationValidationTests = computed(() => {
+    const formation = this.selectedTrainerSessionFormation();
     if (!formation) return [];
     return this.adminValidationTests().filter((t) => t.formationId === formation.id);
   });
@@ -893,7 +900,12 @@ export class App implements OnDestroy {
           isNa: false
         };
       }
-      if (col.key === 'convocation' || col.key === 'compte_rendu_entretien') {
+      if (
+        col.key === 'convocation'
+        || col.key === 'compte_rendu_entretien'
+        || col.key === 'attestation'
+        || col.key === 'enrollement'
+      ) {
         // One-way documents: once sent by admin, status is Envoyé (no apprentice return required).
         return {
           status: 'Envoyé',
@@ -1444,10 +1456,17 @@ export class App implements OnDestroy {
         entry.key === 'test_validation'
           ? validationPeriodOpen && (url.length > 0 || hasIntranetValidation)
           : url.length > 0;
+      const isOneWayDocument =
+        !!entry.linkOnly
+        || entry.key === 'convocation'
+        || entry.key === 'compte_rendu_entretien'
+        || entry.key === 'attestation_reussite';
       const status =
-        workflowDoc && 'signatureStatus' in workflowDoc
-          ? workflowDoc.signatureStatus
-          : (available ? 'envoye' : 'inactif');
+        available && isOneWayDocument
+          ? 'envoye'
+          : workflowDoc && 'signatureStatus' in workflowDoc
+            ? workflowDoc.signatureStatus
+            : (available ? 'envoye' : 'inactif');
       return {
         key: entry.key,
         label: entry.label,
@@ -2488,8 +2507,11 @@ export class App implements OnDestroy {
   loadAdminValidationTestDetail(testId: number): void {
     if (!testId) return;
     this.adminValidationTestDetailId.set(testId);
+    const endpoint = this.isTrainer()
+      ? `${this.apiBaseUrl}/trainer/session-validations/tests/${testId}`
+      : `${this.apiBaseUrl}/admin/session-validations/tests/${testId}`;
     this.http
-      .get<AdminValidationTestDetail>(`${this.apiBaseUrl}/admin/session-validations/tests/${testId}`, {
+      .get<AdminValidationTestDetail>(endpoint, {
         headers: this.authHeaders()
       })
       .subscribe({
@@ -3495,6 +3517,8 @@ export class App implements OnDestroy {
   selectTrainerSessionFormation(formationId: string): void {
     this.selectedTrainerSessionFormationId.set(formationId);
     this.selectedTrainerResourceFormationId.set(formationId);
+    this.trainerSessionDetailTab.set('overview');
+    this.closeAdminValidationTestDetail();
     this.trainerSessionApprenticeSearch.set('');
     this.trainerSessionApprenticePage.set(1);
     this.trainerSessionPlanningPage.set(1);
@@ -3504,7 +3528,16 @@ export class App implements OnDestroy {
   }
 
   backToTrainerSessions(): void {
+    this.trainerSessionDetailTab.set('overview');
+    this.closeAdminValidationTestDetail();
     this.activeSection.set('sessions');
+  }
+
+  setTrainerSessionDetailTab(tab: 'overview' | 'tests'): void {
+    this.trainerSessionDetailTab.set(tab);
+    if (tab === 'overview') {
+      this.closeAdminValidationTestDetail();
+    }
   }
 
   updateTrainerSessionApprenticeSearch(value: string): void {

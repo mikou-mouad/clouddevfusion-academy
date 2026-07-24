@@ -591,7 +591,11 @@
                                 </a>
                               } @else if (row.url) {
                                 <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">
-                                  {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
+                                  @if (row.key === 'attestation_reussite') {
+                                    Telecharger
+                                  } @else {
+                                    {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
+                                  }
                                 </a>
                               } @else {
                                 <span class="sub">—</span>
@@ -953,6 +957,13 @@
                 </article>
               </div>
 
+              <div class="admin-formation-tabs admin-formation-tabs--segmented" role="tablist" aria-label="Detail session formateur">
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="trainerSessionDetailTab() === 'overview'" [class.active]="trainerSessionDetailTab() === 'overview'" (click)="setTrainerSessionDetailTab('overview')">Vue d'ensemble</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="trainerSessionDetailTab() === 'tests'" [class.active]="trainerSessionDetailTab() === 'tests'" (click)="setTrainerSessionDetailTab('tests')">Tests</button>
+              </div>
+
+              @if (trainerSessionDetailTab() === 'overview') {
+              <div class="admin-formation-tab-panels">
               <div class="sessions-sections-grid">
                 <section class="sessions-block sessions-block-apprentices">
                   <div class="sessions-block-head">
@@ -1193,6 +1204,161 @@
                   </div>
                 </div>
               </section>
+              </div>
+              }
+
+              @if (trainerSessionDetailTab() === 'tests') {
+                <section class="sessions-block admin-validation-panel">
+                  <header class="admin-validation-panel-head">
+                    <div>
+                      <h5>Tests de validation</h5>
+                      <p class="sub">Consultez les scores et statuts des apprentis pour les tests de cette formation.</p>
+                    </div>
+                  </header>
+
+                  @if (!adminValidationTestDetail()) {
+                    <div class="admin-validation-tests-section">
+                      @if (!selectedTrainerFormationValidationTests().length) {
+                        <p class="admin-validation-empty">Aucun test cree pour cette formation.</p>
+                      } @else {
+                        <div class="admin-validation-tests-table-wrap planning-table-wrap">
+                          <table class="planning-table doc-table admin-table admin-validation-tests-table">
+                            <thead>
+                              <tr>
+                                <th>Titre</th>
+                                <th>Seuil</th>
+                                <th>Questions</th>
+                                <th>Apprentis</th>
+                                <th>Termines</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (test of selectedTrainerFormationValidationTests(); track test.id) {
+                                <tr>
+                                  <td class="admin-validation-test-title">{{ test.title }}</td>
+                                  <td>{{ test.passThreshold * 100 }} %</td>
+                                  <td>{{ test.questionCount }}</td>
+                                  <td>{{ test.assignedCount }}</td>
+                                  <td>{{ test.completedCount }}</td>
+                                  <td>
+                                    <button type="button" class="ghost-btn dark-ghost-btn admin-validation-history-btn" (click)="loadAdminValidationTestDetail(test.id)">Voir les resultats</button>
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="admin-validation-detail">
+                      <button type="button" class="admin-validation-back-btn" (click)="closeAdminValidationTestDetail()">← Retour a la liste</button>
+                      <header class="admin-validation-detail-head">
+                        <h6>{{ adminValidationTestDetail()!.test.title }}</h6>
+                        <p class="sub">Seuil {{ adminValidationTestDetail()!.test.passThreshold * 100 }} % · {{ adminValidationTestDetail()!.test.questionCount }} question(s)</p>
+                      </header>
+                      <input type="search" class="admin-doc-matrix-search admin-validation-history-search" placeholder="Rechercher un apprenti (nom, email)..." [ngModel]="adminValidationHistoryQuery()" (ngModelChange)="adminValidationHistoryQuery.set($event)" />
+                      <div class="admin-validation-history-table-wrap planning-table-wrap">
+                        <table class="planning-table doc-table admin-table admin-validation-history-table">
+                          <thead>
+                            <tr>
+                              <th>Apprenti</th>
+                              <th>Score</th>
+                              <th>Statut</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (app of filteredAdminValidationTestApprentices(); track app.studentId) {
+                              <tr class="admin-validation-history-row">
+                                <td>
+                                  <span class="admin-validation-apprentice-name">{{ app.studentName }}</span>
+                                  <span class="sub admin-validation-apprentice-email">{{ app.email }}</span>
+                                </td>
+                                <td><strong>{{ app.score }}</strong> / {{ adminValidationTestDetail()!.test.maxScore }}</td>
+                                <td>
+                                  <span class="admin-validation-status-pill" [attr.data-status]="app.status">{{ validationStatusLabel(app.status) }}</span>
+                                </td>
+                                <td>
+                                  @if (app.attempts.length) {
+                                    <button
+                                      type="button"
+                                      class="ghost-btn dark-ghost-btn admin-validation-view-answers-btn"
+                                      (click)="selectAdminValidationHistoryStudent(app.studentId)"
+                                    >
+                                      Voir les reponses
+                                    </button>
+                                  } @else {
+                                    <span class="sub">Non soumis</span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+
+                      @if (selectedAdminValidationHistoryStudent(); as student) {
+                        <div class="trainer-modal-overlay admin-validation-answers-modal-overlay" (click)="closeAdminValidationHistoryModal()">
+                          <section class="trainer-modal admin-validation-answers-modal card content-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="trainerValidationAnswersModalTitle">
+                            <header class="trainer-modal-head admin-validation-answers-modal-head">
+                              <div>
+                                <p class="trainer-modal-kicker">Reponses du test</p>
+                                <h3 id="trainerValidationAnswersModalTitle">{{ student.studentName }}</h3>
+                                <p class="sub">{{ student.email }}</p>
+                              </div>
+                              <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminValidationHistoryModal()" aria-label="Fermer">×</button>
+                            </header>
+
+                            @if (!student.attempts.length) {
+                              <p class="admin-validation-empty">Cet apprenti n'a pas encore soumis le test.</p>
+                            } @else if (selectedAdminValidationHistoryAttempt(); as attempt) {
+                              <div class="admin-validation-attempt-summary">
+                                <span class="admin-validation-status-pill" [attr.data-status]="attempt.status">{{ validationStatusLabel(attempt.status) }}</span>
+                                <span><strong>{{ attempt.score }}</strong> / {{ attempt.maxScore }}</span>
+                                @if (attempt.submittedAt) {
+                                  <span class="sub">Soumis le {{ attempt.submittedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                }
+                              </div>
+
+                              <div class="admin-validation-answer-review">
+                                @for (answer of attempt.answers; track answer.questionId; let qi = $index) {
+                                  <article class="admin-validation-answer-card" [class.is-correct]="answer.isCorrect" [class.is-wrong]="!answer.isCorrect && answer.selectedLabels.length">
+                                    <div class="admin-validation-answer-card-head">
+                                      <span class="admin-validation-question-badge">Q{{ qi + 1 }}</span>
+                                      <span class="admin-validation-answer-verdict" [attr.data-correct]="answer.isCorrect">
+                                        {{ answer.isCorrect ? 'Correct' : (answer.selectedLabels.length ? 'Incorrect' : 'Non repondu') }}
+                                      </span>
+                                    </div>
+                                    <p class="admin-validation-answer-prompt">{{ answer.prompt }}</p>
+                                    <div class="admin-validation-answer-lines">
+                                      <p>
+                                        <span class="admin-validation-answer-label">Reponse donnee :</span>
+                                        @if (answer.selectedLabels.length) {
+                                          <strong>{{ answer.selectedLabels.join(', ') }}</strong>
+                                        } @else {
+                                          <em>Aucune reponse</em>
+                                        }
+                                      </p>
+                                      @if (!answer.isCorrect && answer.correctLabels.length) {
+                                        <p class="admin-validation-answer-expected">
+                                          <span class="admin-validation-answer-label">Bonne reponse :</span>
+                                          <strong>{{ answer.correctLabels.join(', ') }}</strong>
+                                        </p>
+                                      }
+                                    </div>
+                                  </article>
+                                }
+                              </div>
+                            }
+                          </section>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+              }
             }
           </section>
         }
