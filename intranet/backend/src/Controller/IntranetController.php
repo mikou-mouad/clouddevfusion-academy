@@ -278,6 +278,8 @@ final class IntranetController extends AbstractController
                     'is_archived' => false,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
+                ], [
+                    'is_archived' => ParameterType::BOOLEAN,
                 ]);
 
                 $classId = 'grp-'.$formationId;
@@ -321,8 +323,13 @@ final class IntranetController extends AbstractController
                 $this->db()->commit();
 
                 return $this->json(['message' => 'Formation creee avec succes.']);
-            } catch (\Throwable) {
-                $this->db()->rollBack();
+            } catch (\Throwable $exception) {
+                try {
+                    $this->db()->rollBack();
+                } catch (\Throwable) {
+                }
+
+                return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
             }
         }
 
@@ -413,6 +420,54 @@ final class IntranetController extends AbstractController
         return $this->json(['message' => 'Formation archivee avec succes.']);
     }
 
+    #[Route('/admin/formations/{formationId}/unarchive', name: 'admin_unarchive_formation', methods: ['POST'])]
+    public function unarchiveFormation(Request $request, string $formationId): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $targetId = trim($formationId);
+        if ($targetId === '') {
+            return $this->json(['message' => 'Formation invalide.'], 400);
+        }
+
+        $exists = false;
+        foreach ($this->formations(true) as $formation) {
+            if ((string) ($formation['id'] ?? '') === $targetId) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            return $this->json(['message' => 'Formation introuvable.'], 404);
+        }
+
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $this->db()->executeStatement(
+                    'UPDATE formations SET is_archived = FALSE, updated_at = NOW() WHERE id = :id',
+                    ['id' => $targetId]
+                );
+
+                return $this->json(['message' => 'Formation desarchivee avec succes.']);
+            } catch (\Throwable) {
+                // Keep JSON fallback for environments not migrated yet.
+            }
+        }
+
+        $state = $this->loadAdminState();
+        $archived = array_values(array_unique(array_filter(array_map('strval', (array) ($state['archivedFormationIds'] ?? [])))));
+        $state['archivedFormationIds'] = array_values(array_filter(
+            $archived,
+            static fn(string $id): bool => $id !== $targetId
+        ));
+        $this->saveAdminState($state);
+
+        return $this->json(['message' => 'Formation desarchivee avec succes.']);
+    }
+
     #[Route('/admin/formations/{formationId}', name: 'admin_update_formation', methods: ['PUT'])]
     public function updateFormation(Request $request, string $formationId): JsonResponse
     {
@@ -439,13 +494,8 @@ final class IntranetController extends AbstractController
         $teamsLink = trim((string) ($payload['teamsLink'] ?? ''));
         $planningPayload = (array) ($payload['planning'] ?? []);
 
-        if ($title === '' || $trainerId <= 0 || $startDate === '' || $endDate === '') {
+        if ($title === '' || $startDate === '' || $endDate === '') {
             return $this->json(['message' => 'Champs requis manquants.'], 400);
-        }
-
-        $trainer = $this->trainerById($trainerId);
-        if ($trainer === null) {
-            return $this->json(['message' => 'Formateur introuvable.'], 400);
         }
 
         $planning = [];
@@ -465,6 +515,15 @@ final class IntranetController extends AbstractController
         }
         if (count($planning) === 0) {
             return $this->json(['message' => 'Ajoutez au moins un slot de planning.'], 400);
+        }
+
+        if ($this->formationHasStarted($startDate, $planning) && $trainerId <= 0) {
+            return $this->json(['message' => 'Un formateur est obligatoire pour une session deja demarree.'], 400);
+        }
+
+        $trainer = $trainerId > 0 ? $this->trainerById($trainerId) : null;
+        if ($trainerId > 0 && $trainer === null) {
+            return $this->json(['message' => 'Formateur introuvable.'], 400);
         }
 
         if ($this->isSqlIntranetSchemaAvailable()) {
@@ -494,22 +553,7 @@ final class IntranetController extends AbstractController
                         'formation_id' => $targetId,
                     ]
                 );
-                $this->db()->executeStatement(
-                    'DELETE FROM formation_sessions WHERE formation_id = :formation_id',
-                    ['formation_id' => $targetId]
-                );
-                foreach ($planning as $slot) {
-                    $sessionId = $this->sessionId($targetId, (string) ($slot['date'] ?? ''), (string) ($slot['slot'] ?? ''));
-                    $this->db()->insert('formation_sessions', [
-                        'id' => $sessionId,
-                        'formation_id' => $targetId,
-                        'day_label' => (string) ($slot['day'] ?? ''),
-                        'session_date' => (string) ($slot['date'] ?? ''),
-                        'slot_label' => (string) ($slot['slot'] ?? ''),
-                        'topic' => (string) ($slot['topic'] ?? ''),
-                        'created_at' => date('Y-m-d H:i:s'),
-                    ]);
-                }
+                $this->syncFormationSessions($targetId, $planning);
 
                 return $this->json(['message' => 'Formation modifiee avec succes.']);
             } catch (\Throwable) {
@@ -527,7 +571,7 @@ final class IntranetController extends AbstractController
             $formation['mode'] = $mode;
             $formation['teamsLink'] = $teamsLink;
             $formation['trainerId'] = $trainerId;
-            $formation['trainer'] = $trainer['firstName'].' '.$trainer['lastName'];
+            $formation['trainer'] = $trainer !== null ? $trainer['firstName'].' '.$trainer['lastName'] : 'Non assigné';
             $formation['startDate'] = $startDate;
             $formation['endDate'] = $endDate;
             $formation['planning'] = $planning;
@@ -1657,7 +1701,7 @@ final class IntranetController extends AbstractController
             if ($safeName === '') {
                 $safeName = 'resource';
             }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $extension = $this->resolveUploadExtension($uploadedFile);
             $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
 
             $uploadedFile->move($resourcesDir, $filename);
@@ -1668,7 +1712,7 @@ final class IntranetController extends AbstractController
                 'doc', 'docx', 'txt', 'rtf' => 'DOC',
                 'mp4', 'avi', 'mov', 'mkv', 'webm' => 'VID',
                 'xls', 'xlsx', 'csv' => 'XLS',
-                'ppt', 'pptx' => 'PPT',
+                'ppt', 'pptx', 'pps', 'ppsx' => 'PPT',
                 default => $type,
             };
             $type = $typeFromExtension;
@@ -1766,7 +1810,7 @@ final class IntranetController extends AbstractController
             if ($safeName === '') {
                 $safeName = 'resource';
             }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $extension = $this->resolveUploadExtension($uploadedFile);
             $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
 
             $uploadedFile->move($resourcesDir, $filename);
@@ -1777,7 +1821,7 @@ final class IntranetController extends AbstractController
                 'doc', 'docx', 'txt', 'rtf' => 'DOC',
                 'mp4', 'avi', 'mov', 'mkv', 'webm' => 'VID',
                 'xls', 'xlsx', 'csv' => 'XLS',
-                'ppt', 'pptx' => 'PPT',
+                'ppt', 'pptx', 'pps', 'ppsx' => 'PPT',
                 default => $type,
             };
             $type = $typeFromExtension;
@@ -1968,56 +2012,8 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Unauthorized'], 401);
         }
 
-        if ($this->isSqlIntranetSchemaAvailable()) {
-            try {
-                $providers = $this->db()->fetchAllAssociative(
-                    'SELECT id, company_name, siret, address, phone, activity_declaration_number, created_at
-                     FROM providers
-                     ORDER BY id DESC'
-                );
-                $docs = $this->db()->fetchAllAssociative(
-                    'SELECT provider_id, document_type, label, url, uploaded_at
-                     FROM provider_documents'
-                );
-                $docsByProvider = [];
-                foreach ($docs as $doc) {
-                    $providerId = (int) ($doc['provider_id'] ?? 0);
-                    if ($providerId <= 0) {
-                        continue;
-                    }
-                    $docsByProvider[$providerId][(string) ($doc['document_type'] ?? 'doc')] = [
-                        'label' => (string) ($doc['label'] ?? ''),
-                        'url' => (string) ($doc['url'] ?? ''),
-                        'uploadedAt' => substr((string) ($doc['uploaded_at'] ?? date('Y-m-d H:i:s')), 0, 16),
-                    ];
-                }
-                $payload = array_map(
-                    static function (array $provider) use ($docsByProvider): array {
-                        $providerId = (int) ($provider['id'] ?? 0);
-                        return [
-                            'id' => 'provider-'.$providerId,
-                            'companyName' => (string) ($provider['company_name'] ?? ''),
-                            'siret' => (string) ($provider['siret'] ?? ''),
-                            'address' => (string) ($provider['address'] ?? ''),
-                            'phone' => (string) ($provider['phone'] ?? ''),
-                            'activityDeclarationNumber' => (string) ($provider['activity_declaration_number'] ?? ''),
-                            'documents' => $docsByProvider[$providerId] ?? [],
-                            'createdAt' => substr((string) ($provider['created_at'] ?? date('Y-m-d H:i:s')), 0, 16),
-                        ];
-                    },
-                    $providers
-                );
-
-                return $this->json(['providers' => $payload]);
-            } catch (\Throwable) {
-                // Keep JSON fallback for environments not migrated yet.
-            }
-        }
-
-        $state = $this->loadAdminState();
-
         return $this->json([
-            'providers' => array_values((array) ($state['providers'] ?? [])),
+            'providers' => $this->providers(),
         ]);
     }
 
@@ -2084,20 +2080,13 @@ final class IntranetController extends AbstractController
         }
 
         if ($uploadedFile !== null) {
-            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
-            if (!is_dir($resourcesDir)) {
-                mkdir($resourcesDir, 0775, true);
+            try {
+                $url = $this->storeSessionDocumentUpload($uploadedFile, 'session-document');
+            } catch (\InvalidArgumentException $exception) {
+                return $this->json(['message' => $exception->getMessage()], 400);
+            } catch (\Throwable $exception) {
+                return $this->json(['message' => sprintf('Upload fichier impossible: %s', $exception->getMessage())], 500);
             }
-
-            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
-            $safeName = trim((string) $safeName, '-');
-            if ($safeName === '') {
-                $safeName = 'session-document';
-            }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
-            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
-            $uploadedFile->move($resourcesDir, $filename);
-            $url = '/uploads/intranet-session-documents/'.$filename;
         }
 
         try {
@@ -2165,20 +2154,13 @@ final class IntranetController extends AbstractController
         }
 
         if ($uploadedFile !== null) {
-            $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
-            if (!is_dir($resourcesDir)) {
-                mkdir($resourcesDir, 0775, true);
+            try {
+                $url = $this->storeSessionDocumentUpload($uploadedFile, 'student-document');
+            } catch (\InvalidArgumentException $exception) {
+                return $this->json(['message' => $exception->getMessage()], 400);
+            } catch (\Throwable $exception) {
+                return $this->json(['message' => sprintf('Upload fichier impossible: %s', $exception->getMessage())], 500);
             }
-
-            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
-            $safeName = trim((string) $safeName, '-');
-            if ($safeName === '') {
-                $safeName = 'student-document';
-            }
-            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
-            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
-            $uploadedFile->move($resourcesDir, $filename);
-            $url = '/uploads/intranet-session-documents/'.$filename;
         }
 
         $studentIds = [];
@@ -2435,6 +2417,34 @@ final class IntranetController extends AbstractController
         return $this->json($detail);
     }
 
+    #[Route('/trainer/session-validations/tests/{testId}', name: 'trainer_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
+    public function getTrainerValidationTest(int $testId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'trainer') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isValidationQuizSchemaAvailable()) {
+            return $this->json(['message' => 'Quiz validation indisponible.'], 400);
+        }
+        if ($testId <= 0) {
+            return $this->json(['message' => 'Test invalide.'], 400);
+        }
+
+        $detail = $this->adminValidationTestDetail($testId);
+        if ($detail === null) {
+            return $this->json(['message' => 'Test introuvable.'], 404);
+        }
+
+        $formationId = (string) ($detail['test']['formationId'] ?? '');
+        $trainerFormationIds = $this->formationIdsForTrainer((int) $auth['id']);
+        if ($formationId === '' || !in_array($formationId, $trainerFormationIds, true)) {
+            return $this->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return $this->json($detail);
+    }
+
     #[Route('/student/validation-tests/{testId}', name: 'student_get_validation_test', methods: ['GET'], requirements: ['testId' => '\d+'])]
     public function getStudentValidationTest(int $testId, Request $request): JsonResponse
     {
@@ -2663,6 +2673,85 @@ final class IntranetController extends AbstractController
         }
 
         return $this->json(['message' => 'Document signe et recharge avec succes.']);
+    }
+
+    #[Route('/student/session-documents/{documentId}/submit', name: 'student_submit_document', methods: ['POST'])]
+    public function studentSubmitDocument(int $documentId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'student') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        $studentId = $this->resolveStudentIdFromAuthId((int) $auth['id']);
+        if (!$this->isAdminWorkflowSchemaAvailable()) {
+            return $this->json(['message' => 'Workflow documents indisponible. Appliquez la migration.'], 400);
+        }
+        if ($documentId <= 0) {
+            return $this->json(['message' => 'Document invalide.'], 400);
+        }
+
+        $existing = $this->db()->fetchAssociative(
+            'SELECT id, student_id, document_type, title, url FROM student_documents WHERE id = :id LIMIT 1',
+            ['id' => $documentId]
+        );
+        if (!is_array($existing)) {
+            return $this->json(['message' => 'Document introuvable.'], 404);
+        }
+        if ((int) ($existing['student_id'] ?? 0) !== $studentId) {
+            return $this->json(['message' => 'Document non autorise pour cet etudiant.'], 403);
+        }
+        if (!$this->isStudentSubmittableDocumentType(
+            (string) ($existing['document_type'] ?? ''),
+            (string) ($existing['title'] ?? '')
+        )) {
+            return $this->json(['message' => 'Ce document ne peut pas etre renvoye par l etudiant.'], 400);
+        }
+
+        $updateData = [
+            'signature_status' => 'signed',
+            'signed_at' => date('Y-m-d H:i:s'),
+            'signed_by_user_id' => (int) $auth['id'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        /** @var UploadedFile|null $uploadedFile */
+        $uploadedFile = $request->files->get('file');
+        if (!is_string($uploadedFile) && $uploadedFile !== null) {
+            $uploadDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-student-signed-documents';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0775, true);
+            }
+            $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+            $safeName = trim((string) $safeName, '-');
+            if ($safeName === '') {
+                $safeName = 'submitted-document';
+            }
+            $extension = strtolower($uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension() ?: 'bin');
+            $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+            $uploadedFile->move($uploadDir, $filename);
+            $submittedUrl = '/uploads/intranet-student-signed-documents/'.$filename;
+            if (!$this->shouldPreserveDocumentUrlOnSubmit(
+                (string) ($existing['document_type'] ?? ''),
+                (string) ($existing['title'] ?? '')
+            )) {
+                $updateData['url'] = $submittedUrl;
+                $updateData['source'] = 'student';
+            }
+        }
+
+        $updated = $this->db()->update('student_documents', $updateData, ['id' => $documentId]);
+        if ($updated <= 0) {
+            return $this->json(['message' => 'Mise a jour document impossible.'], 500);
+        }
+
+        $message = $this->isConvocationDocumentType(
+            (string) ($existing['document_type'] ?? ''),
+            (string) ($existing['title'] ?? '')
+        )
+            ? 'Reception de la convocation confirmee.'
+            : 'Test renvoye avec succes.';
+
+        return $this->json(['message' => $message]);
     }
 
     #[Route('/admin/session-validations/sync-by-email', name: 'admin_sync_session_validation_scores_by_email', methods: ['POST'])]
@@ -3093,6 +3182,7 @@ final class IntranetController extends AbstractController
             'formations' => $formations,
             'attendanceSessions' => $this->buildAttendanceSessionsForTrainer($trainerId),
             'documents' => $this->documentsForTrainer($trainerId),
+            'adminValidationTests' => $this->adminValidationTestsForTrainer($trainerId),
         ]);
     }
 
@@ -3194,7 +3284,7 @@ final class IntranetController extends AbstractController
             'adminSessionDocuments' => $this->adminSessionDocuments(),
             'adminSessionValidationResults' => $this->adminSessionValidationResults(),
             'adminValidationTests' => $this->adminValidationTestsList(null),
-            'providers' => array_values((array) ($this->loadAdminState()['providers'] ?? [])),
+            'providers' => $this->providers(),
         ]);
     }
 
@@ -3240,9 +3330,13 @@ final class IntranetController extends AbstractController
 
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
-                $key = $this->attendanceKey($sessionId, $studentId);
-                $record = $attendanceMap[$key] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                $record = $this->resolveAttendanceRecord(
+                    (string) $formation['id'],
+                    (string) $slot['date'],
+                    (string) ($slot['slot'] ?? ''),
+                    $studentId,
+                    $attendanceMap
+                );
 
                 $sessions[] = [
                     'id' => $sessionId,
@@ -3263,6 +3357,8 @@ final class IntranetController extends AbstractController
                 ];
             }
         }
+
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
 
         return $sessions;
     }
@@ -3285,14 +3381,19 @@ final class IntranetController extends AbstractController
 
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
                 $records = [];
                 foreach ($studentIds as $studentId) {
                     $student = $studentsById[$studentId] ?? null;
                     if ($student === null) {
                         continue;
                     }
-                    $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                    $record = $this->resolveAttendanceRecord(
+                        (string) $formation['id'],
+                        (string) $slot['date'],
+                        (string) ($slot['slot'] ?? ''),
+                        $studentId,
+                        $attendanceMap
+                    );
                     $records[] = [
                         'studentId' => $studentId,
                         'studentName' => $student['firstName'].' '.$student['lastName'],
@@ -3313,6 +3414,8 @@ final class IntranetController extends AbstractController
                 ];
             }
         }
+
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
 
         return $sessions;
     }
@@ -3345,14 +3448,19 @@ final class IntranetController extends AbstractController
             $studentIds = $classStudents[$classGroup['id']] ?? [];
             foreach ($formation['planning'] as $slot) {
                 $sessionId = $this->sessionId($formation['id'], $slot['date'], (string) ($slot['slot'] ?? ''));
-                $legacySessionId = sprintf('%s-%s-am', (string) $formation['id'], (string) $slot['date']);
                 $records = [];
                 foreach ($studentIds as $studentId) {
                     $student = $studentsById[$studentId] ?? null;
                     if ($student === null) {
                         continue;
                     }
-                    $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+                    $record = $this->resolveAttendanceRecord(
+                        (string) $formation['id'],
+                        (string) $slot['date'],
+                        (string) ($slot['slot'] ?? ''),
+                        $studentId,
+                        $attendanceMap
+                    );
                     $records[] = [
                         'studentId' => $studentId,
                         'studentName' => $student['firstName'].' '.$student['lastName'],
@@ -3374,7 +3482,66 @@ final class IntranetController extends AbstractController
             }
         }
 
+        $this->autoMarkPendingAttendanceAsAbsent($sessions);
+
         return $sessions;
+    }
+
+    /**
+     * End-of-day automation: once a day is over, any "pending" attendance becomes "absent".
+     * This runs lazily on API reads (dashboard) to avoid a dedicated cron requirement.
+     * Already validated records (present, late, absent, excused) are never overwritten.
+     *
+     * @param array<int, array{
+     *   id: string,
+     *   date: string,
+     *   records: array<int, array{studentId:int, status:string}>
+     * }> $sessions
+     */
+    private function autoMarkPendingAttendanceAsAbsent(array &$sessions): void
+    {
+        $attendanceMap = $this->attendanceMap();
+        $today = date('Y-m-d');
+        foreach ($sessions as &$session) {
+            $date = (string) ($session['date'] ?? '');
+            if ($date === '' || $date >= $today) {
+                continue;
+            }
+            $sessionId = (string) ($session['id'] ?? '');
+            if ($sessionId === '') {
+                continue;
+            }
+            $formationId = $this->formationIdFromSessionId($sessionId);
+            foreach ((array) ($session['records'] ?? []) as $idx => $record) {
+                $status = (string) ($record['status'] ?? 'pending');
+                if ($status !== 'pending') {
+                    continue;
+                }
+                $studentId = (int) ($record['studentId'] ?? 0);
+                if ($studentId <= 0) {
+                    continue;
+                }
+
+                // Recover previously validated records that may have been orphaned by session ID changes.
+                if ($formationId !== '') {
+                    $stored = $this->resolveAttendanceRecord($formationId, $date, '', $studentId, $attendanceMap);
+                    if ($stored !== null && (string) ($stored['status'] ?? 'pending') !== 'pending') {
+                        $storedSessionId = (string) ($stored['sessionId'] ?? $sessionId);
+                        $storedStatus = (string) $stored['status'];
+                        if ($storedSessionId !== $sessionId) {
+                            $this->relinkAttendanceRecord($storedSessionId, $sessionId, $studentId, $storedStatus);
+                        }
+                        $session['records'][$idx]['status'] = $storedStatus;
+                        $session['records'][$idx]['updatedAt'] = $stored['updatedAt'] ?? null;
+                        continue;
+                    }
+                }
+
+                // Only auto-mark sessions that never had a validated attendance record.
+                $this->persistAttendanceOverride($sessionId, $studentId, 'absent');
+                $session['records'][$idx]['status'] = 'absent';
+            }
+        }
     }
 
     private function attendanceMap(): array
@@ -3480,6 +3647,296 @@ final class IntranetController extends AbstractController
         return sprintf('%s-%s-%s', $formationId, $this->normalizeSessionDate($date), $slotFingerprint);
     }
 
+    /**
+     * Store an uploaded session/workflow document and return its public URL.
+     * Explicitly supports Office formats including .ppt / .pptx (often detected as zip).
+     *
+     * @throws \InvalidArgumentException when the upload is invalid or the extension is not allowed
+     */
+    private function storeSessionDocumentUpload(UploadedFile $uploadedFile, string $fallbackName): string
+    {
+        if (!$uploadedFile->isValid()) {
+            throw new \InvalidArgumentException($this->describeUploadError($uploadedFile));
+        }
+
+        $extension = $this->resolveUploadExtension($uploadedFile);
+        $allowedExtensions = [
+            'pdf', 'doc', 'docx', 'rtf', 'txt',
+            'ppt', 'pptx', 'pps', 'ppsx',
+            'xls', 'xlsx', 'csv',
+            'png', 'jpg', 'jpeg', 'webp', 'gif',
+            'zip', 'mp4', 'webm',
+        ];
+        if (!in_array($extension, $allowedExtensions, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Format .%s non accepte. Formats autorises : PDF, Word, PowerPoint (.ppt, .pptx), Excel, images, ZIP.',
+                    $extension
+                )
+            );
+        }
+
+        $resourcesDir = $this->getParameter('kernel.project_dir').'/public/uploads/intranet-session-documents';
+        if (!is_dir($resourcesDir) && !mkdir($resourcesDir, 0775, true) && !is_dir($resourcesDir)) {
+            throw new \RuntimeException('Impossible de creer le dossier d\'upload.');
+        }
+
+        $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME));
+        $safeName = trim((string) $safeName, '-');
+        if ($safeName === '') {
+            $safeName = $fallbackName;
+        }
+
+        $filename = sprintf('%s-%s.%s', $safeName, substr(md5((string) microtime(true)), 0, 8), $extension);
+        $uploadedFile->move($resourcesDir, $filename);
+
+        return '/uploads/intranet-session-documents/'.$filename;
+    }
+
+    private function resolveUploadExtension(UploadedFile $uploadedFile): string
+    {
+        $clientExtension = strtolower($uploadedFile->getClientOriginalExtension() ?: '');
+        $guessedExtension = strtolower((string) ($uploadedFile->guessExtension() ?: ''));
+
+        // OpenXML Office files (pptx/docx/xlsx) are ZIP containers; prefer the original extension.
+        $officeExtensions = ['ppt', 'pptx', 'pps', 'ppsx', 'doc', 'docx', 'xls', 'xlsx'];
+        if (in_array($clientExtension, $officeExtensions, true)) {
+            return $clientExtension;
+        }
+
+        if ($guessedExtension !== '' && $guessedExtension !== 'bin') {
+            return $guessedExtension;
+        }
+
+        if ($clientExtension !== '') {
+            return $clientExtension;
+        }
+
+        return 'bin';
+    }
+
+    private function describeUploadError(UploadedFile $uploadedFile): string
+    {
+        $maxUpload = ini_get('upload_max_filesize') ?: '2M';
+        $maxPost = ini_get('post_max_size') ?: '8M';
+
+        return match ($uploadedFile->getError()) {
+            \UPLOAD_ERR_INI_SIZE, \UPLOAD_ERR_FORM_SIZE => sprintf(
+                'Fichier trop volumineux (limite serveur %s / POST %s). Compressez le PPTX ou augmentez la limite.',
+                $maxUpload,
+                $maxPost
+            ),
+            \UPLOAD_ERR_PARTIAL => 'Upload incomplete. Reessayez.',
+            \UPLOAD_ERR_NO_FILE => 'Aucun fichier recu.',
+            \UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire serveur manquant.',
+            \UPLOAD_ERR_CANT_WRITE => 'Ecriture disque impossible sur le serveur.',
+            \UPLOAD_ERR_EXTENSION => 'Upload bloque par une extension PHP.',
+            default => 'Fichier invalide ou upload echoue.',
+        };
+    }
+
+    /**
+     * Upsert planning sessions without deleting attendance records for unchanged slots.
+     *
+     * @param array<int, array{day?:string, date?:string, slot?:string, topic?:string}> $planning
+     */
+    private function syncFormationSessions(string $formationId, array $planning): void
+    {
+        $newSessionIds = [];
+        foreach ($planning as $slot) {
+            $sessionId = $this->sessionId($formationId, (string) ($slot['date'] ?? ''), (string) ($slot['slot'] ?? ''));
+            $newSessionIds[] = $sessionId;
+            $this->db()->executeStatement(
+                'INSERT INTO formation_sessions (id, formation_id, day_label, session_date, slot_label, topic, created_at)
+                 VALUES (:id, :formation_id, :day_label, :session_date, :slot_label, :topic, NOW())
+                 ON CONFLICT (id) DO UPDATE
+                 SET day_label = EXCLUDED.day_label,
+                     session_date = EXCLUDED.session_date,
+                     slot_label = EXCLUDED.slot_label,
+                     topic = EXCLUDED.topic',
+                [
+                    'id' => $sessionId,
+                    'formation_id' => $formationId,
+                    'day_label' => (string) ($slot['day'] ?? ''),
+                    'session_date' => (string) ($slot['date'] ?? ''),
+                    'slot_label' => (string) ($slot['slot'] ?? ''),
+                    'topic' => (string) ($slot['topic'] ?? ''),
+                ]
+            );
+        }
+
+        if ($newSessionIds === []) {
+            return;
+        }
+
+        $this->relinkOrphanedAttendanceRecords($formationId, $newSessionIds);
+
+        $placeholders = implode(', ', array_fill(0, count($newSessionIds), '?'));
+        $params = array_merge([$formationId], $newSessionIds);
+        $this->db()->executeStatement(
+            "DELETE FROM formation_sessions WHERE formation_id = ? AND id NOT IN ($placeholders)",
+            $params
+        );
+    }
+
+    /**
+     * @param array<int, string> $currentSessionIds
+     */
+    private function relinkOrphanedAttendanceRecords(string $formationId, array $currentSessionIds): void
+    {
+        $sessionsByDate = [];
+        foreach ($currentSessionIds as $sessionId) {
+            $date = $this->sessionDateFromSessionId($sessionId);
+            if ($date !== '') {
+                $sessionsByDate[$date] = $sessionId;
+            }
+        }
+
+        if ($sessionsByDate === []) {
+            return;
+        }
+
+        try {
+            $orphans = $this->db()->fetchAllAssociative(
+                'SELECT ar.session_id, ar.student_id, ar.status
+                 FROM attendance_records ar
+                 WHERE ar.session_id LIKE :prefix
+                   AND NOT EXISTS (
+                       SELECT 1 FROM formation_sessions fs WHERE fs.id = ar.session_id
+                   )',
+                ['prefix' => $formationId.'-%']
+            );
+        } catch (\Throwable) {
+            return;
+        }
+
+        foreach ($orphans as $orphan) {
+            $oldSessionId = (string) ($orphan['session_id'] ?? '');
+            $studentId = (int) ($orphan['student_id'] ?? 0);
+            $status = (string) ($orphan['status'] ?? 'absent');
+            if ($oldSessionId === '' || $studentId <= 0) {
+                continue;
+            }
+            $date = $this->sessionDateFromSessionId($oldSessionId);
+            $newSessionId = $sessionsByDate[$date] ?? null;
+            if ($newSessionId === null || $newSessionId === $oldSessionId) {
+                continue;
+            }
+            $this->relinkAttendanceRecord($oldSessionId, $newSessionId, $studentId, $status);
+        }
+    }
+
+    private function relinkAttendanceRecord(string $oldSessionId, string $newSessionId, int $studentId, string $status): void
+    {
+        if ($oldSessionId === $newSessionId) {
+            return;
+        }
+
+        if (!$this->isSqlIntranetSchemaAvailable()) {
+            return;
+        }
+
+        try {
+            $this->db()->executeStatement(
+                'INSERT INTO attendance_records (session_id, student_id, status, updated_at)
+                 VALUES (:session_id, :student_id, :status, NOW())
+                 ON CONFLICT (session_id, student_id) DO UPDATE
+                 SET status = EXCLUDED.status, updated_at = NOW()',
+                [
+                    'session_id' => $newSessionId,
+                    'student_id' => $studentId,
+                    'status' => $status,
+                ]
+            );
+            $this->db()->executeStatement(
+                'DELETE FROM attendance_records WHERE session_id = :session_id AND student_id = :student_id',
+                [
+                    'session_id' => $oldSessionId,
+                    'student_id' => $studentId,
+                ]
+            );
+        } catch (\Throwable) {
+            // Keep existing records if relink fails.
+        }
+    }
+
+    /**
+     * @param array<string, array{sessionId:string, studentId:int, status:string, updatedAt:?string}> $attendanceMap
+     *
+     * @return array{sessionId:string, studentId:int, status:string, updatedAt:?string}|null
+     */
+    private function resolveAttendanceRecord(
+        string $formationId,
+        string $date,
+        string $slot,
+        int $studentId,
+        array $attendanceMap
+    ): ?array {
+        $sessionId = $slot !== ''
+            ? $this->sessionId($formationId, $date, $slot)
+            : '';
+        $legacySessionId = sprintf('%s-%s-am', $formationId, $this->normalizeSessionDate($date));
+
+        if ($sessionId !== '') {
+            $record = $attendanceMap[$this->attendanceKey($sessionId, $studentId)] ?? null;
+            if ($record !== null) {
+                return $record;
+            }
+        }
+
+        $record = $attendanceMap[$this->attendanceKey($legacySessionId, $studentId)] ?? null;
+        if ($record !== null) {
+            return $record;
+        }
+
+        $normalizedDate = $this->normalizeSessionDate($date);
+        $prefix = $formationId.'-'.$normalizedDate.'-';
+        $best = null;
+        foreach ($attendanceMap as $candidate) {
+            if ((int) ($candidate['studentId'] ?? 0) !== $studentId) {
+                continue;
+            }
+            $candidateSessionId = (string) ($candidate['sessionId'] ?? '');
+            if ($candidateSessionId !== $legacySessionId && !str_starts_with($candidateSessionId, $prefix)) {
+                continue;
+            }
+            if ($best === null || $this->attendanceStatusPriority((string) $candidate['status']) > $this->attendanceStatusPriority((string) ($best['status'] ?? 'pending'))) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    private function attendanceStatusPriority(string $status): int
+    {
+        return match ($status) {
+            'present' => 4,
+            'late' => 3,
+            'excused' => 2,
+            'absent' => 1,
+            default => 0,
+        };
+    }
+
+    private function formationIdFromSessionId(string $sessionId): string
+    {
+        if (preg_match('/^(.+)-(\d{4}-\d{2}-\d{2})-(?:[a-f0-9]{8}|am)$/', $sessionId, $matches)) {
+            return (string) $matches[1];
+        }
+
+        return '';
+    }
+
+    private function sessionDateFromSessionId(string $sessionId): string
+    {
+        if (preg_match('/-(\d{4}-\d{2}-\d{2})-(?:[a-f0-9]{8}|am)$/', $sessionId, $matches)) {
+            return (string) $matches[1];
+        }
+
+        return '';
+    }
+
     private function normalizeSessionDate(string $value): string
     {
         $value = trim($value);
@@ -3491,6 +3948,27 @@ final class IntranetController extends AbstractController
         }
 
         return $value;
+    }
+
+    private function formationHasStarted(string $startDate, array $planning): bool
+    {
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
+        $normalizedStart = $this->normalizeSessionDate($startDate);
+        if ($normalizedStart !== '' && $normalizedStart <= $today) {
+            return true;
+        }
+
+        foreach ($planning as $slot) {
+            if (!is_array($slot)) {
+                continue;
+            }
+            $sessionDate = $this->normalizeSessionDate((string) ($slot['date'] ?? ''));
+            if ($sessionDate !== '' && $sessionDate <= $today) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function attendanceKey(string $sessionId, int $studentId): string
@@ -3924,20 +4402,62 @@ final class IntranetController extends AbstractController
         return [...IntranetData::trainers(), ...$state['trainers']];
     }
 
-    private function providerCompanyNames(): array
+    private function providers(): array
     {
         if ($this->isSqlIntranetSchemaAvailable()) {
             try {
-                $rows = $this->db()->fetchFirstColumn('SELECT LOWER(company_name) FROM providers');
-                return array_values(array_filter(array_map('strval', $rows)));
+                $providers = $this->db()->fetchAllAssociative(
+                    'SELECT id, company_name, siret, address, phone, activity_declaration_number, created_at
+                     FROM providers
+                     ORDER BY id DESC'
+                );
+                $docs = $this->db()->fetchAllAssociative(
+                    'SELECT provider_id, document_type, label, url, uploaded_at
+                     FROM provider_documents'
+                );
+                $docsByProvider = [];
+                foreach ($docs as $doc) {
+                    $providerId = (int) ($doc['provider_id'] ?? 0);
+                    if ($providerId <= 0) {
+                        continue;
+                    }
+                    $docsByProvider[$providerId][(string) ($doc['document_type'] ?? 'doc')] = [
+                        'label' => (string) ($doc['label'] ?? ''),
+                        'url' => (string) ($doc['url'] ?? ''),
+                        'uploadedAt' => substr((string) ($doc['uploaded_at'] ?? date('Y-m-d H:i:s')), 0, 16),
+                    ];
+                }
+
+                return array_map(
+                    static function (array $provider) use ($docsByProvider): array {
+                        $providerId = (int) ($provider['id'] ?? 0);
+
+                        return [
+                            'id' => 'provider-'.$providerId,
+                            'companyName' => (string) ($provider['company_name'] ?? ''),
+                            'siret' => (string) ($provider['siret'] ?? ''),
+                            'address' => (string) ($provider['address'] ?? ''),
+                            'phone' => (string) ($provider['phone'] ?? ''),
+                            'activityDeclarationNumber' => (string) ($provider['activity_declaration_number'] ?? ''),
+                            'documents' => $docsByProvider[$providerId] ?? [],
+                            'createdAt' => substr((string) ($provider['created_at'] ?? date('Y-m-d H:i:s')), 0, 16),
+                        ];
+                    },
+                    $providers
+                );
             } catch (\Throwable) {
                 // Keep JSON fallback for environments not migrated yet.
             }
         }
 
+        return array_values((array) ($this->loadAdminState()['providers'] ?? []));
+    }
+
+    private function providerCompanyNames(): array
+    {
         return array_map(
             static fn(array $provider): string => strtolower(trim((string) ($provider['companyName'] ?? ''))),
-            array_values((array) ($this->loadAdminState()['providers'] ?? []))
+            $this->providers()
         );
     }
 
@@ -3954,6 +4474,7 @@ final class IntranetController extends AbstractController
 
         try {
             $this->db()->executeQuery('SELECT 1 FROM formations LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM formation_sessions LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM trainers LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM students LIMIT 1');
             $this->db()->executeQuery('SELECT 1 FROM classes LIMIT 1');
@@ -3983,6 +4504,32 @@ final class IntranetController extends AbstractController
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function isPlacementTestDocumentType(string $documentType, string $title): bool
+    {
+        $haystack = strtolower(trim($documentType.' '.$title));
+
+        return str_contains($haystack, 'positionnement');
+    }
+
+    private function isConvocationDocumentType(string $documentType, string $title): bool
+    {
+        $haystack = strtolower(trim($documentType.' '.$title));
+
+        return str_contains($haystack, 'convocation');
+    }
+
+    private function isStudentSubmittableDocumentType(string $documentType, string $title): bool
+    {
+        return $this->isPlacementTestDocumentType($documentType, $title)
+            || $this->isConvocationDocumentType($documentType, $title);
+    }
+
+    private function shouldPreserveDocumentUrlOnSubmit(string $documentType, string $title): bool
+    {
+        return $this->isPlacementTestDocumentType($documentType, $title)
+            || $this->isConvocationDocumentType($documentType, $title);
     }
 
     private function adminSessionDocuments(?string $formationId = null): array
@@ -4843,6 +5390,39 @@ final class IntranetController extends AbstractController
             'completedCount' => (int) ($row['completed_count'] ?? 0),
             'createdAt' => (string) ($row['created_at'] ?? ''),
         ], $rows);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function formationIdsForTrainer(int $trainerId): array
+    {
+        $ids = [];
+        foreach ($this->formations() as $formation) {
+            if ((int) ($formation['trainerId'] ?? 0) === $trainerId) {
+                $ids[] = (string) $formation['id'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function adminValidationTestsForTrainer(int $trainerId): array
+    {
+        $formationIds = $this->formationIdsForTrainer($trainerId);
+        if ($formationIds === []) {
+            return [];
+        }
+
+        $all = $this->adminValidationTestsList(null);
+
+        return array_values(array_filter(
+            $all,
+            static fn(array $test): bool => in_array((string) ($test['formationId'] ?? ''), $formationIds, true)
+        ));
     }
 
     /**

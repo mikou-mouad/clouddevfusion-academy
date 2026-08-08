@@ -38,6 +38,8 @@ logs/
 # Exceptions: scripts de déploiement principaux
 !deploy-frontend.sh
 !deploy-backend.sh
+!deploy-placement.sh
+deploy.env
 !backend/bin/console
 # Ignorer tous les autres scripts
 *.sh

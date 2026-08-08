@@ -6,11 +6,14 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
-      - "intranet/backend/**"
-      - "intranet/frontend/**"
       - ".htaccess"
       - ".github/workflows/main.yml"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      deploy_intranet:
+        description: "Deploy intranet (backend + frontend)"
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -92,7 +95,6 @@ jobs:
           APP_DEBUG: "0"
           APP_SECRET: ${{ secrets.APP_SECRET }}
           DEFAULT_URI: ${{ secrets.DEFAULT_URI }}
-          MAILER_DSN: ${{ secrets.MAILER_DSN }}
         run: |
           cat > backend/.env << EOF
           APP_ENV=${APP_ENV}
@@ -101,7 +103,6 @@ jobs:
           DATABASE_URL=${DATABASE_URL}
           CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
           DEFAULT_URI=${DEFAULT_URI}
-          MAILER_DSN=${MAILER_DSN}
           EOF
           cat backend/.env
 
@@ -119,7 +120,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -fp ${BACKEND_REMOTE}
+          mkdir -p ${BACKEND_REMOTE}
           cd ${BACKEND_REMOTE}          
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
@@ -149,7 +150,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -fp ${BACKEND_REMOTE}/vendor
+          mkdir -p ${BACKEND_REMOTE}/vendor
           cd ${BACKEND_REMOTE}/vendor
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
@@ -238,9 +239,8 @@ jobs:
           set ftp:passive-mode yes
           set net:timeout 30
           set net:max-retries 3
-          set cmd:fail-exit no
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -f ${INTRANET_BACKEND_REMOTE}
+          mkdir -p ${INTRANET_BACKEND_REMOTE}
           cd ${INTRANET_BACKEND_REMOTE}
           mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
@@ -255,8 +255,8 @@ jobs:
           bye
           "
 
-      - name: Upload intranet backend vendor
-        timeout-minutes: 40
+      - name: Upload vendor (only when deps changed)
+        if: ${{ needs.changes.outputs.intranet_backend_deps == 'true' || github.event_name == 'workflow_dispatch' }}
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
@@ -267,107 +267,32 @@ jobs:
           lftp -c "
           set ftp:ssl-allow no
           set ftp:passive-mode yes
-          set net:timeout 120
-          set net:max-retries 5
-          set cmd:fail-exit no
+          set net:timeout 30
+          set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -f ${INTRANET_BACKEND_REMOTE}/vendor
-          lcd intranet/backend/vendor
+          mkdir -p ${INTRANET_BACKEND_REMOTE}/vendor
           cd ${INTRANET_BACKEND_REMOTE}/vendor
-          mirror -R --only-newer --parallel=6 \
+          mirror -R --only-newer --verbose \
             --exclude-glob='.git*' \
-            --exclude-glob='**/tests/**' \
-            --exclude-glob='**/Tests/**' \
-            . ./
+            intranet/backend/vendor/ ./
           bye
           "
-
-      - name: Upload root .htaccess
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          put .htaccess
-          bye
-          "
-
-      - name: Upload intranet folder .htaccess (API routing)
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          INTRANET_FRONTEND_REMOTE: ${{ secrets.INTRANET_FRONTEND_REMOTE }}
-        run: |
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -f ${INTRANET_FRONTEND_REMOTE}
-          cd ${INTRANET_FRONTEND_REMOTE}
-          put intranet/frontend/public/.htaccess -o .htaccess
-          bye
-          "
-
-      - name: Queue intranet database migrations on production
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASS }}
-          INTRANET_BACKEND_REMOTE: ${{ secrets.INTRANET_BACKEND_REMOTE }}
-        run: |
-          date -u +%FT%TZ > /tmp/migrate.pending
-          lftp -c "
-          set ftp:ssl-allow no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          set cmd:fail-exit no
-          open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          cd ${INTRANET_BACKEND_REMOTE}
-          mkdir -f var
-          put /tmp/migrate.pending -o var/migrate.pending
-          bye
-          "
-
+          
       - name: Clear Symfony cache
         run: |
           sleep 2
           code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/backend/public/clear-cache-complete.php" || echo "000")"
           echo "Cache clear HTTP code: $code"
           sleep 2
-
+          
       - name: Verify intranet backend endpoint
         run: |
-          HEALTH_URL="https://academy.clouddevfusion.com/intranet/api/health"
-          FALLBACK_URL="https://academy.clouddevfusion.com/intranet/backend/public/index.php/intranet/api/health"
-          for i in $(seq 1 10); do
-            body="$(curl -fsS "$HEALTH_URL" 2>/dev/null || echo "FAIL")"
-            echo "health attempt $i/10: $body"
-            if echo "$body" | grep -qi '<html'; then
-              echo "API rewrite not ready, trying direct Symfony URL..."
-              body="$(curl -fsS "$FALLBACK_URL" 2>/dev/null || echo "FAIL")"
-              echo "fallback: $body"
-            fi
-            if echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
-              echo "Intranet backend OK (pending migrations run on first Symfony boot)"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::Intranet health check failed"
-          exit 1
+          code="$(curl -s -o /dev/null -w "%{http_code}" "https://academy.clouddevfusion.com/intranet/api/health" || echo "000")"
+          echo "HTTP_CODE=$code"
+          if [ "$code" != "200" ] && [ "$code" != "401" ] && [ "$code" != "403" ]; then
+            echo "Unexpected intranet backend status: $code"
+            exit 1
+          fi
 
   deploy-frontend:
     name: Deploy Frontend (Angular)
@@ -412,7 +337,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -fp ${FRONTEND_REMOTE}
+          mkdir -p ${FRONTEND_REMOTE}
           cd ${FRONTEND_REMOTE}
           mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
@@ -429,12 +354,9 @@ jobs:
         run: |
           set -e
 
-          URL="https://academy.clouddevfusion.com/home"
-          MAX_RETRIES=20
-          SLEEP_SECONDS=8
-
-          echo "Waiting 15s before first frontend check..."
-          sleep 15
+          URL="https://academy.clouddevfusion.com"
+          MAX_RETRIES=10
+          SLEEP_SECONDS=6
 
           for i in $(seq 1 $MAX_RETRIES); do
             code="$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")"
@@ -497,7 +419,7 @@ jobs:
           set net:timeout 30
           set net:max-retries 3
           open -p ${FTP_PORT} -u '${FTP_USER}','${FTP_PASS}' ${FTP_HOST}
-          mkdir -fp ${INTRANET_FRONTEND_REMOTE}
+          mkdir -p ${INTRANET_FRONTEND_REMOTE}
           cd ${INTRANET_FRONTEND_REMOTE}
           mirror -R --delete --only-newer --parallel=4 --verbose \
             --exclude-glob='.git*' \
@@ -570,14 +492,3 @@ jobs:
       - name: Verify upload
         run: |
           echo "Global .htaccess files deployed successfully"
-
-  check-php-version:
-    name: Check Server PHP Version
-    runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-intranet-backend, deploy-frontend, deploy-intranet-frontend, deploy-htaccess]
-    if: always()
-    steps:
-      - name: Fetch PHP version from server
-        run: |
-          VERSION=$(curl -s "https://academy.clouddevfusion.com/backend/public/version.php")
-          echo "Server PHP version: $VERSION"

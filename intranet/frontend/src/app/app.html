@@ -75,7 +75,7 @@
           </div>
           <div class="global-actions">
             <button class="ghost-btn">Notifications</button>
-            <button class="logout-btn" (click)="logout()">Deconnexion</button>
+            <button class="logout-btn" (click)="logout()">Déconnexion</button>
           </div>
         </div>
       </header>
@@ -101,7 +101,7 @@
               <p class="kpi-value">{{ formations().length }}</p>
             </article>
             <article class="kpi">
-              <p class="kpi-label">Sessions planifiees</p>
+              <p class="kpi-label">Sessions planifiées</p>
               <p class="kpi-value">{{ totalSessions() }}</p>
             </article>
             <article class="kpi">
@@ -182,7 +182,7 @@
           } @else {
             <section class="card content-card">
               <h3>Espace administration</h3>
-              <p class="sub">Gerez formateurs, classes, planning, affectations et emargement centralise.</p>
+              <p class="sub">Gérez formateurs, classes, planning, affectations et émargement centralisé.</p>
               <button class="support-btn" type="button" (click)="setSection('formations')">Ouvrir les sessions</button>
             </section>
             <section class="card content-card admin-workspace">
@@ -370,8 +370,8 @@
                   @if (attendanceError()) { <p class="error student-course-flash">{{ attendanceError() }}</p> }
 
                   <header class="student-course-section-head">
-                    <h5>Planning & emargement</h5>
-                    <p class="sub">Signez votre presence ou votre absence pendant la fenetre d emargement.</p>
+                    <h5>Planning & émargement</h5>
+                    <p class="sub">Signez votre présence ou votre absence pendant la fenêtre d'émargement.</p>
                   </header>
 
                   <div class="planning-table-wrap student-planning-wrap">
@@ -429,7 +429,7 @@
                   </div>
 
                   <div class="student-course-resources">
-                    <h5 class="student-course-resources-title">Ressources pedagogiques</h5>
+                    <h5 class="student-course-resources-title">Ressources pédagogiques</h5>
                     <div class="student-course-resources-grid">
                       <article class="student-course-resource-card supports">
                         <header>
@@ -495,7 +495,7 @@
                 <section class="sessions-block student-session-detail-card student-docs-panel">
                   <header class="student-docs-panel-head">
                     <h5>Documents</h5>
-                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document.</p>
+                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document. Pour le test de positionnement et la convocation : ouvrez le document, puis confirmez une fois termine.</p>
                   </header>
                   @if (studentDocumentNotice()) { <p class="success">{{ studentDocumentNotice() }}</p> }
                   @if (studentDocumentError()) { <p class="error">{{ studentDocumentError() }}</p> }
@@ -504,11 +504,11 @@
                       <thead><tr><th>Document</th><th>Statut</th><th>Action</th></tr></thead>
                       <tbody>
                         @for (row of filteredStudentRequiredDocumentRowsForSelectedFormation(); track row.key) {
-                          <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row)">
+                          <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row) || studentDocumentNeedsSubmission(row)">
                             <td class="student-doc-name">{{ row.label }}</td>
                             <td>
-                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable)">
-                                {{ studentDocumentStatusLabel(row.status, row.available, row.signable) }}
+                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable, row.submittable)">
+                                {{ studentDocumentStatusLabel(row.status, row.available, row.signable, row.submittable, row.key) }}
                               </span>
                             </td>
                             <td class="student-doc-actions">
@@ -534,6 +534,30 @@
                                     (click)="submitStudentSignedDocument(row.sourceDocumentId!)"
                                   >
                                     {{ uploadingStudentDocumentId() === row.sourceDocumentId ? 'Envoi...' : 'Renvoyer signe' }}
+                                  </button>
+                                </div>
+                              } @else if (studentDocumentNeedsSubmission(row) || studentDocumentCanResubmit(row)) {
+                                <div class="student-doc-sign-flow">
+                                  <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">{{ studentDocumentSubmissionOpenLabel(row.key) }}</a>
+                                  <label class="student-doc-sign-upload">
+                                    <span class="student-doc-sign-upload-label">{{ studentDocumentSubmissionUploadLabel(row.key) }}</span>
+                                    <input
+                                      type="file"
+                                      class="student-doc-sign-file"
+                                      accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp"
+                                      (change)="onStudentSignedDocumentSelected(row.sourceDocumentId!, $event)"
+                                    />
+                                    <span class="student-doc-sign-file-name">
+                                      {{ studentSignedUploadFiles()[row.sourceDocumentId!]?.name || 'Ajouter un fichier (optionnel)' }}
+                                    </span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    class="support-btn student-doc-sign-submit"
+                                    [disabled]="uploadingStudentDocumentId() === row.sourceDocumentId"
+                                    (click)="submitStudentDocument(row.sourceDocumentId!)"
+                                  >
+                                    {{ studentDocumentSubmissionButtonLabel(row.key, row.status, uploadingStudentDocumentId() === row.sourceDocumentId) }}
                                   </button>
                                 </div>
                               } @else if (row.key === 'test_validation' && row.available) {
@@ -567,7 +591,11 @@
                                 </a>
                               } @else if (row.url) {
                                 <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">
-                                  {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
+                                  @if (row.key === 'attestation_reussite') {
+                                    Telecharger
+                                  } @else {
+                                    {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
+                                  }
                                 </a>
                               } @else {
                                 <span class="sub">—</span>
@@ -710,14 +738,14 @@
           <section class="card content-card">
             <h3>Espace archives</h3>
             @if (isAdmin()) {
-              <p class="sub">Sessions archivees. Elles ne sont plus visibles dans les espaces etudiant et formateur.</p>
+              <p class="sub">Sessions archivées. Elles ne sont plus visibles dans les espaces étudiant et formateur.</p>
               @if (!archivedAdminFormations().length) {
                 <p class="sub">Aucune session archivee.</p>
               } @else {
                 <div class="sessions-sections-grid">
                   <section class="sessions-block sessions-block-apprentices">
                     <div class="sessions-block-head">
-                      <h5>Sessions archivees</h5>
+                      <h5>Sessions archivées</h5>
                       <p class="sub">Cliquez sur une session pour voir ses informations.</p>
                     </div>
                     <div class="formation-cards-grid">
@@ -734,6 +762,16 @@
                             </div>
                           </div>
                           <p class="sub formation-session-meta">{{ formation.startDate }} au {{ formation.endDate }} · {{ formation.mode }}</p>
+                          <div class="formation-session-actions">
+                            <button
+                              type="button"
+                              class="ghost-btn dark-ghost-btn"
+                              [disabled]="archivingFormationId() === formation.id"
+                              (click)="unarchiveFormation(formation.id, $event)"
+                            >
+                              {{ archivingFormationId() === formation.id ? 'Desarchivage...' : 'Desarchiver' }}
+                            </button>
+                          </div>
                         </article>
                       }
                     </div>
@@ -744,7 +782,7 @@
                       <p class="sub">Aucune session archivee selectionnee.</p>
                     } @else {
                       <div class="sessions-block-head">
-                        <h5>Details de la session archivee</h5>
+                        <h5>Détails de la session archivée</h5>
                       </div>
                       <p class="sub">
                         <strong>{{ selectedArchivedFormation()!.title }}</strong> ·
@@ -919,6 +957,13 @@
                 </article>
               </div>
 
+              <div class="admin-formation-tabs admin-formation-tabs--segmented" role="tablist" aria-label="Detail session formateur">
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="trainerSessionDetailTab() === 'overview'" [class.active]="trainerSessionDetailTab() === 'overview'" (click)="setTrainerSessionDetailTab('overview')">Vue d'ensemble</button>
+                <button type="button" class="admin-formation-tab" role="tab" [attr.aria-selected]="trainerSessionDetailTab() === 'tests'" [class.active]="trainerSessionDetailTab() === 'tests'" (click)="setTrainerSessionDetailTab('tests')">Tests</button>
+              </div>
+
+              @if (trainerSessionDetailTab() === 'overview') {
+              <div class="admin-formation-tab-panels">
               <div class="sessions-sections-grid">
                 <section class="sessions-block sessions-block-apprentices">
                   <div class="sessions-block-head">
@@ -1007,6 +1052,63 @@
                   </section>
                 }
               </div>
+
+              @if (selectedTrainerSessionEmargementMatrix(); as tGrid) {
+                <div class="admin-doc-matrix-wrap admin-emargement-matrix-wrap">
+                  <div class="sessions-block-head admin-doc-matrix-intro">
+                    <h5>Emargement en temps reel</h5>
+                    <p class="sub">Statut par séance : Present / Absent / En attente. Donnees limitees aux sessions de ce formateur.</p>
+                  </div>
+                  @if (!tGrid.sessions.length) {
+                    <p class="sub">Aucune seance d'emargement pour cette formation.</p>
+                  } @else if (!tGrid.rows.length) {
+                    <p class="sub">Aucun apprenti affecte a cette formation.</p>
+                  } @else {
+                    <div class="admin-doc-matrix-scroll admin-doc-matrix-scroll--emargement">
+                      <table class="admin-doc-matrix-table admin-emargement-matrix-table">
+                        <thead>
+                          <tr>
+                            <th class="admin-doc-matrix-sticky-col admin-doc-matrix-corner" scope="col">Apprenti</th>
+                            @for (session of tGrid.sessions; track session.id) {
+                              <th
+                                class="admin-doc-matrix-th-doc admin-emargement-matrix-th"
+                                scope="col"
+                                [attr.title]="session.date + ' · ' + session.slot + ' — ' + session.topic"
+                              >
+                                <span class="admin-doc-matrix-th-title">{{ session.date }}</span>
+                                <span class="admin-doc-matrix-th-tag admin-emargement-matrix-th-slot">{{ session.slot }}</span>
+                              </th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (erow of tGrid.rows; track erow.studentId) {
+                            <tr class="admin-doc-matrix-body-row">
+                              <th class="admin-doc-matrix-sticky-col admin-doc-matrix-row-head" scope="row">
+                                <span class="admin-doc-matrix-person-name">{{ erow.studentName }}</span>
+                                <span class="admin-doc-matrix-detail">{{ erow.studentEmail }}</span>
+                                <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                              </th>
+                              @for (cell of erow.cells; track cell.sessionId) {
+                                <td class="admin-doc-matrix-cell admin-emargement-matrix-cell">
+                                  <span
+                                    class="attendance-status-chip"
+                                    [class.present]="cell.status === 'present' || cell.status === 'late'"
+                                    [class.absent]="cell.status === 'absent'"
+                                    [class.pending]="cell.status === 'pending'"
+                                  >
+                                    {{ trainerEmargementStatusLabel(cell.status) }}
+                                  </span>
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </div>
+              }
 
               <section class="sessions-block sessions-block-apprentices">
                 <div class="sessions-block-head">
@@ -1102,6 +1204,161 @@
                   </div>
                 </div>
               </section>
+              </div>
+              }
+
+              @if (trainerSessionDetailTab() === 'tests') {
+                <section class="sessions-block admin-validation-panel">
+                  <header class="admin-validation-panel-head">
+                    <div>
+                      <h5>Tests de validation</h5>
+                      <p class="sub">Consultez les scores et statuts des apprentis pour les tests de cette formation.</p>
+                    </div>
+                  </header>
+
+                  @if (!adminValidationTestDetail()) {
+                    <div class="admin-validation-tests-section">
+                      @if (!selectedTrainerFormationValidationTests().length) {
+                        <p class="admin-validation-empty">Aucun test cree pour cette formation.</p>
+                      } @else {
+                        <div class="admin-validation-tests-table-wrap planning-table-wrap">
+                          <table class="planning-table doc-table admin-table admin-validation-tests-table">
+                            <thead>
+                              <tr>
+                                <th>Titre</th>
+                                <th>Seuil</th>
+                                <th>Questions</th>
+                                <th>Apprentis</th>
+                                <th>Termines</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (test of selectedTrainerFormationValidationTests(); track test.id) {
+                                <tr>
+                                  <td class="admin-validation-test-title">{{ test.title }}</td>
+                                  <td>{{ test.passThreshold * 100 }} %</td>
+                                  <td>{{ test.questionCount }}</td>
+                                  <td>{{ test.assignedCount }}</td>
+                                  <td>{{ test.completedCount }}</td>
+                                  <td>
+                                    <button type="button" class="ghost-btn dark-ghost-btn admin-validation-history-btn" (click)="loadAdminValidationTestDetail(test.id)">Voir les resultats</button>
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="admin-validation-detail">
+                      <button type="button" class="admin-validation-back-btn" (click)="closeAdminValidationTestDetail()">← Retour a la liste</button>
+                      <header class="admin-validation-detail-head">
+                        <h6>{{ adminValidationTestDetail()!.test.title }}</h6>
+                        <p class="sub">Seuil {{ adminValidationTestDetail()!.test.passThreshold * 100 }} % · {{ adminValidationTestDetail()!.test.questionCount }} question(s)</p>
+                      </header>
+                      <input type="search" class="admin-doc-matrix-search admin-validation-history-search" placeholder="Rechercher un apprenti (nom, email)..." [ngModel]="adminValidationHistoryQuery()" (ngModelChange)="adminValidationHistoryQuery.set($event)" />
+                      <div class="admin-validation-history-table-wrap planning-table-wrap">
+                        <table class="planning-table doc-table admin-table admin-validation-history-table">
+                          <thead>
+                            <tr>
+                              <th>Apprenti</th>
+                              <th>Score</th>
+                              <th>Statut</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (app of filteredAdminValidationTestApprentices(); track app.studentId) {
+                              <tr class="admin-validation-history-row">
+                                <td>
+                                  <span class="admin-validation-apprentice-name">{{ app.studentName }}</span>
+                                  <span class="sub admin-validation-apprentice-email">{{ app.email }}</span>
+                                </td>
+                                <td><strong>{{ app.score }}</strong> / {{ adminValidationTestDetail()!.test.maxScore }}</td>
+                                <td>
+                                  <span class="admin-validation-status-pill" [attr.data-status]="app.status">{{ validationStatusLabel(app.status) }}</span>
+                                </td>
+                                <td>
+                                  @if (app.attempts.length) {
+                                    <button
+                                      type="button"
+                                      class="ghost-btn dark-ghost-btn admin-validation-view-answers-btn"
+                                      (click)="selectAdminValidationHistoryStudent(app.studentId)"
+                                    >
+                                      Voir les reponses
+                                    </button>
+                                  } @else {
+                                    <span class="sub">Non soumis</span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+
+                      @if (selectedAdminValidationHistoryStudent(); as student) {
+                        <div class="trainer-modal-overlay admin-validation-answers-modal-overlay" (click)="closeAdminValidationHistoryModal()">
+                          <section class="trainer-modal admin-validation-answers-modal card content-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="trainerValidationAnswersModalTitle">
+                            <header class="trainer-modal-head admin-validation-answers-modal-head">
+                              <div>
+                                <p class="trainer-modal-kicker">Reponses du test</p>
+                                <h3 id="trainerValidationAnswersModalTitle">{{ student.studentName }}</h3>
+                                <p class="sub">{{ student.email }}</p>
+                              </div>
+                              <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminValidationHistoryModal()" aria-label="Fermer">×</button>
+                            </header>
+
+                            @if (!student.attempts.length) {
+                              <p class="admin-validation-empty">Cet apprenti n'a pas encore soumis le test.</p>
+                            } @else if (selectedAdminValidationHistoryAttempt(); as attempt) {
+                              <div class="admin-validation-attempt-summary">
+                                <span class="admin-validation-status-pill" [attr.data-status]="attempt.status">{{ validationStatusLabel(attempt.status) }}</span>
+                                <span><strong>{{ attempt.score }}</strong> / {{ attempt.maxScore }}</span>
+                                @if (attempt.submittedAt) {
+                                  <span class="sub">Soumis le {{ attempt.submittedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                                }
+                              </div>
+
+                              <div class="admin-validation-answer-review">
+                                @for (answer of attempt.answers; track answer.questionId; let qi = $index) {
+                                  <article class="admin-validation-answer-card" [class.is-correct]="answer.isCorrect" [class.is-wrong]="!answer.isCorrect && answer.selectedLabels.length">
+                                    <div class="admin-validation-answer-card-head">
+                                      <span class="admin-validation-question-badge">Q{{ qi + 1 }}</span>
+                                      <span class="admin-validation-answer-verdict" [attr.data-correct]="answer.isCorrect">
+                                        {{ answer.isCorrect ? 'Correct' : (answer.selectedLabels.length ? 'Incorrect' : 'Non repondu') }}
+                                      </span>
+                                    </div>
+                                    <p class="admin-validation-answer-prompt">{{ answer.prompt }}</p>
+                                    <div class="admin-validation-answer-lines">
+                                      <p>
+                                        <span class="admin-validation-answer-label">Reponse donnee :</span>
+                                        @if (answer.selectedLabels.length) {
+                                          <strong>{{ answer.selectedLabels.join(', ') }}</strong>
+                                        } @else {
+                                          <em>Aucune reponse</em>
+                                        }
+                                      </p>
+                                      @if (!answer.isCorrect && answer.correctLabels.length) {
+                                        <p class="admin-validation-answer-expected">
+                                          <span class="admin-validation-answer-label">Bonne reponse :</span>
+                                          <strong>{{ answer.correctLabels.join(', ') }}</strong>
+                                        </p>
+                                      }
+                                    </div>
+                                  </article>
+                                }
+                              </div>
+                            }
+                          </section>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+              }
             }
           </section>
         }
@@ -1237,15 +1494,15 @@
         @if (activeSection() === 'formations' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Sessions</h3>
-            <p class="sub">Cree une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
+            <p class="sub">Créez une session avec son formateur, ses apprentis, son planning et son lien Teams.</p>
             <div class="admin-form-actions">
               <button type="button" class="support-btn create-session-btn" (click)="toggleAdminFormationCreateForm()">
-                {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Creer une session' }}
+                {{ showAdminFormationCreateForm() ? 'Fermer le formulaire' : 'Créer une session' }}
               </button>
             </div>
             @if (showAdminFormationCreateForm()) {
               <form class="admin-create-form" (submit)="createFormation($event)">
-                <h4>Creer une session</h4>
+                <h4>Créer une session</h4>
                 <div class="admin-form-grid">
                   <label>
                     <span class="label-field-line">Formation catalogue <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -1266,10 +1523,15 @@
                     <input type="text" [ngModel]="newFormationMode()" (ngModelChange)="newFormationMode.set($event)" name="newFormationMode" />
                   </label>
                   <label>
-                    <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                    <select [ngModel]="newFormationTrainerId()" (ngModelChange)="newFormationTrainerId.set(+$event)" name="newFormationTrainerId" required>
+                    Formateur
+                    <select
+                      [ngModel]="newFormationTrainerId()"
+                      (ngModelChange)="setNewFormationTrainerId($event)"
+                      name="newFormationTrainerId"
+                    >
+                      <option [ngValue]="null">Aucun formateur</option>
                       @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                        <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
+                        <option [ngValue]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                       }
                     </select>
                   </label>
@@ -1465,14 +1727,14 @@
             }
             <div class="eval-grid admin-kpis">
               <article class="kpi"><p class="kpi-label">Formateurs</p><p class="kpi-value">{{ adminTrainers().length }}</p></article>
-              <article class="kpi"><p class="kpi-label">Etudiants</p><p class="kpi-value">{{ adminStudents().length }}</p></article>
+              <article class="kpi"><p class="kpi-label">Étudiants</p><p class="kpi-value">{{ adminStudents().length }}</p></article>
               <article class="kpi"><p class="kpi-label">Classes</p><p class="kpi-value">{{ adminClasses().length }}</p></article>
             </div>
 
             <div class="sessions-block sessions-block-apprentices">
               <div class="sessions-block-head">
                 <h5>Liste des sessions</h5>
-                <p class="sub">Cliquez sur une session pour ouvrir sa page dediee, ou archivez-la.</p>
+                <p class="sub">Cliquez sur une session pour ouvrir sa page dédiée, ou archivez-la.</p>
               </div>
               <div class="apprentice-selector-row">
                 <label>
@@ -1489,7 +1751,7 @@
                   </select>
                 </label>
               </div>
-              <p class="sub">{{ filteredAdminSessionCards().length }} session(s) trouvee(s).</p>
+              <p class="sub">{{ filteredAdminSessionCards().length }} session(s) trouvée(s).</p>
               @if (archiveFormationNotice()) {
                 <p class="success">{{ archiveFormationNotice() }}</p>
               }
@@ -1665,10 +1927,20 @@
                       <input type="text" [ngModel]="editFormationMode()" (ngModelChange)="editFormationMode.set($event)" name="editFormationMode" />
                     </label>
                     <label>
-                      <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
-                      <select [ngModel]="editFormationTrainerId()" (ngModelChange)="editFormationTrainerId.set(+$event)" name="editFormationTrainerId" required>
+                      @if (editFormationRequiresTrainer()) {
+                        <span class="label-field-line">Formateur <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                      } @else {
+                        Formateur
+                      }
+                      <select
+                        [ngModel]="editFormationTrainerId()"
+                        (ngModelChange)="setEditFormationTrainerId($event)"
+                        name="editFormationTrainerId"
+                        [required]="editFormationRequiresTrainer()"
+                      >
+                        <option [ngValue]="null">Aucun formateur</option>
                         @for (trainerItem of adminTrainers(); track trainerItem.id) {
-                          <option [value]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
+                          <option [ngValue]="trainerItem.id">{{ trainerItem.firstName }} {{ trainerItem.lastName }}</option>
                         }
                       </select>
                     </label>
@@ -1894,8 +2166,8 @@
                             <label class="admin-unified-doc-field admin-unified-doc-field--file">
                               <span>Fichier</span>
                               <div class="admin-unified-doc-file-wrap">
-                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" />
-                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, image...' }}</span>
+                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.pps,.ppsx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.gif,.zip,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, PowerPoint (.ppt, .pptx), Excel, image…' }}</span>
                               </div>
                             </label>
                           </div>
@@ -2404,19 +2676,19 @@
         @if (activeSection() === 'apprentis' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Apprentis</h3>
-            <p class="sub">Ajoute plusieurs apprentis d'un coup (nom, prenom, date de naissance, email).</p>
+            <p class="sub">Ajoute plusieurs apprentis d'un coup (nom, prénom, date de naissance, email).</p>
             <div class="eval-grid admin-kpis">
               <article class="kpi"><p class="kpi-label">Total apprentis</p><p class="kpi-value">{{ apprenticeKpis().total }}</p></article>
-              <article class="kpi"><p class="kpi-label">Affectes</p><p class="kpi-value">{{ apprenticeKpis().assigned }}</p></article>
-              <article class="kpi"><p class="kpi-label">Non affectes</p><p class="kpi-value">{{ apprenticeKpis().unassigned }}</p></article>
+              <article class="kpi"><p class="kpi-label">Affectés</p><p class="kpi-value">{{ apprenticeKpis().assigned }}</p></article>
+              <article class="kpi"><p class="kpi-label">Non affectés</p><p class="kpi-value">{{ apprenticeKpis().unassigned }}</p></article>
             </div>
             <form class="admin-create-form" (submit)="createApprentices($event)">
               <div class="admin-planning-head">
-                <h4>Creer des apprentis</h4>
+                <h4>Créer des apprentis</h4>
                 <button type="button" class="ghost-btn dark-ghost-btn" (click)="addApprenticeRow()">Ajouter un apprenti</button>
               </div>
               <div class="apprentice-row apprentice-row--head" aria-hidden="true">
-                <span>Prenom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                <span>Prénom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                 <span>Nom <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                 <span>Date naissance</span>
                 <span>Email <abbr class="required-mark" title="Obligatoire">*</abbr></span>
@@ -2424,7 +2696,7 @@
               </div>
               @for (row of apprenticeRows(); track $index) {
                 <div class="apprentice-row">
-                  <input type="text" [ngModel]="row.firstName" (ngModelChange)="updateApprenticeRow($index, 'firstName', $event)" [name]="'apprenticeFirstName' + $index" placeholder="Prenom" required />
+                  <input type="text" [ngModel]="row.firstName" (ngModelChange)="updateApprenticeRow($index, 'firstName', $event)" [name]="'apprenticeFirstName' + $index" placeholder="Prénom" required />
                   <input type="text" [ngModel]="row.lastName" (ngModelChange)="updateApprenticeRow($index, 'lastName', $event)" [name]="'apprenticeLastName' + $index" placeholder="Nom" required />
                   <input type="date" [ngModel]="row.birthDate" (ngModelChange)="updateApprenticeRow($index, 'birthDate', $event)" [name]="'apprenticeBirthDate' + $index" />
                   <input type="email" [ngModel]="row.email" (ngModelChange)="updateApprenticeRow($index, 'email', $event)" [name]="'apprenticeEmail' + $index" placeholder="email@domaine.com" required />
@@ -2439,7 +2711,7 @@
               }
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingApprentices()">
-                  {{ creatingApprentices() ? 'Creation en cours...' : 'Creer les apprentis' }}
+                  {{ creatingApprentices() ? 'Creation en cours...' : 'Créer les apprentis' }}
                 </button>
               </div>
             </form>
@@ -2947,7 +3219,7 @@
         @if (activeSection() === 'prestataires' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Prestataires</h3>
-            <p class="sub">Creation de prestataires avec champs et documents obligatoires.</p>
+            <p class="sub">Création de prestataires avec champs et documents obligatoires.</p>
 
             <form class="admin-create-form" (submit)="createProvider($event)">
               <div class="admin-form-grid">
@@ -2964,11 +3236,11 @@
                   <input type="text" [ngModel]="providerAddress()" (ngModelChange)="providerAddress.set($event)" name="providerAddress" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Numero de telephone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Numéro de téléphone <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="providerPhone()" (ngModelChange)="providerPhone.set($event)" name="providerPhone" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Numero declaration d'activite <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Numéro déclaration d'activité <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="text" [ngModel]="providerActivityDeclarationNumber()" (ngModelChange)="providerActivityDeclarationNumber.set($event)" name="providerActivityDeclarationNumber" required />
                 </label>
                 <label>
@@ -2984,7 +3256,7 @@
                   <input type="file" (change)="onProviderFileSelected($event, 'vigilanceCertificate')" name="providerVigilanceCertificateFile" required />
                 </label>
                 <label>
-                  <span class="label-field-line">Attestation responsabilite civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
+                  <span class="label-field-line">Attestation responsabilité civile <abbr class="required-mark" title="Obligatoire">*</abbr></span>
                   <input type="file" (change)="onProviderFileSelected($event, 'liabilityInsurance')" name="providerLiabilityInsuranceFile" required />
                 </label>
               </div>
@@ -2998,7 +3270,7 @@
 
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingProvider()">
-                  {{ creatingProvider() ? 'Creation en cours...' : 'Creer le prestataire' }}
+                  {{ creatingProvider() ? 'Creation en cours...' : 'Créer le prestataire' }}
                 </button>
               </div>
             </form>
@@ -3039,10 +3311,10 @@
                       <th>SIRET</th>
                     }
                     @if (isProviderColumnVisible('phone')) {
-                      <th>Telephone</th>
+                      <th>Téléphone</th>
                     }
                     @if (isProviderColumnVisible('createdAt')) {
-                      <th>Date creation</th>
+                      <th>Date création</th>
                     }
                     @if (isProviderColumnVisible('address')) {
                       <th>Adresse</th>
@@ -3115,7 +3387,7 @@
         @if (activeSection() === 'ressources' && isAdmin()) {
           <section class="card content-card admin-workspace">
             <h3>Ressources globales</h3>
-            <p class="sub">Envoyez un document a tous les apprentis et tous les formateurs.</p>
+            <p class="sub">Envoyez un document à tous les apprentis et tous les formateurs.</p>
 
             <form class="admin-create-form session-resource-form" (submit)="createAdminGlobalResource($event)">
               <div class="admin-form-grid">
@@ -3152,18 +3424,18 @@
               }
               <div class="admin-form-actions">
                 <button type="submit" class="support-btn" [disabled]="creatingAdminGlobalResource()">
-                  {{ creatingAdminGlobalResource() ? 'Envoi en cours...' : 'Envoyer a tous' }}
+                  {{ creatingAdminGlobalResource() ? 'Envoi en cours...' : 'Envoyer à tous' }}
                 </button>
               </div>
             </form>
 
             <div class="sessions-block sessions-block-apprentices">
               <div class="sessions-block-head">
-                <h5>Ressources envoyees</h5>
+                <h5>Ressources envoyées</h5>
                 <p class="sub">Historique des envois globaux.</p>
               </div>
               @if (!documents().length) {
-                <p class="sub">Aucune ressource globale envoyee.</p>
+                <p class="sub">Aucune ressource globale envoyée.</p>
               } @else {
                 <div class="planning-table-wrap">
                   <table class="planning-table doc-table admin-table">
@@ -3338,15 +3610,15 @@
         <article class="card side-card">
           <div class="side-head">
             <p class="side-kicker">Learning Hub</p>
-            <h3>Ressources pedagogiques</h3>
+            <h3>Ressources pédagogiques</h3>
           </div>
           <ul class="resource-list">
             @if (!documents().length) {
               <li>
                 <span class="resource-dot"></span>
                 <div>
-                  <p class="resource-title">Aucune ressource recu</p>
-                  <p class="resource-meta">Les documents envoyes par le formateur apparaitront ici.</p>
+                  <p class="resource-title">Aucune ressource reçue</p>
+                  <p class="resource-meta">Les documents envoyés par le formateur apparaîtront ici.</p>
                 </div>
                 <span class="resource-tag">N/A</span>
               </li>

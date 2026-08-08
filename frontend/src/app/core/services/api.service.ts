@@ -85,6 +85,7 @@ export interface PlacementTestResult {
   score: number;
   totalQuestions: number;
   correctAnswers: number;
+  answeredQuestions?: number;
   passed: boolean;
   answers?: { [questionId: number]: number }; // questionId -> answerId
   completedAt?: string;
@@ -572,12 +573,55 @@ export class ApiService {
   // ============================================
   // PLACEMENT TESTS
   // ============================================
+  private normalizePlacementAnswer(raw: any): PlacementAnswer {
+    return {
+      ...raw,
+      score: typeof raw?.score === 'string' ? parseFloat(raw.score) : (raw?.score ?? 0),
+      isCorrect: raw?.isCorrect ?? raw?.correct ?? false,
+      orderIndex: raw?.orderIndex ?? 0,
+    };
+  }
+
+  private normalizePlacementQuestion(raw: any): PlacementQuestion {
+    return {
+      ...raw,
+      orderIndex: raw?.orderIndex ?? 0,
+      answers: Array.isArray(raw?.answers)
+        ? raw.answers.map((answer: any) => this.normalizePlacementAnswer(answer))
+        : [],
+    };
+  }
+
+  private normalizePlacementTest(raw: any): PlacementTest {
+    const questions = Array.isArray(raw?.questions)
+      ? raw.questions
+          .map((question: any) => typeof question === 'object' ? this.normalizePlacementQuestion(question) : question)
+          .sort((a: PlacementQuestion, b: PlacementQuestion) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+      : [];
+
+    return {
+      ...raw,
+      isActive: raw?.isActive ?? raw?.active ?? false,
+      questions,
+    };
+  }
+
+  private extractPlacementCourseId(test: PlacementTest | any): number | null {
+    const course = test?.course;
+    if (!course) return null;
+    if (typeof course === 'string') {
+      const match = course.match(/\/(\d+)$/);
+      return match ? parseInt(match[1], 10) : null;
+    }
+    return course.id ?? null;
+  }
+
   getPlacementTests(): Observable<PlacementTest[]> {
     return this.http.get<any>(`${this.apiUrl}/placement_tests`, { 
       headers: this.getHeaders(),
       withCredentials: true
     }).pipe(
-      map(response => this.extractCollection<PlacementTest>(response))
+      map(response => this.extractCollection<any>(response).map(test => this.normalizePlacementTest(test)))
     );
   }
 
@@ -585,13 +629,18 @@ export class ApiService {
     return this.http.get<PlacementTest>(`${this.apiUrl}/placement_tests/${id}`, { 
       headers: this.getHeaders(),
       withCredentials: true
-    });
+    }).pipe(
+      map(test => this.normalizePlacementTest(test))
+    );
   }
 
   getPlacementTestByCourse(courseId: number): Observable<PlacementTest | null> {
-    return this.http.get<any>(`${this.apiUrl}/placement_tests?course.id=${courseId}`, { headers: this.getHeaders() }).pipe(
+    const courseIri = `/api/courses/${courseId}`;
+    return this.http.get<any>(`${this.apiUrl}/placement_tests?course=${encodeURIComponent(courseIri)}`, { headers: this.getHeaders() }).pipe(
       map(response => {
-        const collection = this.extractCollection<PlacementTest>(response);
+        const collection = this.extractCollection<any>(response)
+          .map(test => this.normalizePlacementTest(test))
+          .filter(test => this.extractPlacementCourseId(test) === courseId);
         return collection.length > 0 ? collection[0] : null;
       })
     );
@@ -619,14 +668,14 @@ export class ApiService {
   }
 
   // Questions
-  createPlacementQuestion(question: PlacementQuestion): Observable<PlacementQuestion> {
+  createPlacementQuestion(question: Partial<PlacementQuestion>): Observable<PlacementQuestion> {
     return this.http.post<PlacementQuestion>(`${this.apiUrl}/placement_questions`, question, { 
       headers: this.getHeaders(),
       withCredentials: true
     });
   }
 
-  updatePlacementQuestion(id: number, question: PlacementQuestion): Observable<PlacementQuestion> {
+  updatePlacementQuestion(id: number, question: Partial<PlacementQuestion>): Observable<PlacementQuestion> {
     return this.http.put<PlacementQuestion>(`${this.apiUrl}/placement_questions/${id}`, question, { 
       headers: this.getHeaders(),
       withCredentials: true

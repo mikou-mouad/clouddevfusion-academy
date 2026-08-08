@@ -9,6 +9,20 @@
 
 DirectoryIndex index.php
 
+# Raise upload limits for PPTX / large course materials (LiteSpeed + mod_php)
+<IfModule LiteSpeed>
+  php_value upload_max_filesize 32M
+  php_value post_max_size 40M
+</IfModule>
+<IfModule mod_php.c>
+  php_value upload_max_filesize 32M
+  php_value post_max_size 40M
+</IfModule>
+<IfModule lsapi_module>
+  php_value upload_max_filesize 32M
+  php_value post_max_size 40M
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
