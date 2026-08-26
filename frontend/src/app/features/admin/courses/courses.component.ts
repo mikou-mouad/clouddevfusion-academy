@@ -45,6 +45,8 @@ export class CoursesComponent implements OnInit {
     description: '',
     certification: '',
     popular: false,
+    cpfEligible: false,
+    cpfUrl: '',
     objectives: [],
     outcomes: [],
     prerequisites: [],
@@ -154,6 +156,8 @@ export class CoursesComponent implements OnInit {
       description: '',
       certification: '',
       popular: false,
+      cpfEligible: false,
+      cpfUrl: '',
       objectives: [],
       outcomes: [],
       prerequisites: [],
@@ -267,6 +271,10 @@ export class CoursesComponent implements OnInit {
     courseData.prerequisites = courseData.prerequisites || [];
     courseData.targetRoles = courseData.targetRoles || [];
     courseData.syllabus = courseData.syllabus || [];
+
+    if (!courseData.cpfEligible) {
+      courseData.cpfUrl = null;
+    }
 
     // Nettoyer les modules du syllabus (enlever les IDs pour éviter les conflits)
     courseData.syllabus = courseData.syllabus.map((module: any) => {
