@@ -45,6 +45,8 @@ export class TrainingsComponent implements OnInit {
     description: '',
     certification: '',
     popular: false,
+    cpfEligible: false,
+    cpfUrl: '',
     objectives: [],
     outcomes: [],
     prerequisites: [],
@@ -161,6 +163,8 @@ export class TrainingsComponent implements OnInit {
       description: '',
       certification: '',
       popular: false,
+      cpfEligible: false,
+      cpfUrl: '',
       objectives: [],
       outcomes: [],
       prerequisites: [],
@@ -227,6 +231,10 @@ export class TrainingsComponent implements OnInit {
       ...this.formData,
       price: typeof this.formData.price === 'string' ? parseFloat(this.formData.price) : this.formData.price
     };
+
+    if (!courseData.cpfEligible) {
+      courseData.cpfUrl = null;
+    }
 
     const operation = this.editingCourse?.id
       ? this.apiService.updateCourse(this.editingCourse.id, courseData)

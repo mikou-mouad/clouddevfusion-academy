@@ -419,6 +419,24 @@
                     <span>Formation populaire</span>
                   </label>
                 </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="formData.cpfEligible" name="cpfEligible">
+                    <span>Éligible au CPF</span>
+                  </label>
+                </div>
+                @if (formData.cpfEligible) {
+                  <div class="form-group">
+                    <label for="cpfUrl">URL CPF</label>
+                    <input
+                      type="url"
+                      id="cpfUrl"
+                      [(ngModel)]="formData.cpfUrl"
+                      name="cpfUrl"
+                      placeholder="https://..."
+                    >
+                  </div>
+                }
               </div>
             }
             <!-- Onglet Détails -->
