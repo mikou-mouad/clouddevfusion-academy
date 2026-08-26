@@ -273,7 +273,7 @@ export class CoursesComponent implements OnInit {
     courseData.syllabus = courseData.syllabus || [];
 
     if (!courseData.cpfEligible) {
-      courseData.cpfUrl = null;
+      courseData.cpfUrl = '';
     }
 
     // Nettoyer les modules du syllabus (enlever les IDs pour éviter les conflits)

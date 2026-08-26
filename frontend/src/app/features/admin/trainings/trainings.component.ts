@@ -233,7 +233,7 @@ export class TrainingsComponent implements OnInit {
     };
 
     if (!courseData.cpfEligible) {
-      courseData.cpfUrl = null;
+      courseData.cpfUrl = '';
     }
 
     const operation = this.editingCourse?.id
