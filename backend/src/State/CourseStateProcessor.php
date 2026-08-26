@@ -58,6 +58,8 @@ class CourseStateProcessor implements ProcessorInterface
         $course->setDescription($data['description'] ?? null);
         $course->setCertification($data['certification'] ?? null);
         $course->setPopular($data['popular'] ?? false);
+        $course->setCpfEligible($data['cpfEligible'] ?? false);
+        $course->setCpfUrl($data['cpfUrl'] ?? null);
         $course->setObjectives($data['objectives'] ?? []);
         $course->setOutcomes($data['outcomes'] ?? []);
         $course->setPrerequisites($data['prerequisites'] ?? []);

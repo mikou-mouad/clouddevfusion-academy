@@ -101,6 +101,14 @@ class Course
     #[Groups(['course:read', 'course:write'])]
     private bool $popular = false;
 
+    #[ORM\Column(type: Types::BOOLEAN)]
+    #[Groups(['course:read', 'course:write'])]
+    private bool $cpfEligible = false;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    #[Groups(['course:read', 'course:write'])]
+    private ?string $cpfUrl = null;
+
     #[ORM\Column(type: Types::JSON)]
     #[Groups(['course:read', 'course:write'])]
     private array $objectives = [];
@@ -295,6 +303,28 @@ class Course
     public function setPopular(bool $popular): static
     {
         $this->popular = $popular;
+        return $this;
+    }
+
+    public function isCpfEligible(): bool
+    {
+        return $this->cpfEligible;
+    }
+
+    public function setCpfEligible(bool $cpfEligible): static
+    {
+        $this->cpfEligible = $cpfEligible;
+        return $this;
+    }
+
+    public function getCpfUrl(): ?string
+    {
+        return $this->cpfUrl;
+    }
+
+    public function setCpfUrl(?string $cpfUrl): static
+    {
+        $this->cpfUrl = $cpfUrl;
         return $this;
     }
 

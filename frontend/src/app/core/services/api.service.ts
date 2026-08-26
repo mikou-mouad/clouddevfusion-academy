@@ -107,6 +107,8 @@ export interface Course {
   description?: string;
   certification?: string;
   popular?: boolean;
+  cpfEligible?: boolean;
+  cpfUrl?: string;
   objectives: string[];
   outcomes: string[];
   prerequisites: string[];
@@ -148,6 +150,7 @@ export interface AuditLog {
 @Injectable({
   providedIn: 'root'
 })
+
 export class ApiService {
   private apiUrl = environment.apiUrl || 'http://localhost:8000/api';
 

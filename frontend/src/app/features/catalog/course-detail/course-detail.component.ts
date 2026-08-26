@@ -65,6 +65,10 @@ export class CourseDetailComponent implements OnInit {
     return typeof course.price === 'string' ? parseFloat(course.price) : course.price;
   }
 
+  isCpfEligible(course: Course | null | undefined): boolean {
+    return !!course && course.cpfEligible === true;
+  }
+
   getFormats(course: Course): string[] {
     // Si format est une chaîne unique, retourner un tableau avec cette valeur
     if (course.format) {
