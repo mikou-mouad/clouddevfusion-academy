@@ -187,7 +187,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     {
       icon: 'flexible',
       title: 'Financement CPF',
-      description: 'Éligible au financement CPF, OPCO et autres dispositifs, directement ou à travers nos partenaires, pour faciliter votre accès à la formation.'
+      description: "Formation finançable par l'OPCO (et éligible au CPF selon les formations), ainsi que d'autres dispositifs, directement ou via nos partenaires."
     },
     {
       icon: 'expert',
