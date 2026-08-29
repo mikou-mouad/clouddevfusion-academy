@@ -19,25 +19,25 @@ class ContactNotificationService
 
     public function notifyNewContact(Contact $contact): void
     {
-        $unreadCount = (int) $this->entityManager
-            ->getRepository(Contact::class)
-            ->count(['read' => false]);
-
-        // Safety: avoid sending "0 message non lu" right after creation.
-        if ($unreadCount < 1) {
-            $unreadCount = 1;
-        }
-
-        $label = $unreadCount > 1 ? 'messages non lus' : 'message non lu';
-        $body = sprintf("Vous avez %d %s dans « Contact ».\n", $unreadCount, $label);
-
-        $email = (new Email())
-            ->from($this->fromEmail)
-            ->to($this->notifyEmail)
-            ->subject(sprintf('[CloudDev] %d %s (Contact)', $unreadCount, $label))
-            ->text($body);
-
         try {
+            $unreadCount = (int) $this->entityManager
+                ->getRepository(Contact::class)
+                ->count(['read' => false]);
+
+            // Safety: avoid sending "0 message non lu" right after creation.
+            if ($unreadCount < 1) {
+                $unreadCount = 1;
+            }
+
+            $label = $unreadCount > 1 ? 'messages non lus' : 'message non lu';
+            $body = sprintf("Vous avez %d %s dans « Contact ».\n", $unreadCount, $label);
+
+            $email = (new Email())
+                ->from($this->fromEmail)
+                ->to($this->notifyEmail)
+                ->subject(sprintf('[CloudDev] %d %s (Contact)', $unreadCount, $label))
+                ->text($body);
+
             $this->mailer->send($email);
         } catch (\Throwable $e) {
             if (function_exists('error_log')) {

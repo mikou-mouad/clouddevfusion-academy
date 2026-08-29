@@ -18,7 +18,13 @@ class ContactNotifyListener
 
     public function postPersist(Contact $contact, LifecycleEventArgs $event): void
     {
-        $this->notificationService->notifyNewContact($contact);
+        try {
+            $this->notificationService->notifyNewContact($contact);
+        } catch (\Throwable $e) {
+            if (function_exists('error_log')) {
+                error_log('[ContactNotifyListener] Erreur notification contact: ' . $e->getMessage());
+            }
+        }
     }
 }
 
