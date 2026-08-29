@@ -118,10 +118,6 @@
                       <label>Numéro de téléphone *<input type="tel" [(ngModel)]="leadData.phone" name="leadPhone" required autocomplete="tel"></label>
                       <label>Email *<input type="email" [(ngModel)]="leadData.email" name="leadEmail" required autocomplete="email"></label>
                     </div>
-                    <label class="course-lead-consent">
-                      <input type="checkbox" [(ngModel)]="leadData.consent" name="leadConsent" required>
-                      <span>J'accepte la <a routerLink="/legal/privacy" target="_blank">politique de confidentialité</a> *</span>
-                    </label>
                     <button type="submit" class="btn btn-primary btn-large" [disabled]="leadLoading">
                       {{ leadLoading ? 'Envoi en cours...' : 'Envoyer et continuer' }}
                     </button>

@@ -22,8 +22,7 @@ export class CourseDetailComponent implements OnInit {
     firstName: '',
     lastName: '',
     phone: '',
-    email: '',
-    consent: false
+    email: ''
   };
 
   constructor(
@@ -33,6 +32,11 @@ export class CourseDetailComponent implements OnInit {
   ) {}
 
   openLeadForm(action: 'rdv' | 'cpf'): void {
+    if (action === 'rdv') {
+      this.router.navigate(['/contact']);
+      return;
+    }
+
     this.leadAction = action;
     this.leadError = null;
   }
@@ -45,35 +49,39 @@ export class CourseDetailComponent implements OnInit {
   }
 
   submitLead(): void {
-    if (!this.course || !this.leadAction || !this.leadData.consent) {
-      this.leadError = 'Vous devez accepter la politique de confidentialité';
+    if (!this.course || !this.leadAction) {
+      this.leadError = 'Une erreur est survenue. Veuillez réessayer.';
+      return;
+    }
+
+    const action = this.leadAction;
+
+    if (action === 'rdv') {
+      this.router.navigate(['/contact']);
       return;
     }
 
     this.leadLoading = true;
     this.leadError = null;
-    const action = this.leadAction;
     const cpfUrl = this.course.cpfUrl || 'https://www.moncompteformation.gouv.fr';
+
+    window.open(cpfUrl, '_blank', 'noopener,noreferrer');
 
     this.apiService.createContact({
       name: `${this.leadData.firstName.trim()} ${this.leadData.lastName.trim()}`,
       email: this.leadData.email.trim(),
       phone: this.leadData.phone.trim(),
-      subject: action === 'cpf' ? 'cpf-registration' : 'rdv',
-      message: `${action === 'cpf' ? 'Inscription avec le CPF' : 'Demande de rendez-vous'} pour la formation ${this.course.title} (${this.course.code}).`
+      subject: 'cpf',
+      message: `Inscription avec le CPF pour la formation ${this.course.title} (${this.course.code}).`
     }).subscribe({
       next: () => {
         this.leadLoading = false;
-        if (action === 'cpf') {
-          window.location.href = cpfUrl;
-        } else {
-          this.router.navigate(['/contact']);
-        }
+        this.leadAction = null;
       },
       error: (err) => {
         console.error('Error submitting course lead:', err);
         this.leadLoading = false;
-        this.leadError = 'Erreur lors de l\'envoi. Veuillez réessayer.';
+        this.leadAction = null;
       }
     });
   }

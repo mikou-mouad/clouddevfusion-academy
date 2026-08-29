@@ -31,7 +31,7 @@ export class ContactComponent implements OnInit {
     name: '',
     email: '',
     phone: '',
-    subject: '',
+    subject: 'cpf',
     message: '',
     consent: false
   };
@@ -59,7 +59,7 @@ export class ContactComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       const subject = params['subject'];
       if (subject) {
-        this.formData.subject = 'exam-voucher';
+        this.formData.subject = 'cpf';
         this.formData.message = `Je suis intéressé par : ${subject}`;
       }
     });
