@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService, Course } from '../../../core/services/api.service';
 
 @Component({
     selector: 'app-course-detail',
-    imports: [RouterLink],
+    imports: [FormsModule, RouterLink],
     templateUrl: './course-detail.component.html',
     styleUrls: ['./course-detail.component.scss']
 })
@@ -14,11 +15,68 @@ export class CourseDetailComponent implements OnInit {
   loading = false;
   error: string | null = null;
   hasPlacementTest = false;
+  leadAction: 'rdv' | 'cpf' | null = null;
+  leadLoading = false;
+  leadError: string | null = null;
+  leadData = {
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    consent: false
+  };
 
   constructor(
     private route: ActivatedRoute,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private router: Router
   ) {}
+
+  openLeadForm(action: 'rdv' | 'cpf'): void {
+    this.leadAction = action;
+    this.leadError = null;
+  }
+
+  closeLeadForm(): void {
+    if (!this.leadLoading) {
+      this.leadAction = null;
+      this.leadError = null;
+    }
+  }
+
+  submitLead(): void {
+    if (!this.course || !this.leadAction || !this.leadData.consent) {
+      this.leadError = 'Vous devez accepter la politique de confidentialité';
+      return;
+    }
+
+    this.leadLoading = true;
+    this.leadError = null;
+    const action = this.leadAction;
+    const cpfUrl = this.course.cpfUrl || 'https://www.moncompteformation.gouv.fr';
+
+    this.apiService.createContact({
+      name: `${this.leadData.firstName.trim()} ${this.leadData.lastName.trim()}`,
+      email: this.leadData.email.trim(),
+      phone: this.leadData.phone.trim(),
+      subject: action === 'cpf' ? 'cpf-registration' : 'rdv',
+      message: `${action === 'cpf' ? 'Inscription avec le CPF' : 'Demande de rendez-vous'} pour la formation ${this.course.title} (${this.course.code}).`
+    }).subscribe({
+      next: () => {
+        this.leadLoading = false;
+        if (action === 'cpf') {
+          window.location.href = cpfUrl;
+        } else {
+          this.router.navigate(['/contact']);
+        }
+      },
+      error: (err) => {
+        console.error('Error submitting course lead:', err);
+        this.leadLoading = false;
+        this.leadError = 'Erreur lors de l\'envoi. Veuillez réessayer.';
+      }
+    });
+  }
 
   ngOnInit() {
     const courseCode = this.route.snapshot.paramMap.get('code');

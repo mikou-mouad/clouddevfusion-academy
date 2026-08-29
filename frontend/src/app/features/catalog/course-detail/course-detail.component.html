@@ -87,26 +87,45 @@
                     Faire le test de positionnement
                   </a>
                 }
-                <a routerLink="/contact" class="btn btn-primary btn-large">
+                <button type="button" class="btn btn-primary btn-large" (click)="openLeadForm('rdv')" [disabled]="leadLoading">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                   </svg>
                   Prendre rendez-vous
-                </a>
+                </button>
                 @if (isCpfEligible(course)) {
-                  <a
-                    [href]="course.cpfUrl || 'https://www.moncompteformation.gouv.fr'"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="btn btn-primary btn-large"
-                  >
+                  <button type="button" class="btn btn-primary btn-large" (click)="openLeadForm('cpf')" [disabled]="leadLoading">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                       <circle cx="8.5" cy="7" r="4"/>
                       <path d="M20 8v6M23 11h-6"/>
                     </svg>
                     S'inscrire avec le CPF
-                  </a>
+                  </button>
+                }
+                @if (leadAction) {
+                  <form class="course-lead-form" (ngSubmit)="submitLead()" [class.loading]="leadLoading">
+                    <div class="course-lead-form-header">
+                      <h2>{{ leadAction === 'cpf' ? 'Inscription avec le CPF' : 'Demande de rendez-vous' }}</h2>
+                      <button type="button" class="course-lead-close" (click)="closeLeadForm()" [disabled]="leadLoading" aria-label="Fermer">&times;</button>
+                    </div>
+                    @if (leadError) {
+                      <p class="course-lead-error" role="alert">{{ leadError }}</p>
+                    }
+                    <div class="course-lead-fields">
+                      <label>Prénom *<input type="text" [(ngModel)]="leadData.firstName" name="leadFirstName" required autocomplete="given-name"></label>
+                      <label>Nom *<input type="text" [(ngModel)]="leadData.lastName" name="leadLastName" required autocomplete="family-name"></label>
+                      <label>Numéro de téléphone *<input type="tel" [(ngModel)]="leadData.phone" name="leadPhone" required autocomplete="tel"></label>
+                      <label>Email *<input type="email" [(ngModel)]="leadData.email" name="leadEmail" required autocomplete="email"></label>
+                    </div>
+                    <label class="course-lead-consent">
+                      <input type="checkbox" [(ngModel)]="leadData.consent" name="leadConsent" required>
+                      <span>J'accepte la <a routerLink="/legal/privacy" target="_blank">politique de confidentialité</a> *</span>
+                    </label>
+                    <button type="submit" class="btn btn-primary btn-large" [disabled]="leadLoading">
+                      {{ leadLoading ? 'Envoi en cours...' : 'Envoyer et continuer' }}
+                    </button>
+                  </form>
                 }
               </div>
             </div>

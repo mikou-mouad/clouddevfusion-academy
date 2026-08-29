@@ -192,6 +192,92 @@
   }
 }
 
+.course-lead-form {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.98);
+  color: #1e293b;
+  border-radius: 8px;
+  text-align: left;
+
+  &.loading {
+    opacity: 0.75;
+  }
+}
+
+.course-lead-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--dark-blue);
+  }
+}
+
+.course-lead-close {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.course-lead-fields {
+  display: grid;
+  gap: var(--spacing-sm);
+
+  label,
+  input {
+    display: block;
+    width: 100%;
+  }
+
+  label {
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  input {
+    box-sizing: border-box;
+    margin-top: 4px;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font: inherit;
+  }
+}
+
+.course-lead-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: var(--spacing-md) 0;
+  color: #475569;
+  font-size: 0.75rem;
+
+  input {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  a {
+    color: var(--primary-blue);
+  }
+}
+
+.course-lead-error {
+  margin: 0 0 var(--spacing-sm);
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
 // ============================================
 // MODERN SECTIONS (PLEINE LARGEUR - DENSE)
 // ============================================
