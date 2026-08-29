@@ -113,8 +113,7 @@
                       <p class="course-lead-error" role="alert">{{ leadError }}</p>
                     }
                     <div class="course-lead-fields">
-                      <label>Prénom *<input type="text" [(ngModel)]="leadData.firstName" name="leadFirstName" required autocomplete="given-name"></label>
-                      <label>Nom *<input type="text" [(ngModel)]="leadData.lastName" name="leadLastName" required autocomplete="family-name"></label>
+                      <label>Nom complet *<input type="text" [(ngModel)]="leadData.fullName" name="leadFullName" required autocomplete="name"></label>
                       <label>Numéro de téléphone *<input type="tel" [(ngModel)]="leadData.phone" name="leadPhone" required autocomplete="tel"></label>
                       <label>Email *<input type="email" [(ngModel)]="leadData.email" name="leadEmail" required autocomplete="email"></label>
                     </div>

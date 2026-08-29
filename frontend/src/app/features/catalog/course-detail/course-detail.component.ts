@@ -19,8 +19,7 @@ export class CourseDetailComponent implements OnInit {
   leadLoading = false;
   leadError: string | null = null;
   leadData = {
-    firstName: '',
-    lastName: '',
+    fullName: '',
     phone: '',
     email: ''
   };
@@ -68,11 +67,11 @@ export class CourseDetailComponent implements OnInit {
     window.open(cpfUrl, '_blank', 'noopener,noreferrer');
 
     this.apiService.createContact({
-      name: `${this.leadData.firstName.trim()} ${this.leadData.lastName.trim()}`,
+      name: this.leadData.fullName.trim(),
       email: this.leadData.email.trim(),
       phone: this.leadData.phone.trim(),
       subject: 'cpf',
-      message: `Inscription avec le CPF pour la formation ${this.course.title} (${this.course.code}).`
+      message: `Message automatique: cette personne a essayé de s'inscrire avec le CPF pour la formation ${this.course.title} (${this.course.code}).`
     }).subscribe({
       next: () => {
         this.leadLoading = false;
