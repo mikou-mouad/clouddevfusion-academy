@@ -5642,6 +5642,7 @@ final class IntranetController extends AbstractController
         return $today <= $deadline;
     }
 
+    
     private function studentValidationTestAlreadyCompleted(int $testId, int $studentId): bool
     {
         if ($testId <= 0 || $studentId <= 0) {
