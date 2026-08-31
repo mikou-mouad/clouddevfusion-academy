@@ -5637,8 +5637,9 @@ final class IntranetController extends AbstractController
         }
 
         $today = new \DateTimeImmutable('today');
+        $deadline = $end->modify('+7 days');
 
-        return $today <= $end;
+        return $today <= $deadline;
     }
 
     private function studentValidationTestAlreadyCompleted(int $testId, int $studentId): bool

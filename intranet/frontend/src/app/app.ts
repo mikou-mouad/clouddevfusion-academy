@@ -2852,10 +2852,16 @@ export class App implements OnDestroy {
     if (!raw) return true;
     const end = this.parseIsoDate(raw);
     if (!end) return true;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    return today.getTime() <= end.getTime();
+
+    const gracePeriodDays = 7;
+    const deadline = new Date(end);
+    deadline.setDate(deadline.getDate() + gracePeriodDays);
+    deadline.setHours(23, 59, 59, 999);
+
+    return today.getTime() <= deadline.getTime();
   }
 
   onStudentSignedDocumentSelected(documentId: number, event: Event): void {

@@ -649,9 +649,9 @@
                     <header class="student-validation-list-head">
                       <h5>Tests de validation</h5>
                       <p class="sub">
-                        Les tests restent accessibles jusqu'au dernier jour de la formation
+                        Les tests restent accessibles pendant 7 jours après la fin de la formation
                         @if (selectedStudentSessionFormation()?.endDate) {
-                          ({{ selectedStudentSessionFormation()!.endDate }}).
+                          (jusqu'au {{ selectedStudentSessionFormation()!.endDate }} + 7 jours).
                         }
                       </p>
                     </header>
