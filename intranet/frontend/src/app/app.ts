@@ -2856,6 +2856,7 @@ export class App implements OnDestroy {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    
     const gracePeriodDays = 7;
     const deadline = new Date(end);
     deadline.setDate(deadline.getDate() + gracePeriodDays);
