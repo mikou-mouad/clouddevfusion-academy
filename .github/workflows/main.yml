@@ -6,6 +6,7 @@ on:
     paths:
     - "backend/**"
     - "frontend/**"
+    - "intranet/**"
     - ".htaccess"
     - ".github/workflows/main.yml"
   workflow_dispatch:
