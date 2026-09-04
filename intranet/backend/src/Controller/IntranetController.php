@@ -468,6 +468,176 @@ final class IntranetController extends AbstractController
         return $this->json(['message' => 'Formation desarchivee avec succes.']);
     }
 
+    #[Route('/admin/formations/{formationId}/enrollments', name: 'admin_enroll_formation_students', methods: ['POST'])]
+    public function enrollFormationStudents(Request $request, string $formationId): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $targetId = trim($formationId);
+        if ($targetId === '') {
+            return $this->json(['message' => 'Formation invalide.'], 400);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+        $studentIds = array_values(array_unique(array_filter(
+            array_map('intval', (array) ($payload['studentIds'] ?? [])),
+            static fn(int $id): bool => $id > 0
+        )));
+        if (count($studentIds) === 0) {
+            return $this->json(['message' => 'Selectionnez au moins un apprenti.'], 400);
+        }
+
+        $formationExists = false;
+        foreach ($this->formations(true) as $formation) {
+            if ((string) ($formation['id'] ?? '') === $targetId) {
+                $formationExists = true;
+                break;
+            }
+        }
+        if (!$formationExists) {
+            return $this->json(['message' => 'Formation introuvable.'], 404);
+        }
+
+        $classId = null;
+        foreach ($this->classGroups() as $classGroup) {
+            if ((string) ($classGroup['formationId'] ?? '') === $targetId) {
+                $classId = (string) ($classGroup['id'] ?? '');
+                break;
+            }
+        }
+        if ($classId === null || $classId === '') {
+            $classId = 'grp-'.$targetId;
+        }
+
+        $validStudentIds = [];
+        foreach ($studentIds as $studentId) {
+            if ($this->studentById($studentId) !== null) {
+                $validStudentIds[] = $studentId;
+            }
+        }
+        if (count($validStudentIds) === 0) {
+            return $this->json(['message' => 'Aucun apprenti valide a ajouter.'], 400);
+        }
+
+        $alreadyEnrolled = array_flip($this->studentIdsForFormation($targetId));
+        $toEnroll = array_values(array_filter(
+            $validStudentIds,
+            static fn(int $id): bool => !isset($alreadyEnrolled[$id])
+        ));
+        if (count($toEnroll) === 0) {
+            return $this->json(['message' => 'Tous les apprentis selectionnes sont deja affectes a cette session.']);
+        }
+
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $this->db()->beginTransaction();
+
+                $existingClass = $this->db()->fetchOne(
+                    'SELECT id FROM classes WHERE formation_id = :formation_id LIMIT 1',
+                    ['formation_id' => $targetId]
+                );
+                if (!is_string($existingClass) || $existingClass === '') {
+                    $formation = null;
+                    foreach ($this->formations(true) as $item) {
+                        if ((string) ($item['id'] ?? '') === $targetId) {
+                            $formation = $item;
+                            break;
+                        }
+                    }
+                    $this->db()->insert('classes', [
+                        'id' => $classId,
+                        'formation_id' => $targetId,
+                        'label' => 'Classe '.((string) ($formation['title'] ?? $targetId)),
+                        'trainer_id' => isset($formation['trainerId']) && (int) $formation['trainerId'] > 0
+                            ? (int) $formation['trainerId']
+                            : null,
+                        'capacity' => max(20, count($toEnroll)),
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } else {
+                    $classId = $existingClass;
+                }
+
+                foreach ($toEnroll as $studentId) {
+                    $this->db()->executeStatement(
+                        'INSERT INTO class_enrollments (class_id, student_id, enrolled_at)
+                         VALUES (:class_id, :student_id, NOW())
+                         ON CONFLICT (class_id, student_id) DO NOTHING',
+                        [
+                            'class_id' => $classId,
+                            'student_id' => $studentId,
+                        ]
+                    );
+                }
+
+                $this->db()->commit();
+
+                return $this->json([
+                    'message' => count($toEnroll) === 1
+                        ? '1 apprenti ajoute a la session.'
+                        : sprintf('%d apprentis ajoutes a la session.', count($toEnroll)),
+                    'addedCount' => count($toEnroll),
+                    'studentIds' => $toEnroll,
+                ]);
+            } catch (\Throwable $exception) {
+                try {
+                    $this->db()->rollBack();
+                } catch (\Throwable) {
+                }
+
+                return $this->json(['message' => sprintf('Ajout impossible: %s', $exception->getMessage())], 500);
+            }
+        }
+
+        $state = $this->loadAdminState();
+        $classExists = false;
+        foreach ($state['classes'] as $classItem) {
+            if ((string) ($classItem['formationId'] ?? '') === $targetId) {
+                $classId = (string) ($classItem['id'] ?? $classId);
+                $classExists = true;
+                break;
+            }
+        }
+        if (!$classExists) {
+            $formationTitle = $targetId;
+            foreach ($state['formations'] as $formation) {
+                if ((string) ($formation['id'] ?? '') === $targetId) {
+                    $formationTitle = (string) ($formation['title'] ?? $targetId);
+                    break;
+                }
+            }
+            $state['classes'][] = [
+                'id' => $classId,
+                'label' => 'Classe '.$formationTitle,
+                'formationId' => $targetId,
+                'trainerId' => 0,
+                'capacity' => max(20, count($toEnroll)),
+            ];
+        }
+
+        foreach ($toEnroll as $studentId) {
+            $state['classEnrollments'][] = [
+                'classId' => $classId,
+                'studentId' => $studentId,
+            ];
+        }
+        $this->saveAdminState($state);
+
+        return $this->json([
+            'message' => count($toEnroll) === 1
+                ? '1 apprenti ajoute a la session.'
+                : sprintf('%d apprentis ajoutes a la session.', count($toEnroll)),
+            'addedCount' => count($toEnroll),
+            'studentIds' => $toEnroll,
+        ]);
+    }
+
     #[Route('/admin/formations/{formationId}', name: 'admin_update_formation', methods: ['PUT'])]
     public function updateFormation(Request $request, string $formationId): JsonResponse
     {
@@ -2101,6 +2271,8 @@ final class IntranetController extends AbstractController
                 'created_by_admin_id' => (int) $auth['id'],
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
+            ], [
+                'is_mandatory' => ParameterType::BOOLEAN,
             ]);
         } catch (\Throwable $exception) {
             return $this->json(['message' => sprintf('Creation impossible: %s', $exception->getMessage())], 500);
@@ -2437,7 +2609,8 @@ final class IntranetController extends AbstractController
         }
 
         $formationId = (string) ($detail['test']['formationId'] ?? '');
-        $trainerFormationIds = $this->formationIdsForTrainer((int) $auth['id']);
+        $trainerId = $this->resolveTrainerIdFromAuthId((int) $auth['id']);
+        $trainerFormationIds = $this->formationIdsForTrainer($trainerId);
         if ($formationId === '' || !in_array($formationId, $trainerFormationIds, true)) {
             return $this->json(['message' => 'Unauthorized'], 403);
         }

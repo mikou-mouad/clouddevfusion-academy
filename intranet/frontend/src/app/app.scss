@@ -2348,6 +2348,34 @@ button.archive-btn.trainer-icon-action {
   margin: 0 0 16px;
 }
 
+.admin-validation-questions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.admin-validation-questions-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-validation-question-card--readonly {
+  pointer-events: none;
+}
+
+.admin-validation-question-card--readonly .admin-validation-option-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-validation-question-card--readonly .admin-validation-answer-verdict {
+  margin-left: auto;
+  font-size: 11px;
+}
+
 .admin-validation-history-search {
   margin-bottom: 14px;
   max-width: 360px;
@@ -4252,6 +4280,15 @@ button.archive-btn.trainer-icon-action {
   font-weight: 600;
   color: #2563eb;
   text-decoration: none;
+}
+
+button.admin-doc-matrix-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .admin-doc-matrix-link:hover {

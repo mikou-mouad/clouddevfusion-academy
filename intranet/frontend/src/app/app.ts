@@ -78,6 +78,10 @@ export class App implements OnDestroy {
   selectedStudentIds = signal<number[]>([]);
   selectedStudentToAdd = signal<number | null>(null);
   studentFilterForSelector = signal('');
+  /** Apprentis a ajouter a une session existante (vue d'ensemble / modification). */
+  enrollStudentIds = signal<number[]>([]);
+  enrollStudentFilter = signal('');
+  enrollingStudents = signal(false);
   selectedFormationIdsForTrainer = signal<string[]>([]);
   selectedFormationToAddForTrainer = signal('');
   catalogFormations = signal<CatalogFormationOption[]>([]);
@@ -178,6 +182,8 @@ export class App implements OnDestroy {
   adminValidationTests = signal<AdminValidationTestSummary[]>([]);
   adminValidationTestDetail = signal<AdminValidationTestDetail | null>(null);
   adminValidationTestDetailId = signal<number | null>(null);
+  /** Affiche les questions du test (lecture seule) dans la vue resultats. */
+  adminValidationQuestionsPanelOpen = signal(false);
   adminValidationTestCreateTitle = signal('Test de validation');
   adminValidationTestCreateSessionId = signal('');
   adminValidationTestCreatePassThreshold = signal(70);
@@ -434,6 +440,20 @@ export class App implements OnDestroy {
     }
     return rows;
   });
+  availableStudentsForEnrollment = computed(() => {
+    const enrolledIds = new Set(this.selectedAdminFormationApprentices().map((a) => a.id));
+    const selectedIds = new Set(this.enrollStudentIds());
+    const q = this.enrollStudentFilter().trim().toLowerCase();
+    return this.adminStudents()
+      .filter((student) => !enrolledIds.has(student.id) && !selectedIds.has(student.id))
+      .filter((student) => {
+        if (!q) return true;
+        return `${student.firstName} ${student.lastName} ${student.email}`.toLowerCase().includes(q);
+      });
+  });
+  selectedStudentsForEnrollment = computed(() =>
+    this.adminStudents().filter((student) => this.enrollStudentIds().includes(student.id))
+  );
   filteredAdminStudentDocApprentices = computed(() => {
     const q = this.adminStudentDocStudentComboQuery().trim().toLowerCase();
     const rows = [...this.selectedAdminFormationApprentices()].sort((a, b) =>
@@ -888,6 +908,75 @@ export class App implements OnDestroy {
           isNa: true
         };
       }
+
+      if (col.key === 'test_validation' && studentId !== null) {
+        const validationResults = this.adminSessionValidationResults().filter(
+          (row) => row.formationId === formationId && row.studentId === studentId
+        );
+        const completed = validationResults.filter(
+          (row) => row.status === 'passed' || row.status === 'failed'
+        );
+        const result =
+          completed[0] ??
+          validationResults.find((row) => row.status === 'pending') ??
+          validationResults[0] ??
+          null;
+
+        if (result) {
+          if (result.status === 'pending') {
+            return {
+              status: 'En attente',
+              statusVariant: 'warn',
+              url: (result.testLink ?? '').trim() || null,
+              docId: null,
+              signatureStatus: null,
+              canUpload: false,
+              isNa: false,
+              validationTestId: result.testId,
+              canViewValidationAnswers: false
+            };
+          }
+          const statusLabel = result.status === 'passed' ? 'Validé' : 'Échoué';
+          const statusVariant: AdminFormationDocMatrixCell['statusVariant'] =
+            result.status === 'passed' ? 'ok' : 'danger';
+          return {
+            status: statusLabel,
+            statusVariant,
+            url: (result.testLink ?? '').trim() || null,
+            docId: null,
+            signatureStatus: null,
+            canUpload: false,
+            isNa: false,
+            validationTestId: result.testId,
+            canViewValidationAnswers: true
+          };
+        }
+
+        // Fallback: document externe (lien test validation) sans quiz intranet.
+        const externalDoc = findStudent(studentId, col);
+        if (externalDoc) {
+          return {
+            status: 'Envoyé',
+            statusVariant: 'ok',
+            url: externalDoc.url,
+            docId: externalDoc.id,
+            signatureStatus: externalDoc.signatureStatus,
+            canUpload: true,
+            isNa: false
+          };
+        }
+
+        return {
+          status: 'Non envoyé',
+          statusVariant: 'neutral',
+          url: null,
+          docId: null,
+          signatureStatus: null,
+          canUpload: true,
+          isNa: false
+        };
+      }
+
       const doc = studentId !== null ? findStudent(studentId, col) : null;
       if (!doc) {
         return {
@@ -1780,6 +1869,8 @@ export class App implements OnDestroy {
     this.formationActionError.set('');
     this.adminFormationDetailTab.set('resume');
     this.selectedAdminFormationId.set(formationId);
+    this.enrollStudentIds.set([]);
+    this.enrollStudentFilter.set('');
     this.adminGenericDocSessionId.set('');
     this.adminStudentDocSessionId.set('');
     this.adminValidationSessionId.set('');
@@ -1826,6 +1917,7 @@ export class App implements OnDestroy {
         return 'Non envoyé';
       case 'En attente de signature':
       case 'En attente signature':
+      case 'En attente':
         return 'En attente';
       case 'Signé':
       case 'Signe':
@@ -1833,6 +1925,16 @@ export class App implements OnDestroy {
       case 'Refusé':
       case 'Refuse':
         return 'Refusé';
+      case 'Validé':
+      case 'Valide':
+        return 'Validé';
+      case 'Échoué':
+      case 'Echoué':
+      case 'Echec':
+        return 'Échoué';
+      case 'Terminé':
+      case 'Termine':
+        return 'Terminé';
       case 'Non applicable':
       case '—':
         return '—';
@@ -2507,6 +2609,7 @@ export class App implements OnDestroy {
   loadAdminValidationTestDetail(testId: number): void {
     if (!testId) return;
     this.adminValidationTestDetailId.set(testId);
+    this.adminWorkflowError.set('');
     const endpoint = this.isTrainer()
       ? `${this.apiBaseUrl}/trainer/session-validations/tests/${testId}`
       : `${this.apiBaseUrl}/admin/session-validations/tests/${testId}`;
@@ -2519,10 +2622,13 @@ export class App implements OnDestroy {
           this.adminValidationTestDetail.set(detail);
           this.adminValidationHistoryQuery.set('');
           this.adminValidationHistoryStudentId.set(null);
+          this.adminValidationQuestionsPanelOpen.set(false);
         },
-        error: () => {
+        error: (err) => {
           this.adminValidationTestDetail.set(null);
-          this.adminWorkflowError.set('Impossible de charger le detail du test.');
+          this.adminWorkflowError.set(
+            err?.error?.message ?? 'Impossible de charger le detail du test.'
+          );
         }
       });
   }
@@ -2532,6 +2638,11 @@ export class App implements OnDestroy {
     this.adminValidationTestDetail.set(null);
     this.adminValidationHistoryQuery.set('');
     this.adminValidationHistoryStudentId.set(null);
+    this.adminValidationQuestionsPanelOpen.set(false);
+  }
+
+  toggleAdminValidationQuestionsPanel(): void {
+    this.adminValidationQuestionsPanelOpen.set(!this.adminValidationQuestionsPanelOpen());
   }
 
   selectAdminValidationHistoryStudent(studentId: number): void {
@@ -2544,6 +2655,32 @@ export class App implements OnDestroy {
 
   closeAdminValidationHistoryModal(): void {
     this.adminValidationHistoryStudentId.set(null);
+  }
+
+  openDocMatrixValidationAnswers(testId: number, studentId: number): void {
+    if (!testId || !studentId) return;
+    this.adminWorkflowError.set('');
+    this.adminValidationHistoryStudentId.set(null);
+    this.adminValidationTestDetailId.set(testId);
+    this.http
+      .get<AdminValidationTestDetail>(`${this.apiBaseUrl}/admin/session-validations/tests/${testId}`, {
+        headers: this.authHeaders()
+      })
+      .subscribe({
+        next: (detail) => {
+          this.adminValidationTestDetail.set(detail);
+          const apprentice = detail.apprentices.find((a) => a.studentId === studentId);
+          if (!apprentice || !apprentice.attempts.length) {
+            this.adminWorkflowError.set("Aucune reponse disponible pour cet apprenti.");
+            return;
+          }
+          this.adminValidationHistoryStudentId.set(studentId);
+        },
+        error: () => {
+          this.adminValidationTestDetail.set(null);
+          this.adminWorkflowError.set('Impossible de charger les reponses du test.');
+        }
+      });
   }
 
   startStudentValidationTest(testId: number): void {
@@ -3028,12 +3165,16 @@ export class App implements OnDestroy {
       issues.push({ ...base, status: 'pending_signature', statusLabel: 'En attente de signature' });
       return;
     }
-    if (cell.status === 'En attente' && col.key === 'test_positionnement') {
+    if (cell.status === 'En attente' && (col.key === 'test_positionnement' || col.key === 'test_validation')) {
       issues.push({
         ...base,
         status: 'pending_signature',
-        statusLabel: 'En attente de renvoi'
+        statusLabel: col.key === 'test_validation' ? 'En attente' : 'En attente de renvoi'
       });
+      return;
+    }
+    if (cell.status === 'Échoué' || cell.status === 'Echoué') {
+      issues.push({ ...base, status: 'rejected', statusLabel: 'Echoue' });
       return;
     }
     if (cell.status === 'Refusé') {
@@ -3195,6 +3336,58 @@ export class App implements OnDestroy {
 
   removeSelectedStudent(studentId: number): void {
     this.selectedStudentIds.set(this.selectedStudentIds().filter((id) => id !== studentId));
+  }
+
+  toggleEnrollStudentSelection(studentId: number, checked: boolean): void {
+    const current = this.enrollStudentIds();
+    if (checked && !current.includes(studentId)) {
+      this.enrollStudentIds.set([...current, studentId]);
+      return;
+    }
+    if (!checked) {
+      this.enrollStudentIds.set(current.filter((id) => id !== studentId));
+    }
+  }
+
+  removeEnrollStudent(studentId: number): void {
+    this.enrollStudentIds.set(this.enrollStudentIds().filter((id) => id !== studentId));
+  }
+
+  enrollStudentsInSelectedFormation(): void {
+    const formation = this.selectedAdminFormation();
+    const studentIds = this.enrollStudentIds();
+    if (!formation) {
+      this.formationActionError.set('Aucune session selectionnee.');
+      return;
+    }
+    if (!studentIds.length) {
+      this.formationActionError.set('Selectionnez au moins un apprenti a ajouter.');
+      return;
+    }
+
+    this.enrollingStudents.set(true);
+    this.formationActionNotice.set('');
+    this.formationActionError.set('');
+
+    this.http
+      .post<{ message: string; addedCount?: number }>(
+        `${this.apiBaseUrl}/admin/formations/${encodeURIComponent(formation.id)}/enrollments`,
+        { studentIds },
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.enrollingStudents.set(false);
+          this.enrollStudentIds.set([]);
+          this.enrollStudentFilter.set('');
+          this.formationActionNotice.set(response.message);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.enrollingStudents.set(false);
+          this.formationActionError.set(err?.error?.message ?? 'Ajout des apprentis impossible.');
+        }
+      });
   }
 
   selectedStudents = computed(() =>
@@ -5480,6 +5673,9 @@ interface AdminFormationDocMatrixCell {
   signatureStatus: 'pending' | 'signed' | 'rejected' | null;
   canUpload: boolean;
   isNa: boolean;
+  /** Quiz intranet : id du test pour ouvrir le detail des reponses. */
+  validationTestId?: number | null;
+  canViewValidationAnswers?: boolean;
 }
 
 interface AdminSessionDocumentGeneric {
