@@ -4695,14 +4695,144 @@ final class IntranetController extends AbstractController
 
     private function isStudentSubmittableDocumentType(string $documentType, string $title): bool
     {
-        return $this->isPlacementTestDocumentType($documentType, $title)
-            || $this->isConvocationDocumentType($documentType, $title);
+        // Placement tests are completed online on the public site — no student file return.
+        return $this->isConvocationDocumentType($documentType, $title);
     }
 
     private function shouldPreserveDocumentUrlOnSubmit(string $documentType, string $title): bool
     {
         return $this->isPlacementTestDocumentType($documentType, $title)
             || $this->isConvocationDocumentType($documentType, $title);
+    }
+
+    private function isPlacementTestResultsSchemaAvailable(): bool
+    {
+        static $available = null;
+        if ($available !== null) {
+            return $available;
+        }
+        try {
+            $this->db()->executeQuery('SELECT 1 FROM placement_test_results LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM placement_tests LIMIT 1');
+            $available = true;
+        } catch (\Throwable) {
+            $available = false;
+        }
+
+        return $available;
+    }
+
+    /**
+     * Sync intranet "test de positionnement" document statuses from website placement_test_results
+     * by matching student email (+ course id from the document URL when possible).
+     */
+    private function syncPlacementTestDocumentStatuses(): void
+    {
+        if (!$this->isAdminWorkflowSchemaAvailable() || !$this->isPlacementTestResultsSchemaAvailable()) {
+            return;
+        }
+
+        try {
+            $latestResults = $this->db()->fetchAllAssociative(
+                "SELECT LOWER(TRIM(r.user_email)) AS email,
+                        t.course_id,
+                        r.passed,
+                        r.completed_at,
+                        r.id
+                 FROM placement_test_results r
+                 INNER JOIN placement_tests t ON t.id = r.placement_test_id
+                 INNER JOIN (
+                     SELECT LOWER(TRIM(r2.user_email)) AS email,
+                            t2.course_id,
+                            MAX(r2.id) AS max_id
+                     FROM placement_test_results r2
+                     INNER JOIN placement_tests t2 ON t2.id = r2.placement_test_id
+                     WHERE r2.user_email IS NOT NULL AND TRIM(r2.user_email) <> ''
+                     GROUP BY LOWER(TRIM(r2.user_email)), t2.course_id
+                 ) latest ON latest.max_id = r.id"
+            );
+            if ($latestResults === []) {
+                return;
+            }
+
+            $studentsByEmail = [];
+            foreach ($this->students() as $student) {
+                $email = strtolower(trim((string) ($student['email'] ?? '')));
+                if ($email !== '') {
+                    $studentsByEmail[$email] = (int) ($student['id'] ?? 0);
+                }
+            }
+
+            $docs = $this->db()->fetchAllAssociative(
+                "SELECT id, student_id, document_type, title, url, signature_status
+                 FROM student_documents
+                 WHERE LOWER(document_type || ' ' || title) LIKE '%positionnement%'
+                 ORDER BY id DESC"
+            );
+            if ($docs === []) {
+                return;
+            }
+
+            $docsByStudent = [];
+            foreach ($docs as $doc) {
+                $sid = (int) ($doc['student_id'] ?? 0);
+                if ($sid <= 0) {
+                    continue;
+                }
+                $docsByStudent[$sid][] = $doc;
+            }
+
+            $now = date('Y-m-d H:i:s');
+            foreach ($latestResults as $result) {
+                $email = strtolower(trim((string) ($result['email'] ?? '')));
+                $studentId = $studentsByEmail[$email] ?? 0;
+                if ($studentId <= 0 || !isset($docsByStudent[$studentId])) {
+                    continue;
+                }
+                $courseId = (int) ($result['course_id'] ?? 0);
+                $passed = (bool) ($result['passed'] ?? false);
+                $newStatus = $passed ? 'signed' : 'rejected';
+                $courseNeedle = $courseId > 0 ? 'placement-test/'.$courseId : '';
+
+                $matched = [];
+                if ($courseNeedle !== '') {
+                    foreach ($docsByStudent[$studentId] as $doc) {
+                        $url = strtolower((string) ($doc['url'] ?? ''));
+                        if (str_contains($url, strtolower($courseNeedle))) {
+                            $matched[] = $doc;
+                        }
+                    }
+                }
+                if ($matched === []) {
+                    // Fallback: all positionnement docs still pending for this student.
+                    foreach ($docsByStudent[$studentId] as $doc) {
+                        if ((string) ($doc['signature_status'] ?? '') === 'pending') {
+                            $matched[] = $doc;
+                        }
+                    }
+                }
+                if ($matched === []) {
+                    // Last resort: update latest positionnement doc for this student.
+                    $matched = [ $docsByStudent[$studentId][0] ];
+                }
+
+                foreach ($matched as $doc) {
+                    $docId = (int) ($doc['id'] ?? 0);
+                    $current = (string) ($doc['signature_status'] ?? 'pending');
+                    if ($docId <= 0 || $current === $newStatus) {
+                        continue;
+                    }
+                    $this->db()->update('student_documents', [
+                        'signature_status' => $newStatus,
+                        'signed_at' => $now,
+                        'updated_at' => $now,
+                    ], ['id' => $docId]);
+                    $doc['signature_status'] = $newStatus;
+                }
+            }
+        } catch (\Throwable) {
+            // Non-blocking: dashboard must still load if sync fails.
+        }
     }
 
     private function adminSessionDocuments(?string $formationId = null): array
@@ -4713,6 +4843,8 @@ final class IntranetController extends AbstractController
                 'studentDocuments' => [],
             ];
         }
+
+        $this->syncPlacementTestDocumentStatuses();
 
         $genericSql = 'SELECT id, formation_id, session_id, category, document_type, title, url, is_mandatory, created_at
                        FROM session_documents_generic';

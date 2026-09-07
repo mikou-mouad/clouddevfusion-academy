@@ -495,7 +495,7 @@
                 <section class="sessions-block student-session-detail-card student-docs-panel">
                   <header class="student-docs-panel-head">
                     <h5>Documents</h5>
-                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document. Pour le test de positionnement et la convocation : ouvrez le document, puis confirmez une fois termine.</p>
+                    <p class="sub">Pour le contrat et la fiche de renseignement : telechargez, signez, puis renvoyez le document. Pour la convocation : ouvrez le document, puis confirmez une fois termine. Le test de positionnement se passe en ligne : le statut se met a jour automatiquement apres reussite ou echec.</p>
                   </header>
                   @if (studentDocumentNotice()) { <p class="success">{{ studentDocumentNotice() }}</p> }
                   @if (studentDocumentError()) { <p class="error">{{ studentDocumentError() }}</p> }
@@ -507,7 +507,7 @@
                           <tr [class.student-doc-row--signable]="studentDocumentNeedsSignature(row) || studentDocumentNeedsSubmission(row)">
                             <td class="student-doc-name">{{ row.label }}</td>
                             <td>
-                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable, row.submittable)">
+                              <span class="student-doc-status-pill" [attr.data-variant]="studentDocumentStatusVariant(row.status, row.available, row.signable, row.submittable, row.key)">
                                 {{ studentDocumentStatusLabel(row.status, row.available, row.signable, row.submittable, row.key) }}
                               </span>
                             </td>
@@ -593,6 +593,8 @@
                                 <a class="teams-link admin-teams-link student-doc-open-link" [href]="resolveDocumentUrl(row.url)" target="_blank" rel="noopener noreferrer">
                                   @if (row.key === 'attestation_reussite') {
                                     Telecharger
+                                  } @else if (row.key === 'test_positionnement') {
+                                    Passer le test
                                   } @else {
                                     {{ row.status === 'signed' && row.signable ? 'Voir signe' : 'Ouvrir' }}
                                   }

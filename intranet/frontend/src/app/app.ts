@@ -1007,9 +1007,15 @@ export class App implements OnDestroy {
         };
       }
       if (col.key === 'test_positionnement') {
-        const statusLabel = doc.signatureStatus === 'signed' ? 'Envoyé' : 'En attente';
-        const statusVariant: AdminFormationDocMatrixCell['statusVariant'] =
-          doc.signatureStatus === 'signed' ? 'ok' : 'warn';
+        let statusLabel = 'En attente';
+        let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
+        if (doc.signatureStatus === 'signed') {
+          statusLabel = 'Validé';
+          statusVariant = 'ok';
+        } else if (doc.signatureStatus === 'rejected') {
+          statusLabel = 'Échoué';
+          statusVariant = 'danger';
+        }
         return {
           status: statusLabel,
           statusVariant,
@@ -1461,7 +1467,7 @@ export class App implements OnDestroy {
     }[] = [
       { key: 'reglement_interieur', label: 'Règlement intérieur', keywords: ['reglement', 'interieur'], category: 'inscription' },
       { key: 'cgv', label: 'CGV', keywords: ['cgv'], category: 'inscription' },
-      { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription', submittable: true },
+      { key: 'test_positionnement', label: 'Test de positionnement', keywords: ['positionnement', 'test positionnement'], category: 'pre-inscription' },
       { key: 'compte_rendu_entretien', label: 'Compte rendu entretien', keywords: ['compte', 'rendu', 'entretien'], category: 'inscription' },
       { key: 'contrat', label: 'Contrat', keywords: ['contrat'], category: 'inscription', signable: true },
       { key: 'convocation', label: 'Convocation', keywords: ['convocation'], category: 'inscription', submittable: true },
@@ -2365,6 +2371,18 @@ export class App implements OnDestroy {
 
   studentDocumentStatusLabel(status: string, available = true, signable = false, submittable = false, documentKey = ''): string {
     if (!available) return 'Non disponible';
+    if (documentKey === 'test_positionnement') {
+      switch (status) {
+        case 'signed':
+          return 'Validé';
+        case 'rejected':
+          return 'Échoué';
+        case 'pending':
+          return 'En attente';
+        default:
+          break;
+      }
+    }
     if (signable && status === 'pending') return 'A signer';
     if (submittable && status === 'signed') {
       return documentKey === 'convocation' ? 'Recu' : 'Envoye';
@@ -2386,8 +2404,13 @@ export class App implements OnDestroy {
     }
   }
 
-  studentDocumentStatusVariant(status: string, available = true, signable = false, submittable = false): string {
+  studentDocumentStatusVariant(status: string, available = true, signable = false, submittable = false, documentKey = ''): string {
     if (!available) return 'na';
+    if (documentKey === 'test_positionnement') {
+      if (status === 'signed') return 'ok';
+      if (status === 'rejected') return 'danger';
+      if (status === 'pending') return 'warn';
+    }
     if (signable && status === 'pending') return 'warn';
     if (submittable && status === 'signed') return 'ok';
     if (submittable && status === 'pending') return 'warn';
@@ -3169,7 +3192,7 @@ export class App implements OnDestroy {
       issues.push({
         ...base,
         status: 'pending_signature',
-        statusLabel: col.key === 'test_validation' ? 'En attente' : 'En attente de renvoi'
+        statusLabel: col.key === 'test_validation' ? 'En attente' : 'En attente (test en ligne)'
       });
       return;
     }
