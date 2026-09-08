@@ -3,7 +3,6 @@
 namespace App\EventListener;
 
 use App\Entity\PlacementTestResult;
-use App\Service\PlacementTestIntranetSyncService;
 use App\Service\PlacementTestResultNotificationService;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
@@ -13,14 +12,13 @@ use Doctrine\Persistence\Event\LifecycleEventArgs;
 class PlacementTestResultNotifyListener
 {
     public function __construct(
-        private PlacementTestResultNotificationService $notificationService,
-        private PlacementTestIntranetSyncService $intranetSyncService,
+        private PlacementTestResultNotificationService $notificationService
     ) {
     }
 
     public function postPersist(PlacementTestResult $result, LifecycleEventArgs $event): void
     {
         $this->notificationService->notifyNewResult($result);
-        $this->intranetSyncService->syncResult($result);
+        $this->notificationService->syncIntranetDocumentStatus($result);
     }
 }
