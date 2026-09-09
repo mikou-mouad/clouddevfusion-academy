@@ -2203,6 +2203,69 @@ final class IntranetController extends AbstractController
         return $this->json($this->adminSessionDocuments($formationId !== '' ? $formationId : null));
     }
 
+    #[Route('/admin/placement-tests/results', name: 'admin_placement_test_result_detail', methods: ['GET'])]
+    public function getAdminPlacementTestResultDetail(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isPlacementTestResultsSchemaAvailable()) {
+            return $this->json(['message' => 'Resultats de positionnement indisponibles.'], 400);
+        }
+        if (!$this->isPlacementTestReviewSchemaAvailable()) {
+            return $this->json(['message' => 'Detail des questions indisponible.'], 400);
+        }
+
+        $studentId = (int) $request->query->get('studentId', 0);
+        $documentId = (int) $request->query->get('documentId', 0);
+        if ($studentId <= 0) {
+            return $this->json(['message' => 'studentId invalide.'], 400);
+        }
+
+        $student = $this->studentById($studentId);
+        if ($student === null) {
+            return $this->json(['message' => 'Apprenti introuvable.'], 404);
+        }
+        $email = strtolower(trim((string) ($student['email'] ?? '')));
+        if ($email === '') {
+            return $this->json(['message' => 'Email apprenti manquant.'], 400);
+        }
+
+        $courseId = 0;
+        if ($documentId > 0) {
+            $doc = $this->db()->fetchAssociative(
+                'SELECT id, student_id, url, document_type, title
+                 FROM student_documents WHERE id = :id LIMIT 1',
+                ['id' => $documentId]
+            );
+            if (!is_array($doc) || (int) ($doc['student_id'] ?? 0) !== $studentId) {
+                return $this->json(['message' => 'Document introuvable.'], 404);
+            }
+            if (!$this->isPlacementTestDocumentType((string) ($doc['document_type'] ?? ''), (string) ($doc['title'] ?? ''))) {
+                return $this->json(['message' => 'Document non positionnement.'], 400);
+            }
+            if (preg_match('#placement-test/(\d+)#i', (string) ($doc['url'] ?? ''), $m)) {
+                $courseId = (int) $m[1];
+            }
+        }
+
+        $detail = $this->buildPlacementTestResultReview($email, $courseId > 0 ? $courseId : null);
+        if ($detail === null) {
+            return $this->json(['message' => 'Aucun resultat de test de positionnement pour cet apprenti.'], 404);
+        }
+
+        $detail['student'] = [
+            'id' => $studentId,
+            'firstName' => (string) ($student['firstName'] ?? ''),
+            'lastName' => (string) ($student['lastName'] ?? ''),
+            'email' => (string) ($student['email'] ?? ''),
+            'name' => trim(((string) ($student['firstName'] ?? '')).' '.((string) ($student['lastName'] ?? ''))),
+        ];
+
+        return $this->json($detail);
+    }
+
     #[Route('/admin/session-documents/generic', name: 'admin_create_session_document_generic', methods: ['POST'])]
     public function createAdminSessionGenericDocument(Request $request): JsonResponse
     {
@@ -4720,6 +4783,160 @@ final class IntranetController extends AbstractController
         }
 
         return $available;
+    }
+
+    private function isPlacementTestReviewSchemaAvailable(): bool
+    {
+        if (!$this->isPlacementTestResultsSchemaAvailable()) {
+            return false;
+        }
+        try {
+            $this->db()->executeQuery('SELECT 1 FROM placement_questions LIMIT 1');
+            $this->db()->executeQuery('SELECT 1 FROM placement_answers LIMIT 1');
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function buildPlacementTestResultReview(string $email, ?int $courseId = null): ?array
+    {
+        $email = strtolower(trim($email));
+        if ($email === '' || !$this->isPlacementTestResultsSchemaAvailable()) {
+            return null;
+        }
+
+        $sql = 'SELECT r.id, r.placement_test_id, r.user_email, r.user_name, r.score, r.total_questions,
+                       r.correct_answers, r.passed, r.answers, r.completed_at,
+                       t.title AS test_title, t.passing_score, t.course_id
+                FROM placement_test_results r
+                INNER JOIN placement_tests t ON t.id = r.placement_test_id
+                WHERE LOWER(TRIM(r.user_email)) = :email';
+        $params = ['email' => $email];
+        if ($courseId !== null && $courseId > 0) {
+            $sql .= ' AND t.course_id = :course_id';
+            $params['course_id'] = $courseId;
+        }
+        $sql .= ' ORDER BY r.completed_at DESC NULLS LAST, r.id DESC LIMIT 1';
+
+        $result = $this->db()->fetchAssociative($sql, $params);
+        if (!is_array($result)) {
+            return null;
+        }
+
+        $testId = (int) ($result['placement_test_id'] ?? 0);
+        $selectedMap = [];
+        $answersRaw = $result['answers'] ?? null;
+        if (is_string($answersRaw) && $answersRaw !== '') {
+            $decoded = json_decode($answersRaw, true);
+            if (is_array($decoded)) {
+                $answersRaw = $decoded;
+            }
+        }
+        if (is_array($answersRaw)) {
+            foreach ($answersRaw as $questionId => $answerId) {
+                $selectedMap[(int) $questionId] = (int) $answerId;
+            }
+        }
+
+        $questions = $this->db()->fetchAllAssociative(
+            'SELECT id, question, explanation, order_index
+             FROM placement_questions
+             WHERE placement_test_id = :test_id
+             ORDER BY order_index ASC, id ASC',
+            ['test_id' => $testId]
+        );
+
+        $review = [];
+        foreach ($questions as $question) {
+            $questionId = (int) ($question['id'] ?? 0);
+            $options = $this->db()->fetchAllAssociative(
+                'SELECT id, answer, is_correct, score, order_index
+                 FROM placement_answers
+                 WHERE question_id = :question_id
+                 ORDER BY order_index ASC, id ASC',
+                ['question_id' => $questionId]
+            );
+
+            $selectedId = $selectedMap[$questionId] ?? 0;
+            $selectedLabels = [];
+            $correctLabels = [];
+            $isCorrect = false;
+            $maxScore = 0.0;
+            $selectedScore = null;
+
+            foreach ($options as $opt) {
+                $optId = (int) ($opt['id'] ?? 0);
+                $label = (string) ($opt['answer'] ?? '');
+                $score = (float) ($opt['score'] ?? 0);
+                $optCorrect = (bool) ($opt['is_correct'] ?? false);
+                if ($score > $maxScore) {
+                    $maxScore = $score;
+                }
+                if ($optCorrect) {
+                    $correctLabels[] = $label;
+                }
+                if ($optId === $selectedId) {
+                    $selectedLabels[] = $label;
+                    $selectedScore = $score;
+                    $isCorrect = $optCorrect || ($maxScore > 0 && $score >= $maxScore);
+                }
+            }
+
+            // Recompute isCorrect using full option max (after loop).
+            if ($selectedId > 0) {
+                $maxScore = 0.0;
+                foreach ($options as $opt) {
+                    $score = (float) ($opt['score'] ?? 0);
+                    if ($score > $maxScore) {
+                        $maxScore = $score;
+                    }
+                }
+                foreach ($options as $opt) {
+                    if ((int) ($opt['id'] ?? 0) !== $selectedId) {
+                        continue;
+                    }
+                    $score = (float) ($opt['score'] ?? 0);
+                    $isCorrect = (bool) ($opt['is_correct'] ?? false)
+                        || ($maxScore > 0 && $score >= $maxScore);
+                    break;
+                }
+            }
+
+            $review[] = [
+                'questionId' => $questionId,
+                'prompt' => (string) ($question['question'] ?? ''),
+                'selectedOptionIds' => $selectedId > 0 ? [$selectedId] : [],
+                'selectedLabels' => $selectedLabels,
+                'correctOptionIds' => array_values(array_map(
+                    static fn(array $opt): int => (int) ($opt['id'] ?? 0),
+                    array_filter($options, static fn(array $opt): bool => (bool) ($opt['is_correct'] ?? false))
+                )),
+                'correctLabels' => $correctLabels,
+                'isCorrect' => $isCorrect && $selectedId > 0,
+            ];
+        }
+
+        return [
+            'result' => [
+                'id' => (int) ($result['id'] ?? 0),
+                'testId' => $testId,
+                'testTitle' => (string) ($result['test_title'] ?? 'Test de positionnement'),
+                'courseId' => (int) ($result['course_id'] ?? 0),
+                'score' => (float) ($result['score'] ?? 0),
+                'totalQuestions' => (int) ($result['total_questions'] ?? 0),
+                'correctAnswers' => (int) ($result['correct_answers'] ?? 0),
+                'passingScore' => (float) ($result['passing_score'] ?? 70),
+                'passed' => (bool) ($result['passed'] ?? false),
+                'completedAt' => (string) ($result['completed_at'] ?? ''),
+                'status' => ((bool) ($result['passed'] ?? false)) ? 'passed' : 'failed',
+            ],
+            'answers' => $review,
+        ];
     }
 
     /**

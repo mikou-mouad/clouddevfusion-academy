@@ -199,6 +199,8 @@ export class App implements OnDestroy {
   ]);
   adminValidationHistoryQuery = signal('');
   adminValidationHistoryStudentId = signal<number | null>(null);
+  adminPlacementResultDetail = signal<AdminPlacementTestResultDetail | null>(null);
+  loadingAdminPlacementResult = signal(false);
   studentActiveValidationTest = signal<StudentValidationTestTake | null>(null);
   studentValidationAnswers = signal<Record<number, number[]>>({});
   studentValidationSubmitNotice = signal('');
@@ -1009,12 +1011,15 @@ export class App implements OnDestroy {
       if (col.key === 'test_positionnement') {
         let statusLabel = 'En attente';
         let statusVariant: AdminFormationDocMatrixCell['statusVariant'] = 'warn';
+        let canViewPlacementAnswers = false;
         if (doc.signatureStatus === 'signed') {
           statusLabel = 'Validé';
           statusVariant = 'ok';
+          canViewPlacementAnswers = true;
         } else if (doc.signatureStatus === 'rejected') {
           statusLabel = 'Échoué';
           statusVariant = 'danger';
+          canViewPlacementAnswers = true;
         }
         return {
           status: statusLabel,
@@ -1023,7 +1028,8 @@ export class App implements OnDestroy {
           docId: doc.id,
           signatureStatus: doc.signatureStatus,
           canUpload: true,
-          isNa: false
+          isNa: false,
+          canViewPlacementAnswers
         };
       }
       let statusLabel = 'En attente de signature';
@@ -2662,6 +2668,8 @@ export class App implements OnDestroy {
     this.adminValidationHistoryQuery.set('');
     this.adminValidationHistoryStudentId.set(null);
     this.adminValidationQuestionsPanelOpen.set(false);
+    this.adminPlacementResultDetail.set(null);
+    this.loadingAdminPlacementResult.set(false);
   }
 
   toggleAdminValidationQuestionsPanel(): void {
@@ -2678,12 +2686,14 @@ export class App implements OnDestroy {
 
   closeAdminValidationHistoryModal(): void {
     this.adminValidationHistoryStudentId.set(null);
+    this.adminPlacementResultDetail.set(null);
   }
 
   openDocMatrixValidationAnswers(testId: number, studentId: number): void {
     if (!testId || !studentId) return;
     this.adminWorkflowError.set('');
     this.adminValidationHistoryStudentId.set(null);
+    this.adminPlacementResultDetail.set(null);
     this.adminValidationTestDetailId.set(testId);
     this.http
       .get<AdminValidationTestDetail>(`${this.apiBaseUrl}/admin/session-validations/tests/${testId}`, {
@@ -2704,6 +2714,40 @@ export class App implements OnDestroy {
           this.adminWorkflowError.set('Impossible de charger les reponses du test.');
         }
       });
+  }
+
+  openDocMatrixPlacementAnswers(studentId: number, documentId: number | null): void {
+    if (!studentId) return;
+    this.adminWorkflowError.set('');
+    this.adminValidationHistoryStudentId.set(null);
+    this.adminPlacementResultDetail.set(null);
+    this.loadingAdminPlacementResult.set(true);
+    const params = new URLSearchParams({ studentId: String(studentId) });
+    if (documentId) {
+      params.set('documentId', String(documentId));
+    }
+    this.http
+      .get<AdminPlacementTestResultDetail>(
+        `${this.apiBaseUrl}/admin/placement-tests/results?${params.toString()}`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (detail) => {
+          this.loadingAdminPlacementResult.set(false);
+          this.adminPlacementResultDetail.set(detail);
+        },
+        error: (err) => {
+          this.loadingAdminPlacementResult.set(false);
+          this.adminPlacementResultDetail.set(null);
+          this.adminWorkflowError.set(
+            err?.error?.message ?? 'Impossible de charger les reponses du test de positionnement.'
+          );
+        }
+      });
+  }
+
+  closeAdminPlacementResultModal(): void {
+    this.adminPlacementResultDetail.set(null);
   }
 
   startStudentValidationTest(testId: number): void {
@@ -5699,6 +5743,8 @@ interface AdminFormationDocMatrixCell {
   /** Quiz intranet : id du test pour ouvrir le detail des reponses. */
   validationTestId?: number | null;
   canViewValidationAnswers?: boolean;
+  /** Test de positionnement site : ouvrir le detail des reponses. */
+  canViewPlacementAnswers?: boolean;
 }
 
 interface AdminSessionDocumentGeneric {
@@ -5807,6 +5853,30 @@ interface AdminValidationAnswerReview {
   correctOptionIds: number[];
   correctLabels: string[];
   isCorrect: boolean;
+}
+
+interface AdminPlacementTestResultDetail {
+  student: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    name: string;
+  };
+  result: {
+    id: number;
+    testId: number;
+    testTitle: string;
+    courseId: number;
+    score: number;
+    totalQuestions: number;
+    correctAnswers: number;
+    passingScore: number;
+    passed: boolean;
+    completedAt: string;
+    status: 'passed' | 'failed';
+  };
+  answers: AdminValidationAnswerReview[];
 }
 
 interface StudentValidationTestTake {

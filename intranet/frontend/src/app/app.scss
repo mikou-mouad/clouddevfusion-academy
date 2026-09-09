@@ -2991,6 +2991,14 @@ button.archive-btn.trainer-icon-action {
   color: #166534;
 }
 
+.admin-validation-answer-given[data-correct='true'] {
+  color: #166534;
+}
+
+.admin-validation-answer-given[data-correct='false'] {
+  color: #b91c1c;
+}
+
 @media (max-width: 768px) {
   .admin-validation-meta-grid {
     grid-template-columns: 1fr;

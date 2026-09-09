@@ -2556,6 +2556,15 @@
                                           >
                                             Voir
                                           </button>
+                                        } @else if (cell.canViewPlacementAnswers && mrow.studentId) {
+                                          <button
+                                            type="button"
+                                            class="admin-doc-matrix-link admin-doc-matrix-link--compact"
+                                            title="Voir les reponses du test de positionnement"
+                                            (click)="openDocMatrixPlacementAnswers(mrow.studentId, cell.docId)"
+                                          >
+                                            Voir
+                                          </button>
                                         } @else if (cell.url) {
                                           <a class="admin-doc-matrix-link admin-doc-matrix-link--compact" [href]="resolveDocumentUrl(cell.url)" target="_blank" rel="noopener noreferrer" title="Voir">Voir</a>
                                         }
@@ -2609,7 +2618,7 @@
                                 <p>
                                   <span class="admin-validation-answer-label">Reponse donnee :</span>
                                   @if (answer.selectedLabels.length) {
-                                    <strong>{{ answer.selectedLabels.join(', ') }}</strong>
+                                    <strong class="admin-validation-answer-given" [attr.data-correct]="answer.isCorrect">{{ answer.selectedLabels.join(', ') }}</strong>
                                   } @else {
                                     <em>Aucune reponse</em>
                                   }
@@ -2625,6 +2634,72 @@
                           }
                         </div>
                       }
+                    </section>
+                  </div>
+                }
+
+                @if (adminFormationDetailTab() === 'suivi' && adminPlacementResultDetail(); as placement) {
+                  <div class="trainer-modal-overlay admin-validation-answers-modal-overlay" (click)="closeAdminPlacementResultModal()">
+                    <section class="trainer-modal admin-validation-answers-modal card content-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="suiviPlacementAnswersModalTitle">
+                      <header class="trainer-modal-head admin-validation-answers-modal-head">
+                        <div>
+                          <p class="trainer-modal-kicker">Test de positionnement</p>
+                          <h3 id="suiviPlacementAnswersModalTitle">{{ placement.student.name || (placement.student.firstName + ' ' + placement.student.lastName) }}</h3>
+                          <p class="sub">{{ placement.student.email }}</p>
+                          <p class="sub">{{ placement.result.testTitle }}</p>
+                        </div>
+                        <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminPlacementResultModal()" aria-label="Fermer">×</button>
+                      </header>
+
+                      <div class="admin-validation-attempt-summary">
+                        <span class="admin-validation-status-pill" [attr.data-status]="placement.result.status">{{ placement.result.passed ? 'Validé' : 'Échoué' }}</span>
+                        <span><strong>{{ placement.result.correctAnswers }}</strong> / {{ placement.result.totalQuestions }} ({{ placement.result.score }}%)</span>
+                        @if (placement.result.completedAt) {
+                          <span class="sub">Soumis le {{ placement.result.completedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        }
+                      </div>
+
+                      @if (!placement.answers.length) {
+                        <p class="admin-validation-empty">Aucune question disponible pour ce resultat.</p>
+                      } @else {
+                        <div class="admin-validation-answer-review">
+                          @for (answer of placement.answers; track answer.questionId; let qi = $index) {
+                            <article class="admin-validation-answer-card" [class.is-correct]="answer.isCorrect" [class.is-wrong]="!answer.isCorrect && answer.selectedLabels.length">
+                              <div class="admin-validation-answer-card-head">
+                                <span class="admin-validation-question-badge">Q{{ qi + 1 }}</span>
+                                <span class="admin-validation-answer-verdict" [attr.data-correct]="answer.isCorrect">
+                                  {{ answer.isCorrect ? 'Correct' : (answer.selectedLabels.length ? 'Incorrect' : 'Non repondu') }}
+                                </span>
+                              </div>
+                              <p class="admin-validation-answer-prompt">{{ answer.prompt }}</p>
+                              <div class="admin-validation-answer-lines">
+                                <p>
+                                  <span class="admin-validation-answer-label">Reponse donnee :</span>
+                                  @if (answer.selectedLabels.length) {
+                                    <strong class="admin-validation-answer-given" [attr.data-correct]="answer.isCorrect">{{ answer.selectedLabels.join(', ') }}</strong>
+                                  } @else {
+                                    <em>Aucune reponse</em>
+                                  }
+                                </p>
+                                @if (!answer.isCorrect && answer.correctLabels.length) {
+                                  <p class="admin-validation-answer-expected">
+                                    <span class="admin-validation-answer-label">Bonne reponse :</span>
+                                    <strong>{{ answer.correctLabels.join(', ') }}</strong>
+                                  </p>
+                                }
+                              </div>
+                            </article>
+                          }
+                        </div>
+                      }
+                    </section>
+                  </div>
+                }
+
+                @if (adminFormationDetailTab() === 'suivi' && loadingAdminPlacementResult()) {
+                  <div class="trainer-modal-overlay admin-validation-answers-modal-overlay">
+                    <section class="trainer-modal admin-validation-answers-modal card content-card" role="status">
+                      <p class="admin-validation-empty">Chargement des reponses…</p>
                     </section>
                   </div>
                 }
