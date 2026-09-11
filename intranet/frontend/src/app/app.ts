@@ -1991,6 +1991,32 @@ export class App implements OnDestroy {
     if (!prevTitle || (prevCol && prevTitle === prevCol.label)) {
       this.adminUnifiedDocTitle.set(col.label);
     }
+    this.applyPlacementTestAutoUrlIfNeeded();
+  }
+
+  /** Lien dynamique /placement-test/{catalogCourseId} selon le cours de la session. */
+  placementTestUrlForSelectedFormation(): string | null {
+    const formation = this.selectedAdminFormation();
+    const courseId = Number.parseInt(String(formation?.catalogCourseId ?? '').replace(/\D+/g, ''), 10);
+    if (!Number.isFinite(courseId) || courseId <= 0) {
+      return null;
+    }
+    // Toujours le site public (pas /intranet).
+    const origin =
+      typeof window !== 'undefined' && /clouddevfusion\.com$/i.test(window.location.hostname)
+        ? `${window.location.protocol}//${window.location.hostname}`
+        : 'https://academy.clouddevfusion.com';
+    return `${origin}/placement-test/${courseId}`;
+  }
+
+  applyPlacementTestAutoUrlIfNeeded(): void {
+    if (this.adminUnifiedDocSlotKey() !== 'test_positionnement') {
+      return;
+    }
+    const autoUrl = this.placementTestUrlForSelectedFormation();
+    if (autoUrl) {
+      this.adminUnifiedDocUrl.set(autoUrl);
+    }
   }
 
   onAdminUnifiedDocFileSelected(event: Event): void {
@@ -2005,6 +2031,16 @@ export class App implements OnDestroy {
     if (!formation) return;
     this.adminWorkflowError.set('');
     const col = this.adminUnifiedDocSlotColumn();
+    if (col.key === 'test_positionnement') {
+      const autoUrl = this.placementTestUrlForSelectedFormation();
+      if (!autoUrl) {
+        this.adminWorkflowError.set(
+          'Impossible de generer le lien du test : associez un cours catalogue a cette session.'
+        );
+        return;
+      }
+      this.adminUnifiedDocUrl.set(autoUrl);
+    }
     if (!this.adminUnifiedDocUrl().trim() && !this.adminUnifiedDocFile()) {
       this.adminWorkflowError.set('Ajoutez un lien ou un fichier.');
       return;
@@ -2029,7 +2065,12 @@ export class App implements OnDestroy {
     }
     if (col.scope === 'student') {
       const sid = this.adminStudentDocStudentId();
-      if (sid === null || sid === 'all') {
+      if (sid === null) {
+        this.adminWorkflowError.set('Selectionnez un apprenti pour ce document individuel.');
+        return;
+      }
+      // Placement / docs individuels : "all" est autorise.
+      if (sid !== 'all' && (!Number.isFinite(sid) || sid <= 0)) {
         this.adminWorkflowError.set('Selectionnez un apprenti pour ce document individuel.');
         return;
       }

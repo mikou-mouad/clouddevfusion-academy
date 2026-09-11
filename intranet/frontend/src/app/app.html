@@ -2144,6 +2144,14 @@
                                         >
                                           <span class="admin-searchable-select-name">Choisir un etudiant</span>
                                         </li>
+                                        <li
+                                          role="option"
+                                          class="admin-searchable-select-option"
+                                          [class.admin-searchable-select-option--selected]="adminStudentDocStudentId() === 'all'"
+                                          (mousedown)="$event.preventDefault(); selectAdminStudentDocAllStudents()"
+                                        >
+                                          <span class="admin-searchable-select-name">Tous les apprentis ({{ selectedAdminFormationApprentices().length }})</span>
+                                        </li>
                                       }
                                       @if (!filteredAdminStudentDocApprentices().length && adminStudentDocStudentComboQuery().trim()) {
                                         <li class="admin-searchable-select-empty">Aucun resultat pour cette recherche.</li>
@@ -2199,17 +2207,33 @@
                             }
                           </div>
                           <div class="admin-unified-doc-top-row">
-                            <label class="admin-unified-doc-field">
-                              <span>Lien (optionnel)</span>
-                              <input type="url" [ngModel]="adminUnifiedDocUrl()" (ngModelChange)="adminUnifiedDocUrl.set($event)" name="adminUnifiedDocUrl" placeholder="https://..." />
-                            </label>
-                            <label class="admin-unified-doc-field admin-unified-doc-field--file">
-                              <span>Fichier</span>
-                              <div class="admin-unified-doc-file-wrap">
-                                <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.pps,.ppsx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.gif,.zip,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
-                                <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, PowerPoint (.ppt, .pptx), Excel, image…' }}</span>
+                            @if (adminUnifiedDocSlotKey() === 'test_positionnement') {
+                              <div class="admin-unified-doc-field">
+                                <span>Lien du test</span>
+                                @if (placementTestUrlForSelectedFormation(); as placementUrl) {
+                                  <p class="admin-unified-doc-title-auto-note">
+                                    Genere automatiquement :
+                                    <strong>{{ placementUrl }}</strong>
+                                  </p>
+                                } @else {
+                                  <p class="error">Associez un cours catalogue a cette session pour generer le lien.</p>
+                                }
                               </div>
-                            </label>
+                            } @else {
+                              <label class="admin-unified-doc-field">
+                                <span>Lien (optionnel)</span>
+                                <input type="url" [ngModel]="adminUnifiedDocUrl()" (ngModelChange)="adminUnifiedDocUrl.set($event)" name="adminUnifiedDocUrl" placeholder="https://..." />
+                              </label>
+                            }
+                            @if (adminUnifiedDocSlotKey() !== 'test_positionnement') {
+                              <label class="admin-unified-doc-field admin-unified-doc-field--file">
+                                <span>Fichier</span>
+                                <div class="admin-unified-doc-file-wrap">
+                                  <input type="file" class="admin-unified-doc-file-input" (change)="onAdminUnifiedDocFileSelected($event)" name="adminUnifiedDocFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.pps,.ppsx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.webp,.gif,.zip,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                                  <span class="admin-unified-doc-file-hint">{{ adminUnifiedDocFile()?.name || 'PDF, Word, PowerPoint (.ppt, .pptx), Excel, image…' }}</span>
+                                </div>
+                              </label>
+                            }
                           </div>
                           @if (adminUnifiedDocSlotColumn().scope === 'generic') {
                             <label class="admin-inline-checkbox admin-unified-doc-mandatory">

@@ -2250,7 +2250,18 @@ final class IntranetController extends AbstractController
             }
         }
 
-        $detail = $this->buildPlacementTestResultReview($email, $courseId > 0 ? $courseId : null);
+        try {
+            $detail = $this->buildPlacementTestResultReview($email, $courseId > 0 ? $courseId : null);
+            // Si l'URL document pointe vers un mauvais courseId (lien statique),
+            // retomber sur le dernier resultat de l'apprenti.
+            if ($detail === null && $courseId > 0) {
+                $detail = $this->buildPlacementTestResultReview($email, null);
+            }
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'message' => sprintf('Impossible de charger le detail: %s', $exception->getMessage()),
+            ], 500);
+        }
         if ($detail === null) {
             return $this->json(['message' => 'Aucun resultat de test de positionnement pour cet apprenti.'], 404);
         }
@@ -2379,9 +2390,6 @@ final class IntranetController extends AbstractController
         if ((!$applyToAllStudents && $studentId <= 0) || $formationId === '' || $category === '' || $documentType === '' || $title === '') {
             return $this->json(['message' => 'studentId, formationId, category, documentType et title sont requis.'], 400);
         }
-        if ($url === '' && $uploadedFile === null) {
-            return $this->json(['message' => 'Ajoutez un lien ou un fichier.'], 400);
-        }
 
         $allowedCategories = ['pre-inscription', 'inscription', 'en-formation', 'cloture'];
         if (!in_array($category, $allowedCategories, true)) {
@@ -2398,7 +2406,21 @@ final class IntranetController extends AbstractController
             }
         }
 
-        $studentIds = [];
+        // Test de positionnement : URL dynamique selon le cours catalogue de la session
+        // (ne pas laisser un lien statique /placement-test/3 collé à la main).
+        if ($this->isPlacementTestDocumentType($documentType, $title)) {
+            $autoUrl = $this->placementTestUrlForFormation($formationId);
+            if ($autoUrl === null) {
+                return $this->json([
+                    'message' => 'Impossible de generer le lien du test : associez un cours catalogue a cette session.',
+                ], 400);
+            }
+            $url = $autoUrl;
+        }
+
+        if ($url === '' && $uploadedFile === null) {
+            return $this->json(['message' => 'Ajoutez un lien ou un fichier.'], 400);
+        }
         if ($applyToAllStudents) {
             $studentIds = array_map(
                 'intval',
@@ -4749,6 +4771,50 @@ final class IntranetController extends AbstractController
         return str_contains($haystack, 'positionnement');
     }
 
+    /**
+     * Build the public site placement-test URL from the formation catalog course id.
+     */
+    private function placementTestUrlForFormation(string $formationId): ?string
+    {
+        $formationId = trim($formationId);
+        if ($formationId === '') {
+            return null;
+        }
+
+        $courseId = 0;
+        try {
+            $raw = $this->db()->fetchOne(
+                'SELECT catalog_course_id FROM formations WHERE id = :id LIMIT 1',
+                ['id' => $formationId]
+            );
+            if ($raw !== false && $raw !== null && trim((string) $raw) !== '') {
+                $courseId = (int) preg_replace('/\D+/', '', (string) $raw);
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($courseId <= 0) {
+            return null;
+        }
+
+        return rtrim($this->publicSiteBaseUrl(), '/').'/placement-test/'.$courseId;
+    }
+
+    private function publicSiteBaseUrl(): string
+    {
+        $fromEnv = trim((string) ($_SERVER['PUBLIC_SITE_URL'] ?? $_ENV['PUBLIC_SITE_URL'] ?? ''));
+        if ($fromEnv !== '') {
+            return rtrim($fromEnv, '/');
+        }
+
+        if ('prod' === (string) $this->getParameter('kernel.environment')) {
+            return 'https://academy.clouddevfusion.com';
+        }
+
+        return 'http://localhost:4200';
+    }
+
     private function isConvocationDocumentType(string $documentType, string $title): bool
     {
         $haystack = strtolower(trim($documentType.' '.$title));
@@ -4855,7 +4921,7 @@ final class IntranetController extends AbstractController
         foreach ($questions as $question) {
             $questionId = (int) ($question['id'] ?? 0);
             $options = $this->db()->fetchAllAssociative(
-                'SELECT id, answer, is_correct, score, order_index
+                'SELECT id, text, is_correct, score, order_index
                  FROM placement_answers
                  WHERE question_id = :question_id
                  ORDER BY order_index ASC, id ASC',
@@ -4871,7 +4937,7 @@ final class IntranetController extends AbstractController
 
             foreach ($options as $opt) {
                 $optId = (int) ($opt['id'] ?? 0);
-                $label = (string) ($opt['answer'] ?? '');
+                $label = (string) ($opt['text'] ?? '');
                 $score = (float) ($opt['score'] ?? 0);
                 $optCorrect = (bool) ($opt['is_correct'] ?? false);
                 if ($score > $maxScore) {
@@ -4981,7 +5047,7 @@ final class IntranetController extends AbstractController
             }
 
             $docs = $this->db()->fetchAllAssociative(
-                "SELECT id, student_id, document_type, title, url, signature_status
+                "SELECT id, student_id, formation_id, document_type, title, url, signature_status
                  FROM student_documents
                  WHERE LOWER(document_type || ' ' || title) LIKE '%positionnement%'
                  ORDER BY id DESC"
@@ -5036,15 +5102,39 @@ final class IntranetController extends AbstractController
                 foreach ($matched as $doc) {
                     $docId = (int) ($doc['id'] ?? 0);
                     $current = (string) ($doc['signature_status'] ?? 'pending');
-                    if ($docId <= 0 || $current === $newStatus) {
+                    if ($docId <= 0) {
                         continue;
                     }
-                    $this->db()->update('student_documents', [
-                        'signature_status' => $newStatus,
-                        'signed_at' => $now,
+
+                    $formationIdForDoc = trim((string) ($doc['formation_id'] ?? ''));
+                    $correctUrl = $formationIdForDoc !== ''
+                        ? ($this->placementTestUrlForFormation($formationIdForDoc) ?? '')
+                        : '';
+                    if ($correctUrl === '' && $courseId > 0) {
+                        $correctUrl = rtrim($this->publicSiteBaseUrl(), '/').'/placement-test/'.$courseId;
+                    }
+                    $currentUrl = trim((string) ($doc['url'] ?? ''));
+                    $needsUrlFix = $correctUrl !== '' && $currentUrl !== $correctUrl;
+
+                    if ($current === $newStatus && !$needsUrlFix) {
+                        continue;
+                    }
+
+                    $update = [
                         'updated_at' => $now,
-                    ], ['id' => $docId]);
-                    $doc['signature_status'] = $newStatus;
+                    ];
+                    if ($current !== $newStatus) {
+                        $update['signature_status'] = $newStatus;
+                        $update['signed_at'] = $now;
+                    }
+                    if ($needsUrlFix) {
+                        $update['url'] = $correctUrl;
+                    }
+                    $this->db()->update('student_documents', $update, ['id' => $docId]);
+                    $doc['signature_status'] = $update['signature_status'] ?? $current;
+                    if ($needsUrlFix) {
+                        $doc['url'] = $correctUrl;
+                    }
                 }
             }
         } catch (\Throwable) {
