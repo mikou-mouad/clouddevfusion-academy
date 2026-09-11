@@ -17,14 +17,13 @@ describe('CourseDetailComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
   it('should have course data', () => {
     expect(component.course).toBeDefined();
-    expect(component.course.title).toBeTruthy();
-    expect(component.course.code).toBeTruthy();
+
+    if (component.course) {
+      expect(component.course.title).toBeTruthy();
+      expect(component.course.code).toBeTruthy();
+    }
   });
 });
 

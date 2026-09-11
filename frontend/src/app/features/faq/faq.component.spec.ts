@@ -20,17 +20,45 @@ describe('FaqComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should toggle faq', () => {
-    const faq = component.faqs[0];
-    expect(faq.open).toBe(false);
-    component.toggleFaq(faq);
-    expect(faq.open).toBe(true);
+ it('should toggle faq', () => {
+  const faq = {
+    id: 1,
+    category: 'Financement',
+    question: 'Question test',
+    answer: 'Réponse test',
+    published: true,
+    open: false
+  };
+
+  component.toggleFaq(faq);
+
+  expect(faq.open).toBe(true);
   });
 
   it('should filter faqs by category', () => {
-    component.selectedCategory = 'Financement';
-    expect(component.filteredFaqs.length).toBe(1);
-    expect(component.filteredFaqs[0].category).toBe('Financement');
+  component.faqs = [
+    {
+      id: 1,
+      category: 'Prérequis',
+      question: 'Question 1',
+      answer: 'Réponse 1',
+      published: true,
+      open: false
+    },
+    {
+      id: 2,
+      category: 'Financement',
+      question: 'Question 2',
+      answer: 'Réponse 2',
+      published: true,
+      open: false
+    }
+  ];
+
+  component.selectedCategory = 'Financement';
+
+  expect(component.filteredFaqs.length).toBe(1);
+  expect(component.filteredFaqs[0].category).toBe('Financement');
   });
 });
 

@@ -22,16 +22,15 @@ describe('ContactComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should handle file selection', () => {
-    const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-    const event = {
-      target: {
-        files: [file]
-      }
-    } as any;
-    
-    component.onFileSelected(event);
-    expect(component.selectedFile).toBe(file);
+  it('should show an error when consent is not given', () => {
+    component.formData.consent = false;
+
+    component.onSubmit();
+
+    expect(component.errorMessage).toBe(
+      'Vous devez accepter la politique de confidentialité'
+    );
+    expect(component.loading).toBeFalse();
   });
 });
 

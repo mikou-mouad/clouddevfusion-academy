@@ -23,8 +23,25 @@ describe('CatalogListComponent', () => {
   });
 
   it('should filter courses by role', () => {
-    component.filters.role = 'administrator';
-    expect(component.filteredCourses.length).toBeGreaterThan(0);
+  component.courses = [
+    {
+      id: 1,
+      title: 'Cours Administrateur',
+      description: 'Description test',
+      role: 'administrator'
+    } as any,
+    {
+      id: 2,
+      title: 'Cours Développeur',
+      description: 'Description test',
+      role: 'developer'
+    } as any
+  ];
+
+  component.filters.role = 'administrator';
+
+  expect(component.filteredCourses.length).toBe(1);
+  expect(component.filteredCourses[0].role).toBe('administrator');
   });
 
   it('should reset filters', () => {
