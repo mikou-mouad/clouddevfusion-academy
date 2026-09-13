@@ -5568,14 +5568,14 @@ final class IntranetController extends AbstractController
         $message = (new Email())
             ->from('no-reply@clouddev.local')
             ->to($email)
-            ->subject('Acces Intranet CloudDev')
+            ->subject('Accès Intranet CloudDev')
             ->text(sprintf(
                 "Bonjour %s %s,\n\n".
-                "Votre compte apprenti est cree.\n".
+                "Votre compte apprenti est créé.\n".
                 "Lien intranet: %s\n".
                 "Email: %s\n".
                 "Mot de passe: %s\n\n".
-                "Vous pourrez voir vos formations, planning et emargement apres affectation.\n",
+                "Vous pourrez voir vos formations, planning et émargement après affectation.\n",
                 $firstName,
                 $lastName,
                 $loginUrl,
