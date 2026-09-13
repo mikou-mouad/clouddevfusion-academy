@@ -1838,8 +1838,12 @@ final class IntranetController extends AbstractController
             }
         }
 
-        if ($formation === null || (int) ($formation['trainerId'] ?? 0) !== (int) $auth['id']) {
+        $trainerId = $this->resolveTrainerIdFromAuthId((int) $auth['id']);
+        if ($formation === null || (int) ($formation['trainerId'] ?? 0) !== $trainerId) {
             return $this->json(['message' => 'Formation invalide ou non autorisee.'], 403);
+        }
+        if (!empty($formation['archived'])) {
+            return $this->json(['message' => 'Formation archivee : envoi de ressource non autorise.'], 403);
         }
 
         $sessionLabel = '';
@@ -1889,7 +1893,7 @@ final class IntranetController extends AbstractController
         }
 
         $resourceId = 'res-'.substr(md5((string) microtime(true).$formationId.$title), 0, 10);
-        $sender = $this->trainerById((int) $auth['id']);
+        $sender = $this->trainerById($trainerId);
         if ($this->isSqlIntranetSchemaAvailable()) {
             try {
                 $this->db()->insert('resources', [
@@ -1904,7 +1908,7 @@ final class IntranetController extends AbstractController
                     'url' => $url,
                     'uploaded_at' => date('Y-m-d H:i:s'),
                     'uploaded_by_role' => 'trainer',
-                    'uploaded_by_trainer_id' => (int) $auth['id'],
+                    'uploaded_by_trainer_id' => $trainerId,
                     'uploaded_by_admin_id' => null,
                     'uploaded_by_admin_name' => null,
                 ]);
@@ -1918,6 +1922,7 @@ final class IntranetController extends AbstractController
         $state = $this->loadAdminState();
         $state['resources'][] = [
             'id' => $resourceId,
+            'audience' => 'formation',
             'formationId' => $formationId,
             'formationTitle' => (string) ($formation['title'] ?? 'Formation'),
             'sessionId' => $sessionId,
@@ -1925,9 +1930,12 @@ final class IntranetController extends AbstractController
             'title' => $title,
             'type' => $type,
             'url' => $url,
-            'uploadedAt' => date('Y-m-d H:i'),
-            'uploadedByTrainerId' => (int) $auth['id'],
-            'uploadedByTrainerName' => $sender !== null ? $sender['firstName'].' '.$sender['lastName'] : 'Formateur',
+            'uploadedAt' => date('Y-m-d H:i:s'),
+            'uploadedByRole' => 'trainer',
+            'uploadedByTrainerId' => $trainerId,
+            'uploadedByTrainerName' => $sender !== null
+                ? trim(((string) ($sender['firstName'] ?? '')).' '.((string) ($sender['lastName'] ?? '')))
+                : '',
         ];
         $this->saveAdminState($state);
 
@@ -3221,6 +3229,11 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Session invalide.'], 400);
         }
 
+        $denied = $this->assertTrainerMayManageAttendance($auth, $sessionId);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         $now = time();
         $expiresAt = $now + 600;
         if ($this->isSqlIntranetSchemaAvailable()) {
@@ -3273,6 +3286,11 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Session invalide.'], 400);
         }
 
+        $denied = $this->assertTrainerMayManageAttendance($auth, $sessionId);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if ($this->isSqlIntranetSchemaAvailable()) {
             try {
                 $this->db()->executeStatement(
@@ -3316,6 +3334,11 @@ final class IntranetController extends AbstractController
             return $this->json(['message' => 'Parametres invalides.'], 400);
         }
 
+        $denied = $this->assertTrainerMayManageAttendance($auth, $sessionId, $studentId);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         self::$attendanceOverrides[$this->attendanceKey($sessionId, $studentId)] = [
             'sessionId' => $sessionId,
             'studentId' => $studentId,
@@ -3325,6 +3348,56 @@ final class IntranetController extends AbstractController
         $this->persistAttendanceOverride($sessionId, $studentId, $status);
 
         return $this->json(['message' => 'Emargement mis a jour.']);
+    }
+
+    /**
+     * Trainers may only manage attendance on active formations they are assigned to.
+     * Admins are unrestricted. Returns an error response when denied, null when allowed.
+     */
+    private function assertTrainerMayManageAttendance(array $auth, string $sessionId, ?int $studentId = null): ?JsonResponse
+    {
+        if (($auth['role'] ?? '') === 'admin') {
+            return null;
+        }
+        if (($auth['role'] ?? '') !== 'trainer') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $trainerId = $this->resolveTrainerIdFromAuthId((int) ($auth['id'] ?? 0));
+        if ($trainerId <= 0) {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $formationId = $this->formationIdFromSessionId($sessionId);
+        if ($formationId === '') {
+            return $this->json(['message' => 'Session invalide.'], 400);
+        }
+
+        $formation = null;
+        foreach ($this->formations(true) as $item) {
+            if ((string) ($item['id'] ?? '') === $formationId) {
+                $formation = $item;
+                break;
+            }
+        }
+        if ($formation === null) {
+            return $this->json(['message' => 'Formation introuvable.'], 404);
+        }
+        if (!empty($formation['archived'])) {
+            return $this->json(['message' => 'Formation archivee : emargement non autorise.'], 403);
+        }
+        if ((int) ($formation['trainerId'] ?? 0) !== $trainerId) {
+            return $this->json(['message' => 'Emargement non autorise pour cette formation.'], 403);
+        }
+
+        if ($studentId !== null && $studentId > 0) {
+            $enrolled = $this->studentIdsForFormation($formationId);
+            if (!in_array($studentId, array_map('intval', $enrolled), true)) {
+                return $this->json(['message' => 'Apprenti non inscrit a cette formation.'], 403);
+            }
+        }
+
+        return null;
     }
 
     private function buildStudentDashboard(int $studentId): JsonResponse
