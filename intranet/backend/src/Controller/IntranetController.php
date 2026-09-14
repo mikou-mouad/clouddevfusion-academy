@@ -5557,6 +5557,24 @@ final class IntranetController extends AbstractController
         return $password;
     }
 
+    private function mailerFromAddress(): string
+    {
+        $from = trim((string) ($_ENV['MAILER_FROM'] ?? $_SERVER['MAILER_FROM'] ?? ''));
+        if ($from !== '' && filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            return $from;
+        }
+
+        $dsn = (string) ($_ENV['MAILER_DSN'] ?? $_SERVER['MAILER_DSN'] ?? '');
+        if ($dsn !== '' && preg_match('#://([^:/@]+):#', $dsn, $matches)) {
+            $user = urldecode((string) $matches[1]);
+            if (filter_var($user, FILTER_VALIDATE_EMAIL)) {
+                return $user;
+            }
+        }
+
+        return 'clouddevfusion.academy@gmail.com';
+    }
+
     private function sendStudentAccessEmail(
         MailerInterface $mailer,
         string $email,
@@ -5566,7 +5584,7 @@ final class IntranetController extends AbstractController
     ): bool {
         $loginUrl = $this->intranetLoginUrl();
         $message = (new Email())
-            ->from('clouddevfusion.academy@gmail.com')
+            ->from($this->mailerFromAddress())
             ->to($email)
             ->subject('Accès Intranet CloudDev')
             ->text(sprintf(
@@ -5603,16 +5621,16 @@ final class IntranetController extends AbstractController
     ): bool {
         $loginUrl = $this->intranetLoginUrl();
         $message = (new Email())
-            ->from('clouddevfusion.academy@gmail.com')
+            ->from($this->mailerFromAddress())
             ->to($email)
-            ->subject('Acces Formateur Intranet CloudDev')
+            ->subject('Accès Formateur Intranet CloudDev')
             ->text(sprintf(
                 "Bonjour %s %s,\n\n".
-                "Votre compte formateur est pret.\n".
+                "Votre compte formateur est prêt.\n".
                 "Lien intranet: %s\n".
                 "Email: %s\n".
                 "Mot de passe: %s\n\n".
-                "Connectez-vous pour voir vos formations, planning et emargement.\n",
+                "Connectez-vous pour voir vos formations, planning et émargement.\n",
                 $firstName,
                 $lastName,
                 $loginUrl,
