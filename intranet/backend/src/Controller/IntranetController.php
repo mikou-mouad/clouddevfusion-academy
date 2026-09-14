@@ -5566,7 +5566,7 @@ final class IntranetController extends AbstractController
     ): bool {
         $loginUrl = $this->intranetLoginUrl();
         $message = (new Email())
-            ->from('no-reply@clouddev.local')
+            ->from('clouddevfusion.academy@gmail.com')
             ->to($email)
             ->subject('Accès Intranet CloudDev')
             ->text(sprintf(
@@ -5603,7 +5603,7 @@ final class IntranetController extends AbstractController
     ): bool {
         $loginUrl = $this->intranetLoginUrl();
         $message = (new Email())
-            ->from('no-reply@clouddev.local')
+            ->from('clouddevfusion.academy@gmail.com')
             ->to($email)
             ->subject('Acces Formateur Intranet CloudDev')
             ->text(sprintf(
