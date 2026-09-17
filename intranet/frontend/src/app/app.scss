@@ -4794,6 +4794,23 @@ button.admin-doc-matrix-link {
   font-size: 9px;
 }
 
+.admin-unenroll-btn {
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.admin-doc-matrix-row-head .admin-unenroll-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.admin-doc-matrix-row-head .admin-unenroll-link:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .admin-doc-matrix-suivi .admin-doc-matrix-cell {
   padding: 3px 4px;
   min-width: 3.25rem;

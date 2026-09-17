@@ -638,6 +638,113 @@ final class IntranetController extends AbstractController
         ]);
     }
 
+    #[Route('/admin/formations/{formationId}/enrollments/{studentId}', name: 'admin_unenroll_formation_student', methods: ['DELETE'], requirements: ['studentId' => '\d+'])]
+    public function unenrollFormationStudent(Request $request, string $formationId, int $studentId): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'admin') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $targetId = trim($formationId);
+        if ($targetId === '' || $studentId <= 0) {
+            return $this->json(['message' => 'Parametres invalides.'], 400);
+        }
+
+        $formationExists = false;
+        foreach ($this->formations(true) as $formation) {
+            if ((string) ($formation['id'] ?? '') === $targetId) {
+                $formationExists = true;
+                break;
+            }
+        }
+        if (!$formationExists) {
+            return $this->json(['message' => 'Formation introuvable.'], 404);
+        }
+
+        if ($this->studentById($studentId) === null) {
+            return $this->json(['message' => 'Apprenti introuvable.'], 404);
+        }
+
+        $enrolledIds = $this->studentIdsForFormation($targetId);
+        if (!in_array($studentId, $enrolledIds, true)) {
+            return $this->json(['message' => 'Cet apprenti n\'est pas affecte a cette session.'], 404);
+        }
+
+        if ($this->isSqlIntranetSchemaAvailable()) {
+            try {
+                $classIds = $this->db()->fetchFirstColumn(
+                    'SELECT id FROM classes WHERE formation_id = :formation_id',
+                    ['formation_id' => $targetId]
+                );
+                if (!is_array($classIds) || $classIds === []) {
+                    return $this->json(['message' => 'Aucune classe trouvee pour cette session.'], 404);
+                }
+
+                $placeholders = [];
+                $params = ['student_id' => $studentId];
+                foreach (array_values($classIds) as $index => $classId) {
+                    $key = 'class_'.$index;
+                    $placeholders[] = ':'.$key;
+                    $params[$key] = (string) $classId;
+                }
+
+                $deleted = $this->db()->executeStatement(
+                    sprintf(
+                        'DELETE FROM class_enrollments
+                         WHERE student_id = :student_id
+                           AND class_id IN (%s)',
+                        implode(', ', $placeholders)
+                    ),
+                    $params
+                );
+
+                if ($deleted < 1) {
+                    return $this->json(['message' => 'Cet apprenti n\'est pas affecte a cette session.'], 404);
+                }
+
+                return $this->json([
+                    'message' => 'Apprenti retire de la session.',
+                    'formationId' => $targetId,
+                    'studentId' => $studentId,
+                ]);
+            } catch (\Throwable $exception) {
+                return $this->json([
+                    'message' => sprintf('Retrait impossible: %s', $exception->getMessage()),
+                ], 500);
+            }
+        }
+
+        $state = $this->loadAdminState();
+        $classIdsForFormation = [];
+        foreach ($state['classes'] as $classItem) {
+            if ((string) ($classItem['formationId'] ?? '') === $targetId) {
+                $classIdsForFormation[(string) ($classItem['id'] ?? '')] = true;
+            }
+        }
+        $before = count($state['classEnrollments']);
+        $state['classEnrollments'] = array_values(array_filter(
+            (array) ($state['classEnrollments'] ?? []),
+            static function (array $enrollment) use ($studentId, $classIdsForFormation): bool {
+                if ((int) ($enrollment['studentId'] ?? 0) !== $studentId) {
+                    return true;
+                }
+
+                return !isset($classIdsForFormation[(string) ($enrollment['classId'] ?? '')]);
+            }
+        ));
+        if (count($state['classEnrollments']) === $before) {
+            return $this->json(['message' => 'Cet apprenti n\'est pas affecte a cette session.'], 404);
+        }
+        $this->saveAdminState($state);
+
+        return $this->json([
+            'message' => 'Apprenti retire de la session.',
+            'formationId' => $targetId,
+            'studentId' => $studentId,
+        ]);
+    }
+
     #[Route('/admin/formations/{formationId}', name: 'admin_update_formation', methods: ['PUT'])]
     public function updateFormation(Request $request, string $formationId): JsonResponse
     {
@@ -2707,6 +2814,130 @@ final class IntranetController extends AbstractController
         if ($formationId === '' || !in_array($formationId, $trainerFormationIds, true)) {
             return $this->json(['message' => 'Unauthorized'], 403);
         }
+
+        return $this->json($detail);
+    }
+
+    #[Route('/trainer/formations/{formationId}/placement-tests', name: 'trainer_formation_placement_tests', methods: ['GET'])]
+    public function getTrainerFormationPlacementTests(string $formationId, Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'trainer') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $formationId = trim($formationId);
+        if ($formationId === '') {
+            return $this->json(['message' => 'Formation invalide.'], 400);
+        }
+
+        $trainerId = $this->resolveTrainerIdFromAuthId((int) $auth['id']);
+        if ($trainerId <= 0 || !in_array($formationId, $this->formationIdsForTrainer($trainerId), true)) {
+            return $this->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if (!$this->isPlacementTestResultsSchemaAvailable()) {
+            return $this->json(['apprentices' => [], 'courseId' => null]);
+        }
+
+        $courseId = $this->catalogCourseIdForFormation($formationId);
+        $apprentices = [];
+        foreach ($this->studentIdsForFormation($formationId) as $studentId) {
+            $student = $this->studentById($studentId);
+            if ($student === null) {
+                continue;
+            }
+            $email = strtolower(trim((string) ($student['email'] ?? '')));
+            $summary = $email !== ''
+                ? $this->placementTestResultSummary($email, $courseId > 0 ? $courseId : null)
+                : null;
+            $apprentices[] = [
+                'studentId' => $studentId,
+                'studentName' => trim(((string) ($student['firstName'] ?? '')).' '.((string) ($student['lastName'] ?? ''))),
+                'email' => (string) ($student['email'] ?? ''),
+                'status' => $summary['status'] ?? 'missing',
+                'score' => $summary['score'] ?? null,
+                'totalQuestions' => $summary['totalQuestions'] ?? null,
+                'correctAnswers' => $summary['correctAnswers'] ?? null,
+                'passed' => $summary['passed'] ?? null,
+                'completedAt' => $summary['completedAt'] ?? null,
+                'testTitle' => $summary['testTitle'] ?? null,
+                'canView' => $summary !== null,
+            ];
+        }
+
+        return $this->json([
+            'formationId' => $formationId,
+            'courseId' => $courseId > 0 ? $courseId : null,
+            'apprentices' => $apprentices,
+        ]);
+    }
+
+    #[Route('/trainer/placement-tests/results', name: 'trainer_placement_test_result_detail', methods: ['GET'])]
+    public function getTrainerPlacementTestResultDetail(Request $request): JsonResponse
+    {
+        $auth = $this->identityFromAuthorization($request->headers->get('Authorization'));
+        if ($auth === null || $auth['role'] !== 'trainer') {
+            return $this->json(['message' => 'Unauthorized'], 401);
+        }
+        if (!$this->isPlacementTestResultsSchemaAvailable()) {
+            return $this->json(['message' => 'Resultats de positionnement indisponibles.'], 400);
+        }
+        if (!$this->isPlacementTestReviewSchemaAvailable()) {
+            return $this->json(['message' => 'Detail des questions indisponible.'], 400);
+        }
+
+        $studentId = (int) $request->query->get('studentId', 0);
+        $formationId = trim((string) $request->query->get('formationId', ''));
+        if ($studentId <= 0) {
+            return $this->json(['message' => 'studentId invalide.'], 400);
+        }
+        if ($formationId === '') {
+            return $this->json(['message' => 'formationId invalide.'], 400);
+        }
+
+        $trainerId = $this->resolveTrainerIdFromAuthId((int) $auth['id']);
+        if ($trainerId <= 0 || !in_array($formationId, $this->formationIdsForTrainer($trainerId), true)) {
+            return $this->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $enrolled = $this->studentIdsForFormation($formationId);
+        if (!in_array($studentId, $enrolled, true)) {
+            return $this->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $student = $this->studentById($studentId);
+        if ($student === null) {
+            return $this->json(['message' => 'Apprenti introuvable.'], 404);
+        }
+        $email = strtolower(trim((string) ($student['email'] ?? '')));
+        if ($email === '') {
+            return $this->json(['message' => 'Email apprenti manquant.'], 400);
+        }
+
+        $courseId = $this->catalogCourseIdForFormation($formationId);
+
+        try {
+            $detail = $this->buildPlacementTestResultReview($email, $courseId > 0 ? $courseId : null);
+            if ($detail === null && $courseId > 0) {
+                $detail = $this->buildPlacementTestResultReview($email, null);
+            }
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'message' => sprintf('Impossible de charger le detail: %s', $exception->getMessage()),
+            ], 500);
+        }
+        if ($detail === null) {
+            return $this->json(['message' => 'Aucun resultat de test de positionnement pour cet apprenti.'], 404);
+        }
+
+        $detail['student'] = [
+            'id' => $studentId,
+            'firstName' => (string) ($student['firstName'] ?? ''),
+            'lastName' => (string) ($student['lastName'] ?? ''),
+            'email' => (string) ($student['email'] ?? ''),
+            'name' => trim(((string) ($student['firstName'] ?? '')).' '.((string) ($student['lastName'] ?? ''))),
+        ];
 
         return $this->json($detail);
     }
@@ -4844,34 +5075,97 @@ final class IntranetController extends AbstractController
         return str_contains($haystack, 'positionnement');
     }
 
-    /**
-     * Build the public site placement-test URL from the formation catalog course id.
-     */
-    private function placementTestUrlForFormation(string $formationId): ?string
+    private function catalogCourseIdForFormation(string $formationId): int
     {
         $formationId = trim($formationId);
         if ($formationId === '') {
-            return null;
+            return 0;
         }
 
-        $courseId = 0;
         try {
             $raw = $this->db()->fetchOne(
                 'SELECT catalog_course_id FROM formations WHERE id = :id LIMIT 1',
                 ['id' => $formationId]
             );
             if ($raw !== false && $raw !== null && trim((string) $raw) !== '') {
-                $courseId = (int) preg_replace('/\D+/', '', (string) $raw);
+                return (int) preg_replace('/\D+/', '', (string) $raw);
             }
         } catch (\Throwable) {
-            return null;
+            return 0;
         }
 
+        return 0;
+    }
+
+    /**
+     * Build the public site placement-test URL from the formation catalog course id.
+     */
+    private function placementTestUrlForFormation(string $formationId): ?string
+    {
+        $courseId = $this->catalogCourseIdForFormation($formationId);
         if ($courseId <= 0) {
             return null;
         }
 
         return rtrim($this->publicSiteBaseUrl(), '/').'/placement-test/'.$courseId;
+    }
+
+    /**
+     * Light placement result for list views (no answer review).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function placementTestResultSummary(string $email, ?int $courseId = null): ?array
+    {
+        $email = strtolower(trim($email));
+        if ($email === '' || !$this->isPlacementTestResultsSchemaAvailable()) {
+            return null;
+        }
+
+        $sql = 'SELECT r.id, r.score, r.total_questions, r.correct_answers, r.passed, r.completed_at,
+                       t.title AS test_title, t.course_id
+                FROM placement_test_results r
+                INNER JOIN placement_tests t ON t.id = r.placement_test_id
+                WHERE LOWER(TRIM(r.user_email)) = :email';
+        $params = ['email' => $email];
+        if ($courseId !== null && $courseId > 0) {
+            $sql .= ' AND t.course_id = :course_id';
+            $params['course_id'] = $courseId;
+        }
+        $sql .= ' ORDER BY r.completed_at DESC NULLS LAST, r.id DESC LIMIT 1';
+
+        $row = $this->db()->fetchAssociative($sql, $params);
+        if (!is_array($row) && $courseId !== null && $courseId > 0) {
+            // Fallback: latest result for this email if course-specific miss.
+            $row = $this->db()->fetchAssociative(
+                'SELECT r.id, r.score, r.total_questions, r.correct_answers, r.passed, r.completed_at,
+                        t.title AS test_title, t.course_id
+                 FROM placement_test_results r
+                 INNER JOIN placement_tests t ON t.id = r.placement_test_id
+                 WHERE LOWER(TRIM(r.user_email)) = :email
+                 ORDER BY r.completed_at DESC NULLS LAST, r.id DESC LIMIT 1',
+                ['email' => $email]
+            );
+        }
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $passed = (bool) ($row['passed'] ?? false);
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'testTitle' => (string) ($row['test_title'] ?? ''),
+            'courseId' => (int) ($row['course_id'] ?? 0),
+            'score' => (int) ($row['score'] ?? 0),
+            'totalQuestions' => (int) ($row['total_questions'] ?? 0),
+            'correctAnswers' => (int) ($row['correct_answers'] ?? 0),
+            'passed' => $passed,
+            'completedAt' => isset($row['completed_at']) && $row['completed_at'] !== null
+                ? (string) $row['completed_at']
+                : null,
+            'status' => $passed ? 'passed' : 'failed',
+        ];
     }
 
     private function publicSiteBaseUrl(): string

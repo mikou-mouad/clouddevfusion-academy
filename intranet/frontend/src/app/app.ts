@@ -82,6 +82,7 @@ export class App implements OnDestroy {
   enrollStudentIds = signal<number[]>([]);
   enrollStudentFilter = signal('');
   enrollingStudents = signal(false);
+  unenrollingStudentId = signal<number | null>(null);
   selectedFormationIdsForTrainer = signal<string[]>([]);
   selectedFormationToAddForTrainer = signal('');
   catalogFormations = signal<CatalogFormationOption[]>([]);
@@ -200,6 +201,8 @@ export class App implements OnDestroy {
   adminValidationHistoryQuery = signal('');
   adminValidationHistoryStudentId = signal<number | null>(null);
   adminPlacementResultDetail = signal<AdminPlacementTestResultDetail | null>(null);
+  trainerFormationPlacementResults = signal<TrainerFormationPlacementApprentice[]>([]);
+  loadingTrainerFormationPlacementResults = signal(false);
   loadingAdminPlacementResult = signal(false);
   studentActiveValidationTest = signal<StudentValidationTestTake | null>(null);
   studentValidationAnswers = signal<Record<number, number[]>>({});
@@ -2787,6 +2790,71 @@ export class App implements OnDestroy {
       });
   }
 
+  loadTrainerFormationPlacementResults(formationId?: string): void {
+    const id = (formationId ?? this.selectedTrainerSessionFormation()?.id ?? '').trim();
+    if (!id || !this.isTrainer()) {
+      this.trainerFormationPlacementResults.set([]);
+      return;
+    }
+    this.loadingTrainerFormationPlacementResults.set(true);
+    this.http
+      .get<{ apprentices: TrainerFormationPlacementApprentice[] }>(
+        `${this.apiBaseUrl}/trainer/formations/${encodeURIComponent(id)}/placement-tests`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.loadingTrainerFormationPlacementResults.set(false);
+          this.trainerFormationPlacementResults.set(response.apprentices ?? []);
+        },
+        error: (err) => {
+          this.loadingTrainerFormationPlacementResults.set(false);
+          this.trainerFormationPlacementResults.set([]);
+          this.adminWorkflowError.set(
+            err?.error?.message ?? 'Impossible de charger les tests de positionnement.'
+          );
+        }
+      });
+  }
+
+  openTrainerPlacementAnswers(studentId: number): void {
+    if (!studentId || !this.isTrainer()) return;
+    const formationId = this.selectedTrainerSessionFormation()?.id ?? '';
+    if (!formationId) return;
+    this.adminWorkflowError.set('');
+    this.adminValidationHistoryStudentId.set(null);
+    this.adminPlacementResultDetail.set(null);
+    this.loadingAdminPlacementResult.set(true);
+    const params = new URLSearchParams({
+      studentId: String(studentId),
+      formationId
+    });
+    this.http
+      .get<AdminPlacementTestResultDetail>(
+        `${this.apiBaseUrl}/trainer/placement-tests/results?${params.toString()}`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (detail) => {
+          this.loadingAdminPlacementResult.set(false);
+          this.adminPlacementResultDetail.set(detail);
+        },
+        error: (err) => {
+          this.loadingAdminPlacementResult.set(false);
+          this.adminPlacementResultDetail.set(null);
+          this.adminWorkflowError.set(
+            err?.error?.message ?? 'Impossible de charger les reponses du test de positionnement.'
+          );
+        }
+      });
+  }
+
+  placementStatusLabel(status: string | null | undefined): string {
+    if (status === 'passed') return 'Validé';
+    if (status === 'failed') return 'Échoué';
+    return 'Non passé';
+  }
+
   closeAdminPlacementResultModal(): void {
     this.adminPlacementResultDetail.set(null);
   }
@@ -3498,6 +3566,46 @@ export class App implements OnDestroy {
       });
   }
 
+  unenrollStudentFromSelectedFormation(studentId: number, studentName?: string): void {
+    const formation = this.selectedAdminFormation();
+    if (!formation || !studentId) {
+      this.formationActionError.set('Session ou apprenti invalide.');
+      return;
+    }
+    if (this.unenrollingStudentId() !== null) {
+      return;
+    }
+
+    const label = (studentName ?? '').trim() || `apprenti #${studentId}`;
+    const confirmed = window.confirm(
+      `Retirer ${label} de la session « ${formation.title} » ?\n\nLa session et les autres apprentis ne seront pas modifies.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.unenrollingStudentId.set(studentId);
+    this.formationActionNotice.set('');
+    this.formationActionError.set('');
+
+    this.http
+      .delete<{ message: string }>(
+        `${this.apiBaseUrl}/admin/formations/${encodeURIComponent(formation.id)}/enrollments/${studentId}`,
+        { headers: this.authHeaders() }
+      )
+      .subscribe({
+        next: (response) => {
+          this.unenrollingStudentId.set(null);
+          this.formationActionNotice.set(response.message);
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.unenrollingStudentId.set(null);
+          this.formationActionError.set(err?.error?.message ?? 'Retrait de l\'apprenti impossible.');
+        }
+      });
+  }
+
   selectedStudents = computed(() =>
     this.adminStudents().filter((student) => this.selectedStudentIds().includes(student.id))
   );
@@ -3827,6 +3935,7 @@ export class App implements OnDestroy {
     this.selectedTrainerResourceFormationId.set(formationId);
     this.trainerSessionDetailTab.set('overview');
     this.closeAdminValidationTestDetail();
+    this.trainerFormationPlacementResults.set([]);
     this.trainerSessionApprenticeSearch.set('');
     this.trainerSessionApprenticePage.set(1);
     this.trainerSessionPlanningPage.set(1);
@@ -3838,6 +3947,7 @@ export class App implements OnDestroy {
   backToTrainerSessions(): void {
     this.trainerSessionDetailTab.set('overview');
     this.closeAdminValidationTestDetail();
+    this.trainerFormationPlacementResults.set([]);
     this.activeSection.set('sessions');
   }
 
@@ -3845,6 +3955,9 @@ export class App implements OnDestroy {
     this.trainerSessionDetailTab.set(tab);
     if (tab === 'overview') {
       this.closeAdminValidationTestDetail();
+      this.trainerFormationPlacementResults.set([]);
+    } else if (tab === 'tests') {
+      this.loadTrainerFormationPlacementResults();
     }
   }
 
@@ -5918,6 +6031,20 @@ interface AdminPlacementTestResultDetail {
     status: 'passed' | 'failed';
   };
   answers: AdminValidationAnswerReview[];
+}
+
+interface TrainerFormationPlacementApprentice {
+  studentId: number;
+  studentName: string;
+  email: string;
+  status: 'passed' | 'failed' | 'missing';
+  score: number | null;
+  totalQuestions: number | null;
+  correctAnswers: number | null;
+  passed: boolean | null;
+  completedAt: string | null;
+  testTitle: string | null;
+  canView: boolean;
 }
 
 interface StudentValidationTestTake {

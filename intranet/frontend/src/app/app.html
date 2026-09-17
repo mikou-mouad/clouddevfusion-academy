@@ -1213,11 +1213,72 @@
                 <section class="sessions-block admin-validation-panel">
                   <header class="admin-validation-panel-head">
                     <div>
+                      <h5>Tests de positionnement</h5>
+                      <p class="sub">Consultez le score et le detail des reponses pour chaque apprenti de cette formation.</p>
+                    </div>
+                  </header>
+                  @if (adminWorkflowError().trim()) {
+                    <p class="error">{{ adminWorkflowError() }}</p>
+                  }
+                  @if (loadingTrainerFormationPlacementResults()) {
+                    <p class="admin-validation-empty">Chargement des resultats de positionnement…</p>
+                  } @else if (!trainerFormationPlacementResults().length) {
+                    <p class="admin-validation-empty">Aucun apprenti inscrit sur cette formation.</p>
+                  } @else {
+                    <div class="admin-validation-tests-table-wrap planning-table-wrap">
+                      <table class="planning-table doc-table admin-table admin-validation-tests-table">
+                        <thead>
+                          <tr>
+                            <th>Apprenti</th>
+                            <th>Email</th>
+                            <th>Score</th>
+                            <th>Statut</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of trainerFormationPlacementResults(); track row.studentId) {
+                            <tr>
+                              <td>{{ row.studentName }}</td>
+                              <td>{{ row.email }}</td>
+                              <td>
+                                @if (row.canView && row.correctAnswers != null && row.totalQuestions != null) {
+                                  {{ row.correctAnswers }} / {{ row.totalQuestions }}
+                                  @if (row.score != null) {
+                                    <span class="sub">({{ row.score }}%)</span>
+                                  }
+                                } @else {
+                                  <span class="sub">—</span>
+                                }
+                              </td>
+                              <td>
+                                <span class="admin-validation-status-pill" [attr.data-status]="row.status === 'missing' ? 'pending' : row.status">
+                                  {{ placementStatusLabel(row.status) }}
+                                </span>
+                              </td>
+                              <td>
+                                @if (row.canView) {
+                                  <button type="button" class="ghost-btn dark-ghost-btn admin-validation-history-btn" (click)="openTrainerPlacementAnswers(row.studentId)">Voir</button>
+                                } @else {
+                                  <span class="sub">Non disponible</span>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </section>
+
+                <section class="sessions-block admin-validation-panel">
+                  <header class="admin-validation-panel-head">
+                    <div>
                       <h5>Tests de validation</h5>
                       <p class="sub">Consultez les scores et statuts des apprentis pour les tests de cette formation.</p>
                     </div>
                   </header>
-                  @if (adminWorkflowError().trim()) {
+                  @if (adminWorkflowError().trim() && adminValidationTestDetail()) {
                     <p class="error">{{ adminWorkflowError() }}</p>
                   }
 
@@ -1398,6 +1459,72 @@
                     </div>
                   }
                 </section>
+
+                @if (adminPlacementResultDetail(); as placement) {
+                  <div class="trainer-modal-overlay admin-validation-answers-modal-overlay" (click)="closeAdminPlacementResultModal()">
+                    <section class="trainer-modal admin-validation-answers-modal card content-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="trainerPlacementAnswersModalTitle">
+                      <header class="trainer-modal-head admin-validation-answers-modal-head">
+                        <div>
+                          <p class="trainer-modal-kicker">Test de positionnement</p>
+                          <h3 id="trainerPlacementAnswersModalTitle">{{ placement.student.name || (placement.student.firstName + ' ' + placement.student.lastName) }}</h3>
+                          <p class="sub">{{ placement.student.email }}</p>
+                          <p class="sub">{{ placement.result.testTitle }}</p>
+                        </div>
+                        <button type="button" class="admin-validation-history-answers-close" (click)="closeAdminPlacementResultModal()" aria-label="Fermer">×</button>
+                      </header>
+
+                      <div class="admin-validation-attempt-summary">
+                        <span class="admin-validation-status-pill" [attr.data-status]="placement.result.status">{{ placement.result.passed ? 'Validé' : 'Échoué' }}</span>
+                        <span><strong>{{ placement.result.correctAnswers }}</strong> / {{ placement.result.totalQuestions }} ({{ placement.result.score }}%)</span>
+                        @if (placement.result.completedAt) {
+                          <span class="sub">Soumis le {{ placement.result.completedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        }
+                      </div>
+
+                      @if (!placement.answers.length) {
+                        <p class="admin-validation-empty">Aucune question disponible pour ce resultat.</p>
+                      } @else {
+                        <div class="admin-validation-answer-review">
+                          @for (answer of placement.answers; track answer.questionId; let qi = $index) {
+                            <article class="admin-validation-answer-card" [class.is-correct]="answer.isCorrect" [class.is-wrong]="!answer.isCorrect && answer.selectedLabels.length">
+                              <div class="admin-validation-answer-card-head">
+                                <span class="admin-validation-question-badge">Q{{ qi + 1 }}</span>
+                                <span class="admin-validation-answer-verdict" [attr.data-correct]="answer.isCorrect">
+                                  {{ answer.isCorrect ? 'Correct' : (answer.selectedLabels.length ? 'Incorrect' : 'Non repondu') }}
+                                </span>
+                              </div>
+                              <p class="admin-validation-answer-prompt">{{ answer.prompt }}</p>
+                              <div class="admin-validation-answer-lines">
+                                <p>
+                                  <span class="admin-validation-answer-label">Reponse donnee :</span>
+                                  @if (answer.selectedLabels.length) {
+                                    <strong class="admin-validation-answer-given" [attr.data-correct]="answer.isCorrect">{{ answer.selectedLabels.join(', ') }}</strong>
+                                  } @else {
+                                    <em>Aucune reponse</em>
+                                  }
+                                </p>
+                                @if (!answer.isCorrect && answer.correctLabels.length) {
+                                  <p class="admin-validation-answer-expected">
+                                    <span class="admin-validation-answer-label">Bonne reponse :</span>
+                                    <strong>{{ answer.correctLabels.join(', ') }}</strong>
+                                  </p>
+                                }
+                              </div>
+                            </article>
+                          }
+                        </div>
+                      }
+                    </section>
+                  </div>
+                }
+
+                @if (loadingAdminPlacementResult()) {
+                  <div class="trainer-modal-overlay admin-validation-answers-modal-overlay">
+                    <section class="trainer-modal admin-validation-answers-modal card content-card" role="status">
+                      <p class="admin-validation-empty">Chargement des reponses…</p>
+                    </section>
+                  </div>
+                }
               }
             }
           </section>
@@ -2270,10 +2397,25 @@
                       } @else {
                         <div class="planning-table-wrap">
                           <table class="planning-table doc-table admin-table">
-                            <thead><tr><th>Apprenti</th><th>Email</th><th>Classe</th><th>Emargement</th></tr></thead>
+                            <thead><tr><th>Apprenti</th><th>Email</th><th>Classe</th><th>Emargement</th><th></th></tr></thead>
                             <tbody>
                               @for (item of selectedAdminFormationApprentices(); track item.id) {
-                                <tr><td>{{ item.name }}</td><td>{{ item.email }}</td><td>{{ item.classLabel }}</td><td>{{ item.attendanceMarked }} / {{ item.attendanceTotal }}</td></tr>
+                                <tr>
+                                  <td>{{ item.name }}</td>
+                                  <td>{{ item.email }}</td>
+                                  <td>{{ item.classLabel }}</td>
+                                  <td>{{ item.attendanceMarked }} / {{ item.attendanceTotal }}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      class="ghost-btn dark-ghost-btn admin-unenroll-btn"
+                                      [disabled]="unenrollingStudentId() === item.id"
+                                      (click)="unenrollStudentFromSelectedFormation(item.id, item.name)"
+                                    >
+                                      {{ unenrollingStudentId() === item.id ? 'Retrait...' : 'Retirer de la session' }}
+                                    </button>
+                                  </td>
+                                </tr>
                               }
                             </tbody>
                           </table>
@@ -2562,6 +2704,17 @@
                                       <span class="admin-doc-matrix-badge">Formateur</span>
                                     } @else {
                                       <span class="admin-doc-matrix-badge admin-doc-matrix-badge--student">Apprenti</span>
+                                      @if (mrow.studentId) {
+                                        <button
+                                          type="button"
+                                          class="admin-doc-matrix-link admin-doc-matrix-link--compact admin-unenroll-link"
+                                          [disabled]="unenrollingStudentId() === mrow.studentId"
+                                          title="Retirer cet apprenti de la session"
+                                          (click)="unenrollStudentFromSelectedFormation(mrow.studentId, mrow.name)"
+                                        >
+                                          {{ unenrollingStudentId() === mrow.studentId ? 'Retrait...' : 'Retirer de la session' }}
+                                        </button>
+                                      }
                                     }
                                   </th>
                                   @for (col of mv.columns; track col.key) {
